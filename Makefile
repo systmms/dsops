@@ -97,6 +97,25 @@ check: lint vet test ## Run all checks (lint, vet, test)
 
 ci: check build ## Run CI pipeline (check + build)
 
+# Documentation targets
+.PHONY: docs-install docs-serve docs-build docs-clean
+
+docs-install: ## Install documentation dependencies
+	@echo "Installing documentation dependencies..."
+	cd docs && npm install
+
+docs-serve: ## Serve documentation locally
+	@echo "Starting documentation server..."
+	cd docs && npm run dev
+
+docs-build: ## Build documentation site
+	@echo "Building documentation..."
+	cd docs && npm run build
+
+docs-clean: ## Clean documentation build
+	@echo "Cleaning documentation build..."
+	cd docs && rm -rf public resources node_modules
+
 # Development helpers
 watch: ## Watch for changes and rebuild
 	@echo "Watching for changes..."
