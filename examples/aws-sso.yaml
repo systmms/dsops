@@ -1,0 +1,58 @@
+# AWS IAM Identity Center (SSO) Example Configuration
+providers:
+  # Basic SSO configuration
+  sso-dev:
+    type: aws.sso
+    start_url: https://my-company.awsapps.com/start
+    account_id: "123456789012"
+    role_name: DeveloperAccess
+    region: us-east-1
+  
+  # Production account via SSO
+  sso-prod:
+    type: aws.sso
+    start_url: https://my-company.awsapps.com/start
+    account_id: "987654321098"
+    role_name: AdministratorAccess
+    region: us-east-1
+    # Optional: custom cache path
+    # cache_path: ~/.custom/sso/cache
+    # Optional: disable auto-refresh
+    # refresh_token: false
+
+envs:
+  development:
+    # Get SSO credentials for dev account
+    AWS_ACCESS_KEY_ID:
+      from: sso-dev:access_key_id
+    
+    AWS_SECRET_ACCESS_KEY:
+      from: sso-dev:secret_access_key
+    
+    AWS_SESSION_TOKEN:
+      from: sso-dev:session_token
+    
+    # All credentials as JSON (useful for SDK configuration)
+    AWS_CREDS_JSON:
+      from: sso-dev:credentials
+  
+  production:
+    # Production credentials via SSO
+    AWS_ACCESS_KEY_ID:
+      from: sso-prod:access_key_id
+    
+    AWS_SECRET_ACCESS_KEY:
+      from: sso-prod:secret_access_key
+    
+    AWS_SESSION_TOKEN:
+      from: sso-prod:session_token
+    
+    # Check expiration
+    TOKEN_EXPIRES:
+      from: sso-prod:expiration
+
+# Note: Before using SSO providers, authenticate with:
+#   aws configure sso
+#   aws sso login --profile my-sso-profile
+#
+# Or use: dsops login aws.sso

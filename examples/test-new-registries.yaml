@@ -1,0 +1,46 @@
+version: 0
+
+secretStores:
+  bitwarden-store:
+    type: bitwarden
+    timeoutMs: 30000
+    config:
+      organization: test-org
+  
+  literal-store:
+    type: literal
+    config:
+      values:
+        test_secret: test-value-from-literal
+        db_password: super-secret-password
+
+services:
+  github-org:
+    type: github
+    config:
+      organization: acme-corp
+      
+  prod-db:
+    type: postgres
+    config:
+      host: prod-db.example.com
+      database: main
+
+envs:
+  test:
+    TEST_SECRET:
+      from: store://literal-store/test_secret
+    
+    DB_PASSWORD:
+      from:
+        provider: literal-store
+        key: db_password
+    
+    BW_SECRET:
+      from: store://bitwarden-store/Platform/Database#password
+      optional: true
+
+  production:
+    PROD_DB_PASS:
+      from: store://bitwarden-store/Production/Database#password
+      optional: true

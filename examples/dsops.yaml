@@ -1,0 +1,57 @@
+version: 0
+
+# Example configuration with mock providers for testing
+providers:
+  mock_provider:
+    type: mock
+  
+  json_provider:
+    type: json
+  
+  literal_provider:
+    type: literal
+    values:
+      debug_mode: "true"
+      log_level: "info"
+
+# Environment definitions
+envs:
+  development:
+    # Mock provider examples
+    API_KEY:
+      from: { provider: mock_provider, key: "api-key" }
+    
+    DATABASE_URL:
+      from: { provider: json_provider, key: "db-config" }
+      transform: json_extract:.url
+    
+    # Literal values
+    DEBUG:
+      from: { provider: literal_provider, key: "debug_mode" }
+    
+    LOG_LEVEL:
+      from: { provider: literal_provider, key: "log_level" }
+    
+    # Plain literal
+    NODE_ENV:
+      literal: "development"
+    
+    # JSON extraction example
+    DB_MAX_CONNECTIONS:
+      from: { provider: json_provider, key: "db-config" }
+      transform: json_extract:.max_connections
+    
+    # Optional variable
+    OPTIONAL_SECRET:
+      from: { provider: mock_provider, key: "missing-key" }
+      optional: true
+
+  production:
+    API_KEY:
+      from: { provider: mock_provider, key: "api-key" }
+    
+    NODE_ENV:
+      literal: "production"
+    
+    LOG_LEVEL:
+      literal: "warn"

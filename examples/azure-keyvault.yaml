@@ -1,0 +1,68 @@
+# Azure Key Vault Example Configuration
+providers:
+  # Basic Key Vault with Managed Identity (recommended for Azure VMs/Containers)
+  azure-kv:
+    type: azure.keyvault
+    vault_url: https://my-vault.vault.azure.net/
+    use_managed_identity: true
+  
+  # Key Vault with User-Assigned Managed Identity
+  azure-kv-user:
+    type: azure.keyvault
+    vault_url: https://my-vault.vault.azure.net/
+    use_managed_identity: true
+    user_assigned_identity_id: "your-user-assigned-identity-client-id"
+  
+  # Key Vault with Service Principal
+  azure-sp:
+    type: azure.keyvault
+    vault_url: https://my-vault.vault.azure.net/
+    use_managed_identity: false
+    tenant_id: "your-tenant-id"
+    client_id: "your-client-id"
+    client_secret: "your-client-secret"
+  
+  # Key Vault using Azure CLI/Default Credential (development)
+  azure-dev:
+    type: azure.keyvault
+    vault_url: https://dev-vault.vault.azure.net/
+    use_managed_identity: false
+
+envs:
+  production:
+    # Simple secret retrieval
+    DATABASE_PASSWORD:
+      from: azure-kv:prod-database-password
+    
+    # Secret with specific version
+    API_KEY:
+      from: azure-kv:api-key/v1
+      optional: false
+    
+    # JSON secret with field extraction
+    DATABASE_CONFIG:
+      from: azure-kv:database-config#.connection_string
+    
+    # Complex JSON extraction
+    REDIS_HOST:
+      from: azure-kv:redis-config#.cluster.primary.host
+    
+    # SSL certificate (binary data)
+    SSL_CERT:
+      from: azure-kv:ssl-certificate
+      transform:
+        - base64_decode
+        - trim
+    
+    # Service principal secret
+    SERVICE_PRINCIPAL_SECRET:
+      from: azure-sp:service-principal-secret
+    
+  development:
+    # Development secrets using Azure CLI auth
+    DEV_DATABASE_URL:
+      from: azure-dev:dev-database-url
+    
+    # Development API key
+    DEV_API_KEY:
+      from: azure-dev:dev-api-key

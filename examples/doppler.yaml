@@ -1,0 +1,103 @@
+# Doppler Provider Example Configuration
+providers:
+  # Basic Doppler provider
+  doppler:
+    type: doppler
+    token: "dp.st.prod.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    project: "my-backend-api"
+    config: "prd"
+  
+  # Development environment
+  doppler-dev:
+    type: doppler
+    token: "dp.st.dev.yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+    project: "my-backend-api"
+    config: "dev"
+  
+  # Staging environment
+  doppler-stg:
+    type: doppler
+    token: "dp.st.stg.zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+    project: "my-frontend-app"
+    config: "stg"
+
+envs:
+  production:
+    # Database connection string
+    DATABASE_URL:
+      from: doppler:DATABASE_URL
+    
+    # API keys
+    STRIPE_SECRET_KEY:
+      from: doppler:STRIPE_SECRET_KEY
+    
+    # Third-party service credentials
+    SENDGRID_API_KEY:
+      from: doppler:SENDGRID_API_KEY
+    
+    # JWT signing secret
+    JWT_SECRET:
+      from: doppler:JWT_SECRET
+    
+    # Redis connection
+    REDIS_URL:
+      from: doppler:REDIS_URL
+    
+    # Optional secrets with fallback
+    OPTIONAL_API_KEY:
+      from: doppler:OPTIONAL_API_KEY
+      optional: true
+  
+  development:
+    # Development database
+    DATABASE_URL:
+      from: doppler-dev:DATABASE_URL
+    
+    # Development API keys
+    STRIPE_SECRET_KEY:
+      from: doppler-dev:STRIPE_TEST_KEY
+    
+    # Debug flag from Doppler
+    DEBUG:
+      from: doppler-dev:DEBUG_MODE
+    
+    # Local development overrides
+    LOG_LEVEL:
+      from: doppler-dev:LOG_LEVEL
+  
+  staging:
+    # Staging secrets from different project
+    DATABASE_URL:
+      from: doppler-stg:DATABASE_URL
+    
+    API_KEY:
+      from: doppler-stg:API_KEY
+    
+    # Cross-environment secret sharing
+    SHARED_SERVICE_KEY:
+      from: doppler:SHARED_SERVICE_KEY
+
+# Configuration Notes:
+#
+# Service Token Format:
+# - Production: dp.st.prod.{64-character-string}
+# - Development: dp.st.dev.{64-character-string}
+# - Staging: dp.st.stg.{64-character-string}
+# - Custom: dp.st.{config}.{64-character-string}
+#
+# Project Structure:
+# - Projects group related configurations
+# - Configs represent environments within projects
+# - Common configs: dev, stg, prd, test
+#
+# Best Practices:
+# - Use separate service tokens per environment
+# - Scope tokens to minimum required permissions
+# - Rotate tokens regularly
+# - Use meaningful project and config names
+#
+# Security:
+# - Service tokens provide full access to the specified config
+# - Store tokens securely (environment variables, secure key stores)
+# - Never commit tokens to version control
+# - Use Doppler's audit logs to monitor access

@@ -1,0 +1,25 @@
+version: 0
+
+# Test configuration for AWS Secrets Manager
+# This will fail gracefully if AWS credentials aren't configured
+providers:
+  aws_sm:
+    type: aws.secretsmanager
+    region: us-east-1
+
+  # Keep a literal provider for fallback testing
+  literal_test:
+    type: literal
+    values:
+      test_value: "aws-provider-test"
+
+envs:
+  test:
+    # This will work with literal provider
+    TEST_VALUE:
+      from: { provider: literal_test, key: "test_value" }
+      
+    # This will fail gracefully if no AWS creds (good for testing)
+    AWS_TEST:
+      from: { provider: aws_sm, key: "test-secret" }
+      optional: true

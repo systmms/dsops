@@ -1,0 +1,27 @@
+version: 0
+
+secretStores:
+  literal-store:
+    type: literal
+    values:
+      test-key: "test-value"
+
+services:
+  test-service:
+    type: postgres
+    host: localhost
+    database: test
+
+envs:
+  test:
+    # Test new store:// format
+    TEST_VAR:
+      from: { store: "store://literal-store/test-key" }
+    
+    # Test legacy format for backward compatibility
+    TEST_VAR_LEGACY:
+      from: { provider: literal-store, key: "test-key" }
+    
+    # Test literal value
+    NODE_ENV:
+      literal: "test"

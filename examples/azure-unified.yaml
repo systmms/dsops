@@ -1,0 +1,107 @@
+# Azure Unified Provider Example Configuration
+# This provider intelligently routes to different Azure services
+
+providers:
+  # Simple unified Azure provider with Managed Identity
+  azure:
+    type: azure
+    use_managed_identity: true
+    default_service: keyvault  # Default when service can't be auto-detected
+    
+    # Key Vault configuration
+    keyvault:
+      vault_url: https://my-vault.vault.azure.net/
+    
+    # Identity configuration (for token requests)
+    identity:
+      scope: https://management.azure.com/.default
+  
+  # Advanced unified provider with Service Principal
+  azure-sp:
+    type: azure
+    tenant_id: "your-tenant-id"
+    client_id: "your-client-id"
+    client_secret: "your-client-secret"
+    use_managed_identity: false
+    default_service: keyvault
+    
+    # Service-specific configurations
+    keyvault:
+      vault_url: https://prod-vault.vault.azure.net/
+    
+    identity:
+      scope: https://graph.microsoft.com/.default
+
+envs:
+  production:
+    # Explicit service prefixes
+    DATABASE_PASSWORD:
+      from: azure:kv:prod-database-password
+    
+    API_CONFIG:
+      from: azure:keyvault:api-configuration
+    
+    MGMT_TOKEN:
+      from: azure:identity:https://management.azure.com/.default:access_token
+    
+    AUTH_TOKEN:
+      from: azure:auth:access_token
+    
+    # Auto-detection based on format
+    SIMPLE_SECRET:
+      from: azure:my-simple-secret  # Auto-detects as Key Vault
+    
+    # Version specification auto-detection
+    VERSIONED_SECRET:
+      from: azure:api-key/v2  # Auto-detects as Key Vault with version
+    
+    # JSON extraction auto-detection
+    DATABASE_HOST:
+      from: azure:database-config#.host  # Auto-detects as Key Vault with JSON extraction
+    
+    # Token patterns auto-detection
+    ACCESS_TOKEN:
+      from: azure:access_token  # Auto-detects as Identity
+    
+    # Scope patterns auto-detection
+    GRAPH_TOKEN:
+      from: azure:https://graph.microsoft.com/.default  # Auto-detects as Identity
+    
+    # Using service principal provider
+    PROD_CONFIG:
+      from: azure-sp:production-configuration
+    
+    # Complex secret with transforms
+    CERTIFICATE:
+      from: azure:ssl-certificate
+      transform:
+        - trim
+        - base64_decode
+
+# Smart Reference Detection for Azure:
+# 
+# 1. Explicit prefixes:
+#    kv:secret-name              -> Key Vault
+#    keyvault:secret-name        -> Key Vault
+#    vault:secret-name           -> Key Vault
+#    secrets:secret-name         -> Key Vault
+#    identity:scope              -> Identity/Managed Identity
+#    auth:scope                  -> Identity/Managed Identity
+#    token:scope                 -> Identity/Managed Identity
+#    managed:scope               -> Identity/Managed Identity
+#
+# 2. Auto-detection:
+#    secret-name/version         -> Key Vault (version syntax)
+#    secret-name#.json.path      -> Key Vault (JSON extraction)
+#    https://*.vault.azure.net/  -> Key Vault (vault URL)
+#    access_token                -> Identity (token field)
+#    expires_at                  -> Identity (token field)
+#    https://*.azure.com/.default -> Identity (scope pattern)
+#    secret-name                 -> Default service (keyvault)
+#
+# 3. Future extensibility:
+#    When we add more Azure services, the unified provider will 
+#    automatically route based on reference patterns:
+#    - https://*.blob.core.windows.net/   -> Storage Account
+#    - https://*.servicebus.windows.net/  -> Service Bus
+#    - appconfig:key-name                 -> App Configuration

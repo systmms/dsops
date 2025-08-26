@@ -1,0 +1,24 @@
+version: 0
+
+# Mixed format showing compatibility between old and new
+secretStores:
+  # New format secret stores
+  vault:
+    type: vault
+    address: https://vault.company.com
+    auth_method: token
+
+# Environment definitions mixing legacy and new reference formats
+envs:
+  development:
+    # New store:// URI format
+    VAULT_SECRET:
+      from: { store: "store://vault/secrets/api-keys#stripe_key" }
+    
+    # Legacy provider format (still works for backward compatibility)
+    LEGACY_SECRET:
+      from: { provider: vault, key: "secret/legacy/key" }
+    
+    # Literal values
+    NODE_ENV:
+      literal: "development"

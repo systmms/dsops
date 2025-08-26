@@ -1,0 +1,102 @@
+version: 0
+
+providers:
+  test-bitwarden:
+    type: bitwarden
+    server: "https://vault.bitwarden.com"
+  
+  test-1password:
+    type: 1password
+    account: "my-account"
+    
+  test-aws:
+    type: aws-secretsmanager
+    region: us-east-1
+
+envs:
+  development:
+    API_KEY:
+      from:
+        provider: test-1password
+        key: "op://Private/API Service/password"
+    
+    DB_PASSWORD:
+      from:
+        provider: test-aws
+        key: "prod/database/password"
+        
+  production:
+    API_KEY:
+      from:
+        provider: test-aws
+        key: "prod/api/key"
+    
+    DB_PASSWORD:
+      from:
+        provider: test-aws
+        key: "prod/database/password"
+
+# Policy enforcement configuration
+policies:
+  # Global provider restrictions
+  allowed_providers:
+    - bitwarden
+    - 1password
+    - aws-secretsmanager
+  
+  # blocked_providers:
+  #   - mock  # Example: block mock provider in production
+  
+  # Secret complexity requirements
+  secret_complexity:
+    min_length: 8
+    max_length: 256
+    require_upper: false
+    require_lower: false
+    require_digit: false
+    require_symbol: false
+  
+  # Forbidden patterns (secrets must NOT match these)
+  forbidden_patterns:
+    - "password123"
+    - "admin"
+    - "test.*"
+  
+  # Required patterns (secrets must match at least one)
+  # required_patterns:
+  #   - "^[A-Za-z0-9!@#$%^&*]{12,}$"  # Example: strong password pattern
+  
+  # Per-environment restrictions
+  environment_rules:
+    production:
+      allowed_providers:
+        - aws-secretsmanager    # Only AWS Secrets Manager in production
+      max_secrets: 10           # Limit production secrets
+      require_approval: false   # Future feature
+    
+    development:
+      max_secrets: 50           # More lenient for development
+  
+  # File output restrictions
+  output_restrictions:
+    # Allowed output paths (regex patterns)
+    allowed_paths:
+      - "^/tmp/.*"
+      - "^\\./.*\\.env$"
+      - "^\\./secrets/.*"
+    
+    # Blocked output paths
+    blocked_paths:
+      - "^/usr/.*"
+      - "^/etc/.*"
+      - ".*\\.git/.*"
+    
+    require_gitignore: true     # Require output files to be in .gitignore
+    max_ttl: 3600              # Maximum TTL: 1 hour
+  
+  # Audit logging (future feature)
+  audit_logging:
+    enabled: true
+    log_path: ".dsops/audit.log"
+    log_level: "info"
+    include_values: false       # NEVER set to true in production

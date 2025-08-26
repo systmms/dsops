@@ -1,0 +1,77 @@
+version: 0
+
+providers:
+  vault-dev:
+    type: vault
+    address: "https://vault.example.com:8200"
+    auth_method: "token"
+    # token: "hvs.your-vault-token-here"  # Better to use VAULT_TOKEN env var
+    namespace: ""  # Optional: for Vault Enterprise namespaces
+    tls_skip: false  # Set to true for development/self-signed certs
+  
+  vault-userpass:
+    type: vault
+    address: "https://vault.example.com:8200" 
+    auth_method: "userpass"
+    userpass_username: "myuser"
+    # userpass_password: "mypass"  # Better to use VAULT_USERPASS_PASSWORD env var
+  
+  vault-ldap:
+    type: vault
+    address: "https://vault.example.com:8200"
+    auth_method: "ldap"
+    ldap_username: "myuser"
+    # ldap_password: "mypass"  # Better to use VAULT_LDAP_PASSWORD env var
+  
+  vault-aws:
+    type: vault
+    address: "https://vault.example.com:8200"
+    auth_method: "aws"
+    aws_role: "my-iam-role"
+  
+  vault-k8s:
+    type: vault
+    address: "https://vault.example.com:8200"
+    auth_method: "k8s"
+    k8s_role: "my-k8s-role"
+
+envs:
+  development:
+    # Get entire secret as JSON
+    DATABASE_CONFIG:
+      from:
+        provider: vault-dev
+        key: "secret/data/myapp/database"
+    
+    # Get specific field from secret  
+    API_KEY:
+      from:
+        provider: vault-dev
+        key: "secret/data/myapp/api#key"
+    
+    # Get password field
+    DB_PASSWORD:
+      from:
+        provider: vault-dev  
+        key: "secret/data/myapp/database#password"
+    
+    # Static value for testing
+    APP_ENV:
+      literal: "development"
+
+  production:
+    # Production secrets with different auth
+    API_KEY:
+      from:
+        provider: vault-userpass
+        key: "secret/data/prod/api#key"
+    
+    DB_PASSWORD:
+      from:
+        provider: vault-userpass
+        key: "secret/data/prod/database#password"
+    
+    JWT_SECRET:
+      from:
+        provider: vault-userpass
+        key: "secret/data/prod/auth#jwt_secret"

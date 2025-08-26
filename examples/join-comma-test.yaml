@@ -1,0 +1,15 @@
+version: 0
+
+providers:
+  test:
+    type: literal
+    values:
+      FRUITS: "apple,banana,cherry"
+
+envs:
+  test:
+    JOINED:
+      from:
+        provider: test
+        key: FRUITS
+      transform: join:comma

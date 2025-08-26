@@ -1,0 +1,65 @@
+# Azure Identity Provider Example Configuration
+providers:
+  # System-assigned Managed Identity
+  azure-mi:
+    type: azure.identity
+    use_managed_identity: true
+    scope: https://management.azure.com/.default  # Default Azure Management scope
+  
+  # User-assigned Managed Identity
+  azure-mi-user:
+    type: azure.identity
+    use_managed_identity: true
+    user_assigned_identity_id: "your-user-assigned-identity-client-id"
+    scope: https://graph.microsoft.com/.default  # Microsoft Graph scope
+  
+  # Service Principal
+  azure-sp:
+    type: azure.identity
+    use_managed_identity: false
+    tenant_id: "your-tenant-id"
+    client_id: "your-client-id"
+    client_secret: "your-client-secret"
+    scope: https://storage.azure.com/.default  # Azure Storage scope
+
+envs:
+  production:
+    # Azure Management API token
+    AZURE_MGMT_TOKEN:
+      from: azure-mi:https://management.azure.com/.default:access_token
+    
+    # Token expiration info
+    TOKEN_EXPIRES_AT:
+      from: azure-mi:https://management.azure.com/.default:expires_at
+    
+    # Seconds until expiration
+    TOKEN_EXPIRES_IN:
+      from: azure-mi:https://management.azure.com/.default:expires_in
+    
+    # All token information as JSON
+    TOKEN_INFO:
+      from: azure-mi:https://management.azure.com/.default:token_info
+    
+    # Microsoft Graph token (user-assigned identity)
+    GRAPH_TOKEN:
+      from: azure-mi-user:access_token
+    
+    # Azure Storage token (service principal)
+    STORAGE_TOKEN:
+      from: azure-sp:access_token
+    
+    # Different scopes for different services
+    KEY_VAULT_TOKEN:
+      from: azure-mi:https://vault.azure.net/.default:access_token
+    
+    COSMOS_DB_TOKEN:
+      from: azure-mi:https://cosmos.azure.com/.default:access_token
+
+# Common Azure Scopes:
+# - https://management.azure.com/.default     # Azure Resource Manager
+# - https://graph.microsoft.com/.default      # Microsoft Graph
+# - https://storage.azure.com/.default        # Azure Storage
+# - https://vault.azure.net/.default          # Azure Key Vault
+# - https://database.windows.net/.default     # Azure SQL Database
+# - https://cosmos.azure.com/.default         # Azure Cosmos DB
+# - https://servicebus.azure.net/.default     # Azure Service Bus

@@ -1,0 +1,66 @@
+# AWS STS (Security Token Service) Example Configuration
+providers:
+  # Basic role assumption
+  temp-role:
+    type: aws.sts
+    assume_role: arn:aws:iam::123456789012:role/MyDeploymentRole
+    role_session_name: dsops-deployment
+    duration: 3600  # 1 hour
+    region: us-east-1
+  
+  # Role with external ID
+  cross-account:
+    type: aws.sts
+    assume_role: arn:aws:iam::987654321098:role/CrossAccountRole
+    external_id: my-secure-external-id
+    role_session_name: dsops-cross-account
+  
+  # Role with MFA
+  secure-role:
+    type: aws.sts
+    assume_role: arn:aws:iam::123456789012:role/SecureAdminRole
+    mfa_serial_number: arn:aws:iam::123456789012:mfa/alice
+    mfa_token_code: "123456"  # In practice, prompt for this
+    duration: 900  # 15 minutes for high-security operations
+  
+  # Role with session policy
+  restricted-role:
+    type: aws.sts
+    assume_role: arn:aws:iam::123456789012:role/BaseRole
+    session_policy: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [{
+          "Effect": "Allow",
+          "Action": ["s3:GetObject"],
+          "Resource": ["arn:aws:s3:::my-bucket/*"]
+        }]
+      }
+
+envs:
+  deployment:
+    # Get individual credential components
+    AWS_ACCESS_KEY_ID:
+      from: temp-role:access_key_id
+    
+    AWS_SECRET_ACCESS_KEY:
+      from: temp-role:secret_access_key
+    
+    AWS_SESSION_TOKEN:
+      from: temp-role:session_token
+    
+    # Get all credentials as JSON
+    AWS_CREDENTIALS_JSON:
+      from: temp-role:credentials
+    
+    # Cross-account credentials
+    CROSS_ACCOUNT_ACCESS_KEY:
+      from: cross-account:access_key_id
+    
+    # Check when credentials expire
+    CREDS_EXPIRE_AT:
+      from: temp-role:expiration
+    
+    # Get assumed role ARN
+    ASSUMED_ROLE_ARN:
+      from: temp-role:assumed_role_arn

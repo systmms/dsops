@@ -1,0 +1,77 @@
+version: 0
+
+providers:
+  test-transforms:
+    type: literal
+    values:
+      # YAML content for yaml_extract testing
+      YAML_CONFIG: |
+        database:
+          host: localhost
+          port: 5432
+          name: myapp
+        redis:
+          host: redis.example.com
+          port: 6379
+      
+      # JSON array for join testing
+      JSON_ARRAY: '["item1", "item2", "item3"]'
+      
+      # Multi-line list for join testing
+      MULTILINE_LIST: |
+        apple
+        banana
+        cherry
+        date
+      
+      # Comma-separated for join testing
+      COMMA_LIST: "red,green,blue,yellow"
+
+envs:
+  test:
+    # Test yaml_extract transform
+    DB_HOST:
+      from:
+        provider: test-transforms
+        key: YAML_CONFIG
+      transform: yaml_extract:.database.host
+    
+    DB_PORT:
+      from:
+        provider: test-transforms
+        key: YAML_CONFIG
+      transform: yaml_extract:.database.port
+    
+    REDIS_HOST:
+      from:
+        provider: test-transforms
+        key: YAML_CONFIG
+      transform: yaml_extract:.redis.host
+    
+    # Test join transform with JSON array
+    JOINED_ARRAY:
+      from:
+        provider: test-transforms
+        key: JSON_ARRAY
+      transform: "join:,"
+    
+    # Test join transform with multiline
+    JOINED_FRUITS:
+      from:
+        provider: test-transforms
+        key: MULTILINE_LIST
+      transform: "join:,"
+    
+    # Test join transform with different separator
+    PIPED_FRUITS:
+      from:
+        provider: test-transforms
+        key: MULTILINE_LIST
+      transform: "join:-"
+    
+    # Test join transform with existing comma-separated
+    SEMICOLON_COLORS:
+      from:
+        provider: test-transforms
+        key: COMMA_LIST
+      transform: "join:;"

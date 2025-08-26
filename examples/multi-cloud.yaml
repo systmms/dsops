@@ -1,0 +1,157 @@
+# Multi-Cloud Secret Management Example
+# Demonstrates using AWS, GCP, Azure, and other providers together
+
+providers:
+  # AWS unified provider
+  aws:
+    type: aws
+    region: us-east-1
+    profile: production
+    default_service: secretsmanager
+    
+    # Service-specific configs
+    secretsmanager:
+      version_stage: AWSCURRENT
+    ssm:
+      with_decryption: true
+      parameter_prefix: /myapp/prod/
+    sts:
+      assume_role: arn:aws:iam::123456789012:role/ProdRole
+      duration: 3600
+
+  # GCP unified provider  
+  gcp:
+    type: gcp
+    project_id: my-production-project
+    default_service: secretmanager
+    
+    secretmanager:
+      use_plaintext_names: true
+
+  # Azure unified provider
+  azure:
+    type: azure
+    use_managed_identity: true
+    default_service: keyvault
+    
+    keyvault:
+      vault_url: https://prod-vault.vault.azure.net/
+    
+    identity:
+      scope: https://management.azure.com/.default
+
+  # HashiCorp Vault for dynamic secrets
+  vault:
+    type: vault
+    address: https://vault.company.com:8200
+    auth_method: aws
+    role: production-role
+
+  # Bitwarden for developer access
+  bitwarden:
+    type: bitwarden
+
+envs:
+  # Production environment using multiple clouds
+  production:
+    # Database credentials from AWS Secrets Manager
+    DATABASE_URL:
+      from: aws:sm:prod/database/connection-string
+    
+    # API keys from GCP Secret Manager
+    GOOGLE_API_KEY:
+      from: gcp:sm:google-services-api-key
+    
+    # SSL certificates from Azure Key Vault
+    SSL_CERT:
+      from: azure:kv:ssl-production-certificate
+      transform:
+        - base64_decode
+    
+    # Third-party service tokens from GCP
+    STRIPE_SECRET_KEY:
+      from: gcp:stripe-secret-key:latest
+    
+    # Azure application secrets
+    AZURE_APP_SECRET:
+      from: azure:prod-application-secret
+    
+    # Azure access tokens for API calls
+    AZURE_MGMT_TOKEN:
+      from: azure:identity:access_token
+    
+    # Dynamic database password from Vault
+    VAULT_DB_PASSWORD:
+      from: vault:database/creds/production:password
+    
+    # Temporary AWS credentials for cross-account access
+    CROSS_ACCOUNT_ACCESS_KEY:
+      from: aws:sts:access_key_id
+    
+    CROSS_ACCOUNT_SECRET_KEY:
+      from: aws:sts:secret_access_key
+    
+    CROSS_ACCOUNT_SESSION_TOKEN:
+      from: aws:sts:session_token
+
+  # Development environment
+  development:
+    # Development database from Bitwarden (shared team access)
+    DEV_DATABASE_URL:
+      from: bitwarden:dev-database.url
+    
+    # Development API keys from GCP
+    GOOGLE_API_KEY:
+      from: gcp:google-services-dev-key
+    
+    # Local certificates from AWS
+    SSL_CERT:
+      from: aws:ssm:/ssl/development/certificate
+
+  # Staging environment with fallbacks
+  staging:
+    # Primary secret from AWS, fallback to GCP
+    API_KEY:
+      from: aws:sm:staging/api-key
+      optional: true
+    
+    API_KEY_FALLBACK:
+      from: gcp:staging-api-key
+      optional: true
+    
+    # Complex configuration from multiple sources
+    SERVICE_CONFIG:
+      from: gcp:staging-service-config#.database
+      transform:
+        - json_extract:.connection_string
+
+# Cloud-specific advantages demonstrated:
+#
+# AWS:
+# - Excellent for existing AWS infrastructure
+# - SSM Parameter Store for configuration
+# - STS for temporary credentials
+# - Cross-account access patterns
+#
+# GCP: 
+# - Native Kubernetes/GKE integration
+# - Application Default Credentials
+# - JSON path extraction
+# - Service account impersonation
+#
+# Azure:
+# - Managed Identity integration (no credentials needed)
+# - Key Vault combines secrets + certificates + keys
+# - Deep Azure AD integration
+# - Cross-service token acquisition
+#
+# Vault:
+# - Dynamic secret generation
+# - Secret rotation
+# - Fine-grained access policies
+# - Audit logging
+#
+# Bitwarden:
+# - Human-readable secret sharing
+# - Team collaboration
+# - Emergency access

@@ -1,0 +1,122 @@
+version: 0
+
+# Complete example showing all dsops features
+providers:
+  # Bitwarden password manager
+  bitwarden:
+    type: bitwarden
+    # profile: work  # optional for multiple profiles
+
+  # Mock provider for testing
+  mock_provider:
+    type: mock
+    values:
+      backup-key: "mock-backup-key-value"
+      
+  # JSON provider for transform testing
+  json_provider:
+    type: json
+    
+  # Literal provider for non-secret config
+  app_config:
+    type: literal
+    values:
+      version: "1.0.0"
+      build_date: "2025-01-18"
+
+# Transform definitions (reusable)
+transforms:
+  extract_db_password: [json_extract:.password]
+  encode_cert: [multiline_to_single, base64_encode]
+
+envs:
+  development:
+    # Database credentials from Bitwarden
+    DATABASE_HOST:
+      from: { provider: bitwarden, key: "dev-database.uri0" }
+    DATABASE_USER:
+      from: { provider: bitwarden, key: "dev-database.username" }
+    DATABASE_PASSWORD:
+      from: { provider: bitwarden, key: "dev-database.password" }
+    DATABASE_URL:
+      from: { provider: json_provider, key: "db-config" }
+      transform: json_extract:.url
+    
+    # API secrets
+    STRIPE_KEY:
+      from: { provider: bitwarden, key: "stripe-dev.password" }
+    TWILIO_TOKEN:
+      from: { provider: bitwarden, key: "twilio-dev.token" }
+      
+    # Certificates and keys
+    JWT_PUBLIC_KEY:
+      from: { provider: bitwarden, key: "jwt-keys.public_key" }
+      transform: multiline_to_single
+    SSL_CERT:
+      from: { provider: bitwarden, key: "ssl-certs.notes" }
+      
+    # Mock fallback values
+    BACKUP_KEY:
+      from: { provider: mock_provider, key: "backup-key" }
+      
+    # App configuration (non-secret)
+    APP_VERSION:
+      from: { provider: app_config, key: "version" }
+    BUILD_DATE:
+      from: { provider: app_config, key: "build_date" }
+    
+    # Literal values
+    NODE_ENV:
+      literal: "development"
+    DEBUG:
+      literal: "true"
+    LOG_LEVEL:
+      literal: "debug"
+    
+    # Optional secrets (won't fail if missing)
+    OPTIONAL_FEATURE_FLAG:
+      from: { provider: bitwarden, key: "feature-flags.experimental" }
+      optional: true
+
+  staging:
+    DATABASE_URL:
+      from: { provider: bitwarden, key: "staging-db.uri0" }
+    API_KEY:
+      from: { provider: bitwarden, key: "staging-api.password" }
+    NODE_ENV:
+      literal: "staging"
+    DEBUG:
+      literal: "false"
+    LOG_LEVEL:
+      literal: "info"
+
+  production:
+    DATABASE_URL:
+      from: { provider: bitwarden, key: "prod-database.uri0" }
+    DATABASE_PASSWORD:
+      from: { provider: bitwarden, key: "prod-database.password" }
+    API_KEY:
+      from: { provider: bitwarden, key: "prod-api.password" }
+    JWT_SECRET:
+      from: { provider: bitwarden, key: "prod-jwt.password" }
+    
+    # Production app config
+    NODE_ENV:
+      literal: "production"
+    DEBUG:
+      literal: "false"
+    LOG_LEVEL:
+      literal: "warn"
+
+# Output templates
+templates:
+  - name: docker-env
+    format: dotenv
+    env: development
+    out: .env.docker
+    
+  - name: k8s-secrets
+    format: template
+    env: production
+    out: k8s/secrets.yaml
+    template_path: examples/templates/k8s-secret.yaml.tmpl

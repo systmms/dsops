@@ -1,0 +1,13 @@
+version: 0
+
+providers:
+  doppler:
+    type: doppler
+    token: dp.st.prod.test
+    project: test
+    config: test
+
+envs:
+  test:
+    TEST:
+      from: doppler:TEST

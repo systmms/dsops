@@ -1,0 +1,13 @@
+version: 0
+
+providers:
+  doppler:
+    type: doppler
+    token: dp.st.prod.test-token-for-validation
+    project: test-project
+    config: test
+
+envs:
+  test:
+    TEST_SECRET:
+      from: doppler:TEST_SECRET

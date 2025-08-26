@@ -1,0 +1,15 @@
+version: 0
+
+secretStores:
+  literal-store:
+    type: literal
+    config:
+      values:
+        test_secret: test-value
+
+envs:
+  test:
+    TEST_SECRET:
+      from: 
+        provider: literal-store
+        key: test_secret

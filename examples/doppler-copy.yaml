@@ -1,0 +1,19 @@
+version: 0
+
+# Example Doppler configuration
+providers:
+  doppler:
+    type: doppler
+    token: dp.st.test.fake
+    project: test
+    config: test
+
+# Environment definitions with Bitwarden secrets
+envs:
+  development:
+    # Test secrets from Doppler
+    DATABASE_URL:
+      from: doppler:DATABASE_URL
+    
+    API_KEY:
+      from: doppler:API_KEY

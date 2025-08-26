@@ -1,0 +1,31 @@
+version: 0
+
+providers:
+  test-literal:
+    type: literal
+    timeout_ms: 5000  # 5 second timeout
+    values:
+      API_KEY: "test-api-key-123"
+      DATABASE_URL: "postgresql://user:pass@localhost/db"
+  
+  slow-literal:
+    type: literal
+    timeout_ms: 1000  # 1 second timeout (very short for testing)
+    values:
+      SLOW_SECRET: "this-would-timeout-with-real-provider"
+
+envs:
+  test:
+    API_KEY:
+      from:
+        provider: test-literal
+        key: API_KEY
+    DATABASE_URL:
+      from:
+        provider: test-literal
+        key: DATABASE_URL
+    SLOW_VALUE:
+      from:
+        provider: slow-literal
+        key: SLOW_SECRET
+      optional: true

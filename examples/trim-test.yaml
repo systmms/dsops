@@ -1,0 +1,15 @@
+version: 0
+
+providers:
+  test:
+    type: literal
+    values:
+      SPACED: "  hello world  "
+
+envs:
+  test:
+    TRIMMED:
+      from:
+        provider: test
+        key: SPACED
+      transform: trim

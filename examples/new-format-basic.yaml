@@ -1,0 +1,59 @@
+version: 0
+
+# New dsops.yaml format with separated secret stores and services
+secretStores:
+  # Secret storage systems (where secrets are stored and retrieved)
+  bitwarden:
+    type: bitwarden
+    
+  vault:
+    type: vault
+    address: https://vault.company.com
+    auth_method: token
+    
+  aws-secrets:
+    type: aws.secretsmanager
+    region: us-west-2
+
+services:
+  # Rotation target services (systems with credentials to rotate)
+  github-org:
+    type: github
+    org: acme-corp
+    
+  prod-database:
+    type: postgres
+    host: db.prod.company.com
+    database: app
+
+# Environment definitions using new URI format
+envs:
+  development:
+    # Using store:// URI format for secret store references
+    DATABASE_PASSWORD:
+      from: { store: "store://bitwarden/Platform/Database#password" }
+    
+    API_KEY:
+      from: { store: "store://vault/secrets/api-keys?version=latest" }
+    
+    # Using svc:// URI format for service references (rotation)
+    GITHUB_TOKEN:
+      from: { service: "svc://github-org/ci-bot?kind=pat&principal=deploy" }
+    
+    # Mixed legacy and new format (during transition)
+    REDIS_URL:
+      from: { provider: bitwarden, key: "dev-cache.url" }
+    
+    # Literal values remain unchanged
+    NODE_ENV:
+      literal: "development"
+
+  production:
+    DATABASE_PASSWORD:
+      from: { store: "store://aws-secrets/prod/database#password" }
+    
+    API_KEY:
+      from: { store: "store://vault/prod/api-keys#stripe_key" }
+    
+    NODE_ENV:
+      literal: "production"

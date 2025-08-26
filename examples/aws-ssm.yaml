@@ -1,0 +1,41 @@
+# AWS SSM Parameter Store Example Configuration
+providers:
+  ssm:
+    type: aws.ssm
+    region: us-east-1
+    # Optional: prefix for all parameters
+    parameter_prefix: /myapp/prod/
+    # Optional: whether to decrypt SecureString parameters (default: true)
+    with_decryption: true
+    # Optional: AWS profile to use
+    # profile: myprofile
+    # Optional: assume a role
+    # assume_role: arn:aws:iam::123456789012:role/MyRole
+
+envs:
+  production:
+    # Simple parameter retrieval
+    DATABASE_URL:
+      from: ssm:/database/connection_string
+    
+    # SecureString parameter (automatically decrypted)
+    API_KEY:
+      from: ssm:/api/key
+      optional: false
+    
+    # Using parameter prefix (will resolve to /myapp/prod/redis/host)
+    REDIS_HOST:
+      from: ssm:redis/host
+    
+    # Parameter with transforms
+    DATABASE_PASSWORD:
+      from: ssm:/database/password
+      transform:
+        - base64_decode
+        - trim
+    
+    # Hierarchical parameters
+    SERVICE_CONFIG:
+      from: ssm:/service/config/json
+      transform:
+        - json_extract:.endpoint

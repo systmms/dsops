@@ -1,0 +1,56 @@
+version: 0
+
+# Example Bitwarden configuration
+providers:
+  bitwarden:
+    type: bitwarden
+    # profile: default  # Optional: if you use multiple bw profiles
+
+# Environment definitions with Bitwarden secrets
+envs:
+  development:
+    # Database credentials from Bitwarden
+    # Assumes you have an item named "dev-database" in your vault
+    DATABASE_URL:
+      from: { provider: bitwarden, key: "dev-database.uri0" }
+    
+    DATABASE_PASSWORD:
+      from: { provider: bitwarden, key: "dev-database.password" }
+    
+    DATABASE_USER:
+      from: { provider: bitwarden, key: "dev-database.username" }
+    
+    # API key from a different item
+    API_KEY:
+      from: { provider: bitwarden, key: "api-keys.password" }
+    
+    # Custom field example
+    REDIS_URL:
+      from: { provider: bitwarden, key: "dev-cache.redis_url" }
+    
+    # Notes field example
+    SSL_CERT:
+      from: { provider: bitwarden, key: "ssl-certs.notes" }
+    
+    # Non-secret configuration
+    NODE_ENV:
+      literal: "development"
+      
+    DEBUG:
+      literal: "true"
+
+  production:
+    DATABASE_URL:
+      from: { provider: bitwarden, key: "prod-database.uri0" }
+    
+    DATABASE_PASSWORD:
+      from: { provider: bitwarden, key: "prod-database.password" }
+    
+    API_KEY:
+      from: { provider: bitwarden, key: "prod-api.password" }
+    
+    NODE_ENV:
+      literal: "production"
+      
+    DEBUG:
+      literal: "false"

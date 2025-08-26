@@ -1,0 +1,99 @@
+# Example dsops configuration for PostgreSQL password rotation
+# This demonstrates how to configure secrets for rotation using webhook/script strategies
+# NOTE: Database-specific rotation logic is now defined in the dsops-data repository
+
+providers:
+  my_postgres_secrets:
+    type: bitwarden
+    config:
+      collection: "Database Credentials"
+      
+  admin_credentials:
+    type: bitwarden
+    config:
+      collection: "Admin Credentials"
+
+envs:
+  production:
+    # Database password that will be rotated
+    DATABASE_PASSWORD:
+      from:
+        provider: my_postgres_secrets
+        key: "postgres-app-user-password"
+      # Metadata for rotation - the rotation strategy (webhook/script) is determined
+      # by the service instance configuration in dsops-data repository
+      metadata:
+        rotation_strategy: "webhook"  # or "script" 
+        service_type: "postgresql"    # matches service type in dsops-data
+        instance_id: "prod-primary"   # matches instance in dsops-data
+        db_type: "postgresql"
+        host: "prod-postgres.internal"
+        port: "5432"
+        database: "myapp"
+        username: "myapp_user"
+        admin_user: "postgres"
+        # Admin password would come from a separate secret
+        admin_password_ref: "admin_credentials/postgres-admin-password"
+        ssl_mode: "require"
+        
+    # Another database password with different settings  
+    ANALYTICS_DB_PASSWORD:
+      from:
+        provider: my_postgres_secrets
+        key: "postgres-analytics-password"
+      metadata:
+        db_type: "postgresql"
+        host: "analytics-postgres.internal"
+        port: "5432"
+        database: "analytics"
+        username: "analytics_reader"
+        admin_user: "postgres"
+        admin_password_ref: "admin_credentials/analytics-admin-password"
+        ssl_mode: "require"
+        
+  staging:
+    DATABASE_PASSWORD:
+      from:
+        provider: my_postgres_secrets
+        key: "postgres-staging-password"
+      metadata:
+        db_type: "postgresql"
+        host: "staging-postgres.internal"
+        port: "5432"
+        database: "myapp_staging"
+        username: "myapp_user"
+        admin_user: "postgres"
+        admin_password_ref: "admin_credentials/staging-admin-password"
+        ssl_mode: "prefer"
+
+# Configuration for rotation constraints
+rotation:
+  constraints:
+    DATABASE_PASSWORD:
+      min_rotation_interval: "24h"
+      max_value_length: 64
+      min_value_length: 16
+      grace_period: "5m"
+      notification_required: true
+      required_tests:
+        - name: "connection_test"
+          type: "connection"
+          timeout: "30s"
+          required: true
+        - name: "query_test"  
+          type: "query"
+          config:
+            query: "SELECT version()"
+          timeout: "10s"
+          required: true
+          
+    ANALYTICS_DB_PASSWORD:
+      min_rotation_interval: "48h"
+      max_value_length: 32
+      min_value_length: 12
+      grace_period: "10m"
+      required_tests:
+        - name: "connection_test"
+          type: "connection"
+          timeout: "30s"
+          required: true

@@ -1,0 +1,103 @@
+version: 0
+
+# pass (zx2c4) Provider Example Configuration
+providers:
+  # Basic pass provider (uses default ~/.password-store)
+  pass:
+    type: pass
+    # Optional configurations:
+    # password_store: "/custom/path/to/password-store"  # Custom password store location
+    # gpg_key: "your-gpg-key-id"                       # Specific GPG key to use
+  
+  # Custom pass provider with specific configuration
+  pass-work:
+    type: pass
+    password_store: "/home/user/work-passwords"
+    gpg_key: "work@company.com"
+
+envs:
+  development:
+    # Simple password retrieval
+    DATABASE_PASSWORD:
+      from: pass:dev/database/password
+    
+    # API keys organized in folders
+    GITHUB_TOKEN:
+      from: pass:dev/api-keys/github
+    
+    STRIPE_SECRET_KEY:
+      from: pass:dev/api-keys/stripe/secret
+    
+    # Email credentials
+    SMTP_PASSWORD:
+      from: pass:dev/email/smtp
+    
+    # Redis connection
+    REDIS_PASSWORD:
+      from: pass:dev/redis/auth
+  
+  production:
+    # Production secrets from different pass store
+    DATABASE_PASSWORD:
+      from: pass-work:prod/database/main
+    
+    API_KEY:
+      from: pass-work:prod/services/api-key
+    
+    # SSL certificate password
+    SSL_CERT_PASSWORD:
+      from: pass-work:prod/ssl/cert-password
+    
+    # Service account credentials
+    SERVICE_ACCOUNT_PASSWORD:
+      from: pass-work:prod/accounts/service
+  
+  personal:
+    # Personal secrets for development
+    PERSONAL_TOKEN:
+      from: pass:personal/tokens/github
+    
+    # Optional secrets with fallback
+    OPTIONAL_KEY:
+      from: pass:personal/optional/key
+      optional: true
+
+# pass Integration Notes:
+#
+# Setup Requirements:
+# 1. Install pass: brew install pass (macOS) or apt install pass (Ubuntu)
+# 2. Initialize: pass init your-gpg-key-id
+# 3. Add secrets: pass insert dev/database/password
+#
+# Organization Strategies:
+# - Environment-based: dev/, staging/, prod/
+# - Service-based: database/, api/, email/
+# - Project-based: myapp/, tools/, personal/
+#
+# Secret Format:
+# pass stores the password on the first line, with optional
+# additional metadata on subsequent lines:
+#
+# $ pass show dev/database/config
+# MySecretPassword123
+# username: admin
+# host: localhost
+# port: 5432
+#
+# Advanced Features:
+# - Git integration: pass git push/pull for syncing
+# - Generate passwords: pass generate dev/new-service 32
+# - Edit secrets: pass edit dev/database/password
+# - Multi-line secrets: pass insert -m dev/ssl/cert
+#
+# Security:
+# - Secrets are encrypted with GPG
+# - Each secret is a separate file
+# - Git history provides versioning
+# - Access control via GPG key management
+#
+# Common Patterns:
+# - Use hierarchical paths for organization
+# - First line is the primary secret (password/token)
+# - Additional lines can contain metadata
+# - Use consistent naming conventions across teams

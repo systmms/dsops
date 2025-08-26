@@ -1,0 +1,90 @@
+# AWS Unified Provider Example Configuration
+# This provider intelligently routes to different AWS services based on reference format
+
+providers:
+  # Simple unified AWS provider
+  aws:
+    type: aws
+    region: us-east-1
+    profile: default
+    default_service: secretsmanager  # Default when service can't be auto-detected
+  
+  # Advanced unified provider with service-specific config
+  aws-advanced:
+    type: aws
+    region: us-east-1
+    profile: prod
+    default_service: ssm
+    
+    # Optional: Service-specific configurations
+    secretsmanager:
+      timeout_ms: 5000
+      version_stage: AWSCURRENT
+    
+    ssm:
+      with_decryption: true
+      parameter_prefix: /myapp/prod/
+    
+    sts:
+      assume_role: arn:aws:iam::123456789012:role/ProdRole
+      duration: 3600
+      external_id: my-external-id
+    
+    sso:
+      start_url: https://my-company.awsapps.com/start
+      account_id: "123456789012"
+      role_name: AdministratorAccess
+
+envs:
+  production:
+    # Explicit service prefixes
+    DATABASE_PASSWORD:
+      from: aws:sm:prod/database/password
+    
+    API_CONFIG:
+      from: aws:ssm:/myapp/config/api
+    
+    TEMP_CREDENTIALS:
+      from: aws:sts:credentials
+    
+    SSO_ACCESS_KEY:
+      from: aws:sso:access_key_id
+    
+    # Auto-detection based on format
+    SECRET_KEY:
+      from: aws:prod/app/secret-key  # Auto-detects as Secrets Manager
+    
+    PARAMETER_VALUE:
+      from: aws:/app/config/value    # Auto-detects as SSM (starts with /)
+    
+    # Using advanced provider with different defaults
+    CONFIG_VALUE:
+      from: aws-advanced:config-key  # Uses SSM (default_service)
+    
+    # Complex secret with transforms
+    DATABASE_CONFIG:
+      from: aws:sm:prod/database/config
+      transform:
+        - json_extract:.connection_string
+        - trim
+    
+    # SSM parameter with hierarchy
+    REDIS_CONFIG:
+      from: aws:ssm:/app/redis/config
+      transform:
+        - json_extract:.host
+
+# Smart Reference Detection:
+# 
+# 1. Explicit prefixes:
+#    sm:secret-name          -> Secrets Manager
+#    ssm:/path/to/param      -> SSM Parameter Store  
+#    sts:access_key_id       -> STS temporary credentials
+#    sso:session_token       -> SSO credentials
+#
+# 2. Auto-detection:
+#    /path/to/param          -> SSM (starts with /)
+#    arn:aws:secretsmanager: -> Secrets Manager
+#    arn:aws:ssm:            -> SSM Parameter Store
+#    access_key_id           -> STS/SSO (credential keys)
+#    secret-name             -> Default service (secretsmanager)

@@ -1,0 +1,158 @@
+version: 0
+
+# Secret Rotation Example Configuration
+# Demonstrates various rotation scenarios and capabilities
+
+providers:
+  # AWS Secrets Manager with rotation support
+  aws-sm:
+    type: aws.secretsmanager
+    region: us-east-1
+    profile: production
+
+  # GCP Secret Manager with rotation support  
+  gcp-sm:
+    type: gcp.secretmanager
+    project_id: my-production-project
+
+  # Azure Key Vault with rotation support
+  azure-kv:
+    type: azure.keyvault
+    vault_url: https://prod-vault.vault.azure.net/
+    use_managed_identity: true
+
+  # HashiCorp Vault with dynamic secrets
+  vault:
+    type: vault
+    address: https://vault.company.com:8200
+    auth_method: aws
+    role: production-role
+
+envs:
+  production:
+    # Database password - frequently rotated
+    DATABASE_PASSWORD:
+      from: aws-sm:prod/database/password
+      
+    # API keys - medium rotation frequency
+    STRIPE_SECRET_KEY:
+      from: aws-sm:prod/api-keys/stripe
+      
+    # JWT signing secret - infrequent rotation
+    JWT_SECRET:
+      from: gcp-sm:jwt-signing-secret
+      
+    # Service account password - automated rotation
+    SERVICE_ACCOUNT_PASSWORD:
+      from: azure-kv:service-account-password
+      
+    # Database credentials from Vault - dynamic secrets
+    VAULT_DB_USERNAME:
+      from: vault:database/creds/production:username
+      
+    VAULT_DB_PASSWORD:
+      from: vault:database/creds/production:password
+      
+    # SSL/TLS certificates
+    TLS_PRIVATE_KEY:
+      from: azure-kv:tls-private-key
+      
+    TLS_CERTIFICATE:
+      from: azure-kv:tls-certificate
+
+  staging:
+    # Staging secrets with different rotation policies
+    DATABASE_PASSWORD:
+      from: aws-sm:staging/database/password
+      
+    API_KEY:
+      from: gcp-sm:staging-api-key
+      
+  development:
+    # Development secrets - minimal rotation
+    DEV_DATABASE_PASSWORD:
+      from: aws-sm:dev/database/password
+      
+    DEV_API_KEY:
+      from: gcp-sm:dev-api-key
+
+# Rotation Examples:
+#
+# 1. Rotate a single secret with random password:
+#    dsops rotate --env production --keys DATABASE_PASSWORD --new-value random:32
+#
+# 2. Rotate multiple secrets at once:
+#    dsops rotate --env production --keys DATABASE_PASSWORD,JWT_SECRET --new-value random:64
+#
+# 3. Rotate with specific value from file:
+#    dsops rotate --env production --keys TLS_CERTIFICATE --new-value file:./new-cert.pem
+#
+# 4. Rotate with literal value:
+#    dsops rotate --env production --keys API_KEY --new-value literal:new-api-key-value
+#
+# 5. Dry run to see what would be rotated:
+#    dsops rotate --env production --keys DATABASE_PASSWORD --new-value random:32 --dry-run
+#
+# 6. Force rotation even if recently rotated:
+#    dsops rotate --env production --keys JWT_SECRET --new-value random:64 --force
+#
+# 7. Generate different types of random values:
+#    dsops rotate --env production --keys DATABASE_PASSWORD --new-value random:32:alphanumeric
+#    dsops rotate --env production --keys API_KEY --new-value random:64:hex
+#    dsops rotate --env production --keys JWT_SECRET --new-value random:32:base64
+
+# Provider-Specific Rotation Capabilities:
+#
+# AWS Secrets Manager:
+# - Supports versioning (AWSCURRENT, AWSPENDING, etc.)
+# - Automatic rotation with Lambda functions
+# - Version deprecation by removing from stages
+# - Max secret size: 65,536 bytes
+#
+# GCP Secret Manager:
+# - Versioned secrets with numeric versions
+# - Manual rotation by creating new versions
+# - Version deprecation by disabling
+# - Max secret size: 65,536 bytes
+#
+# Azure Key Vault:
+# - Versioned secrets with automatic versioning
+# - Integration with Azure rotation services
+# - Version deprecation by disabling versions
+# - Max secret size: 25 KB
+#
+# HashiCorp Vault:
+# - Dynamic secrets with TTL-based rotation
+# - Automatic renewal and rotation
+# - Lease-based secret lifecycle
+# - Provider-dependent size limits
+#
+# Bitwarden/1Password/pass:
+# - No built-in rotation support
+# - Manual secret updates only
+# - Use external processes for rotation
+
+# Security Best Practices:
+#
+# 1. Rotation Frequency:
+#    - High-risk secrets (DB passwords): Weekly or monthly
+#    - Medium-risk secrets (API keys): Monthly or quarterly  
+#    - Low-risk secrets (config values): Quarterly or annually
+#
+# 2. Rotation Process:
+#    - Always test new secrets before deprecating old ones
+#    - Use staged rollouts with AWSPENDING in AWS
+#    - Keep old versions for emergency rollback
+#    - Monitor applications after rotation
+#
+# 3. Automation:
+#    - Set up automatic rotation where supported
+#    - Use CI/CD pipelines for scheduled rotation
+#    - Implement monitoring and alerting
+#    - Document rotation procedures
+#
+# 4. Value Generation:
+#    - Use cryptographically secure random generation
+#    - Follow provider-specific requirements
+#    - Consider character set limitations
+#    - Ensure sufficient entropy (32+ characters)

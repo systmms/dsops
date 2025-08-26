@@ -1,0 +1,12 @@
+version: 0
+
+providers:
+  literal-test:
+    type: literal
+    values:
+      TEST: test-value
+
+envs:
+  test:
+    TEST:
+      from: literal-test:TEST

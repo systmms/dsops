@@ -1,0 +1,80 @@
+# Google Cloud Unified Provider Example Configuration
+# This provider intelligently routes to different GCP services
+
+providers:
+  # Simple unified GCP provider
+  gcp:
+    type: gcp
+    project_id: my-gcp-project
+    default_service: secretmanager  # Default when service can't be auto-detected
+  
+  # Advanced unified provider with service-specific config
+  gcp-advanced:
+    type: gcp
+    project_id: my-production-project
+    service_account_key_path: ~/gcp/prod-service-account.json
+    default_service: secretmanager
+    
+    # Service-specific configurations
+    secretmanager:
+      use_plaintext_names: true
+      location: global
+
+envs:
+  production:
+    # Explicit service prefixes
+    DATABASE_PASSWORD:
+      from: gcp:sm:prod-database-password
+    
+    API_CONFIG:
+      from: gcp:secretmanager:api-configuration
+    
+    SHARED_KEY:
+      from: gcp:secrets:shared-encryption-key
+    
+    # Auto-detection based on format
+    SIMPLE_SECRET:
+      from: gcp:my-simple-secret  # Auto-detects as Secret Manager
+    
+    # Full resource name auto-detection
+    CROSS_PROJECT_SECRET:
+      from: gcp:projects/shared-project/secrets/shared-secret/versions/latest
+    
+    # Version specification auto-detection
+    VERSIONED_SECRET:
+      from: gcp:api-key:v1  # Auto-detects as Secret Manager with version
+    
+    # JSON extraction auto-detection
+    DATABASE_HOST:
+      from: gcp:database-config#.host  # Auto-detects as Secret Manager with JSON extraction
+    
+    # Using advanced provider
+    PROD_CONFIG:
+      from: gcp-advanced:production-configuration
+    
+    # Complex secret with transforms
+    CERTIFICATE:
+      from: gcp:ssl-certificate
+      transform:
+        - trim
+        - base64_decode
+
+# Smart Reference Detection for GCP:
+# 
+# 1. Explicit prefixes:
+#    sm:secret-name              -> Secret Manager
+#    secretmanager:secret-name   -> Secret Manager
+#    secrets:secret-name         -> Secret Manager
+#
+# 2. Auto-detection:
+#    projects/proj/secrets/...   -> Secret Manager (full resource name)
+#    secret-name:version         -> Secret Manager (version syntax)
+#    secret-name@version         -> Secret Manager (alternate version syntax)
+#    secret-name#.json.path      -> Secret Manager (JSON extraction)
+#    secret-name                 -> Default service (secretmanager)
+#
+# 3. Future extensibility:
+#    When we add more GCP services, the unified provider will 
+#    automatically route based on resource name patterns:
+#    - projects/proj/locations/loc/keyRings/... -> Cloud KMS
+#    - projects/proj/configs/...                -> Cloud Config
