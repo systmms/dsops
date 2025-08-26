@@ -1,0 +1,174 @@
+# Provider Rotation Capabilities
+# This file documents the rotation capabilities of providers that dsops supports
+# Only add providers that have been tested and verified
+
+providers:
+  # AWS Providers
+  aws-iam:
+    display_name: "AWS IAM Access Keys"
+    max_active_keys: 2
+    supports_expiration: false
+    supports_versioning: false
+    supports_revocation: true
+    rotation_api: false
+    recommended_strategies:
+      - two-key
+      - immediate
+    verified_date: "2025-08-19"
+    documentation: "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html"
+    notes: "Exactly 2 access keys per IAM user, designed specifically for rotation"
+    
+  aws-secrets-manager:
+    display_name: "AWS Secrets Manager"
+    max_active_keys: unlimited
+    supports_expiration: true
+    supports_versioning: true
+    supports_revocation: false
+    rotation_api: true
+    recommended_strategies:
+      - versioned
+      - overlap
+    verified_date: "2025-08-19"
+    documentation: "https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotating-secrets.html"
+    notes: "Native rotation with Lambda, supports automatic rotation schedules"
+
+  # Password Managers
+  bitwarden:
+    display_name: "Bitwarden"
+    max_active_keys: 1
+    supports_expiration: false
+    supports_versioning: true
+    supports_revocation: false
+    rotation_api: false
+    recommended_strategies:
+      - immediate
+    verified_date: "2025-08-19"
+    documentation: "https://bitwarden.com/help/cli/"
+    notes: "Password manager, updates overwrite existing values"
+    
+  onepassword:
+    display_name: "1Password"
+    max_active_keys: 1
+    supports_expiration: false
+    supports_versioning: true
+    supports_revocation: false
+    rotation_api: false
+    recommended_strategies:
+      - immediate
+    verified_date: "2025-08-19"
+    documentation: "https://developer.1password.com/docs/cli"
+    notes: "Password manager with version history, but only one active value"
+
+  # Database Credentials
+  postgres-user:
+    display_name: "PostgreSQL User"
+    max_active_keys: 1
+    supports_expiration: false
+    supports_versioning: false
+    supports_revocation: true
+    rotation_api: false
+    recommended_strategies:
+      - immediate
+      - postgres-two-secret  # Using secondary users
+    verified_date: "2025-08-19"
+    documentation: "https://www.postgresql.org/docs/current/sql-alteruser.html"
+    notes: "Single password per user, but can create secondary users for zero-downtime"
+
+  # API Key Providers
+  github-pat:
+    display_name: "GitHub Personal Access Token"
+    max_active_keys: unlimited
+    supports_expiration: true
+    supports_versioning: false
+    supports_revocation: true
+    rotation_api: false
+    recommended_strategies:
+      - immediate
+      - overlap
+    verified_date: "2025-08-19"
+    documentation: "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens"
+    notes: "Multiple independent tokens, not true active/inactive pairs. Fine-grained PATs have expiration."
+    
+  stripe-api-key:
+    display_name: "Stripe API Key"
+    max_active_keys: unlimited
+    supports_expiration: false
+    supports_versioning: false
+    supports_revocation: true
+    rotation_api: false
+    recommended_strategies:
+      - two-key
+    verified_date: "2025-08-19"
+    documentation: "https://docs.stripe.com/keys"
+    notes: "Supports multiple API keys for zero-downtime rotation"
+    
+  datadog-api-key:
+    display_name: "Datadog API Key"
+    max_active_keys: 50
+    supports_expiration: false
+    supports_versioning: false
+    supports_revocation: true
+    rotation_api: false
+    recommended_strategies:
+      - two-key
+    verified_date: "2025-08-19"
+    documentation: "https://docs.datadoghq.com/account_management/api-app-keys/"
+    notes: "Organization can have up to 50 API keys"
+
+  # Azure Providers  
+  azure-service-principal:
+    display_name: "Azure Service Principal"
+    max_active_keys: unlimited
+    supports_expiration: true
+    supports_versioning: false
+    supports_revocation: true
+    rotation_api: false
+    recommended_strategies:
+      - two-key
+      - overlap
+    verified_date: "2025-08-19"
+    documentation: "https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal"
+    notes: "Multiple client secrets with configurable expiration dates"
+
+# Strategy Definitions
+strategies:
+  two-key:
+    name: "Two-Key Rotation"
+    description: "Maintain two active keys for zero-downtime rotation"
+    downtime_risk: none
+    complexity: medium
+    requirements:
+      - "Provider must support at least 2 active keys"
+      
+  immediate:
+    name: "Immediate Replacement"
+    description: "Replace key immediately, accepting brief downtime"
+    downtime_risk: high
+    complexity: low
+    requirements:
+      - "Works with any provider"
+      
+  overlap:
+    name: "Overlap Period"
+    description: "Create new key with expiration overlap"
+    downtime_risk: low
+    complexity: medium
+    requirements:
+      - "Provider must support expiration dates"
+      
+  versioned:
+    name: "Versioned Rotation"
+    description: "Create new version while old remains accessible"
+    downtime_risk: none
+    complexity: low
+    requirements:
+      - "Provider must support versioning"
+      
+  postgres-two-secret:
+    name: "PostgreSQL Two-User"
+    description: "Use secondary database user for zero-downtime"
+    downtime_risk: none
+    complexity: high
+    requirements:
+      - "Database admin access"
+      - "Ability to create users"
