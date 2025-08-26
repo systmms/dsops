@@ -63,9 +63,23 @@ test-results/
 # Local dsops files
 dsops.lock
 .dsops-cache/
+.dsops/
 
-# Nix development environment
-.go/
-.direnv/
+# Nix
 result
 result-*
+.direnv/
+
+# Go cache directories (used by Nix)
+.go/
+.cache/
+
+# Local environment overrides
+.env.local
+
+# Hugo/Doks documentation
+docs/node_modules/
+docs/public/
+docs/resources/
+docs/.hugo_build.lock
+docs/package-lock.json
