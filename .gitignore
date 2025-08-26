@@ -1,0 +1,71 @@
+# Binaries
+/dsops
+/bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace
+go.work
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment files (exactly what dsops helps manage!)
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Build artifacts
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+
+# Security - never commit these
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# OS specific
+Thumbs.db
+.DS_Store
+
+# Test artifacts
+test-results/
+*.log
+
+# Local dsops files
+dsops.lock
+.dsops-cache/
+
+# Nix development environment
+.go/
+.direnv/
+result
+result-*
