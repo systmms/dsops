@@ -6,7 +6,7 @@ Automated system for generating retrospective specifications from the dsops code
 
 This system extracts metadata from code and populates markdown templates to generate specification documents. It automates the repetitive parts of spec creation while leaving strategic sections for human refinement.
 
-##Status
+## Status
 
 **✅ Completed**:
 - Provider spec template (`scripts/spec-templates/provider-template.md`)
