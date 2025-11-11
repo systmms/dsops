@@ -61,7 +61,99 @@ go test -race ./...                # Run with race detection
 # Testing with real configs
 ./bin/dsops plan --config examples/test-1password.yaml --env test
 ./bin/dsops doctor --config examples/bitwarden.yaml
+
+# Spec-Kit workflow (for feature development)
+uv tool run --from specify-cli specify --help  # or use 'speckit' alias after sourcing .envrc
 ```
+
+## Spec-Driven Development with Spec-Kit
+
+This project uses [GitHub Spec-Kit](https://github.com/github/spec-kit) for specification-driven development. Specs live in `specs/` directory and follow a structured workflow.
+
+### Using Spec-Kit
+
+**Command format:** `uv tool run --from specify-cli specify [command]`
+**Alias:** After sourcing `.envrc`, you can use `speckit [command]`
+
+### Key Spec-Kit Commands
+
+- **`speckit init`** - Initialize spec-kit in a new project (already done)
+- **`/speckit.constitution`** - Review project constitution and principles
+- **`/speckit.specify`** - Create a new feature specification
+- **`/speckit.plan`** - Generate technical implementation plan from spec
+- **`/speckit.tasks`** - Generate actionable task list from plan
+- **`/speckit.implement`** - Execute all tasks systematically
+- **`/speckit.clarify`** - Resolve ambiguities in specs
+- **`/speckit.analyze`** - Check cross-artifact consistency
+- **`/speckit.checklist`** - Quality validation checklist
+
+### Spec Directory Structure
+
+```
+specs/
+├── constitution.md              # Project governing principles
+├── features/                    # Feature specifications (001-049)
+├── rotation/                    # Rotation features (050-079)
+├── providers/                   # Provider implementations (080-099)
+└── future/                      # v0.2+ planned features (100+)
+```
+
+### When to Create Specs
+
+- **New features**: Always create a spec before implementation
+- **New providers**: Use spec-kit to document provider design
+- **Architectural changes**: Create spec + ADR for major decisions
+- **Bug fixes**: Small bugs don't need specs, but complex bug fixes may benefit from one
+
+### Spec Lifecycle
+
+1. **Draft** → Research and define requirements
+2. **In Review** → Team reviews and provides feedback
+3. **Accepted** → Ready for implementation planning
+4. **In Progress** → Implementation underway
+5. **Implemented** → Feature complete and tested
+6. **Retrospective** → Created after-the-fact for existing features
+
+### Integration with Existing Documentation
+
+Specs complement but don't replace:
+- **VISION.md**: High-level product vision (specs reference sections)
+- **ADRs**: Architectural decisions (specs link to relevant ADRs)
+- **Research docs**: Investigation findings (specs cite research)
+- **Hugo docs**: User/developer guides (specs inform documentation)
+
+### Automated Spec Generation
+
+For retrospective specs and repetitive spec types, use the automated generation system:
+
+**Generate Provider Specs** (14 providers):
+```bash
+# Generate all provider specs at once
+./scripts/generate-all-provider-specs.sh
+
+# Or generate individual provider spec
+./scripts/spec-gen/generate-provider-spec.sh <provider-type> <spec-number>
+# Example: ./scripts/spec-gen/generate-provider-spec.sh bitwarden 080
+```
+
+**How It Works**:
+1. Extracts metadata from provider code (struct names, imports, capabilities, tests)
+2. Populates template with extracted metadata
+3. Generates spec with [TODO] markers for manual completion
+
+**Generated specs include**:
+- ✅ Basic metadata (name, type, implementation date, files)
+- ✅ Authentication and integration methods
+- ✅ Capabilities matrix
+- ✅ Test coverage statistics
+- ⏳ [TODO] markers for strategic sections (design decisions, lessons learned, future enhancements)
+
+**After Generation**:
+1. Search for `[TODO]` in generated specs
+2. Fill in implementation details, design decisions, and lessons learned
+3. Review and refine before committing
+
+See `scripts/spec-gen/README.md` for complete documentation on the generation system.
 
 ## Terminology and Architecture
 

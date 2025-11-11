@@ -83,3 +83,8 @@ docs/public/
 docs/resources/
 docs/.hugo_build.lock
 docs/package-lock.json
+
+# Spec-Kit agent folders (may contain credentials/tokens)
+# Allow .claude/commands/ (framework), exclude potential credential storage
+.claude/*
+!.claude/commands/
