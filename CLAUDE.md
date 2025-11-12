@@ -122,39 +122,6 @@ Specs complement but don't replace:
 - **Research docs**: Investigation findings (specs cite research)
 - **Hugo docs**: User/developer guides (specs inform documentation)
 
-### Automated Spec Generation
-
-For retrospective specs and repetitive spec types, use the automated generation system:
-
-**Generate Provider Specs** (14 providers):
-```bash
-# Generate all provider specs at once
-./scripts/generate-all-provider-specs.sh
-
-# Or generate individual provider spec
-./scripts/spec-gen/generate-provider-spec.sh <provider-type> <spec-number>
-# Example: ./scripts/spec-gen/generate-provider-spec.sh bitwarden 080
-```
-
-**How It Works**:
-1. Extracts metadata from provider code (struct names, imports, capabilities, tests)
-2. Populates template with extracted metadata
-3. Generates spec with [TODO] markers for manual completion
-
-**Generated specs include**:
-- ✅ Basic metadata (name, type, implementation date, files)
-- ✅ Authentication and integration methods
-- ✅ Capabilities matrix
-- ✅ Test coverage statistics
-- ⏳ [TODO] markers for strategic sections (design decisions, lessons learned, future enhancements)
-
-**After Generation**:
-1. Search for `[TODO]` in generated specs
-2. Fill in implementation details, design decisions, and lessons learned
-3. Review and refine before committing
-
-See `scripts/spec-gen/README.md` for complete documentation on the generation system.
-
 ## Terminology and Architecture
 
 ### Important Terminology
