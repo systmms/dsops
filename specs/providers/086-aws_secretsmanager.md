@@ -12,7 +12,7 @@
 
 ## Summary
 
-The AWSSecretsManager provider enables secret retrieval from AWSSecretsManagerProvider implements the provider interface for AWS Secrets Manager. Implementation uses AWS SDK for Go for authentication and secret fetching. This provider supports [TODO: List key capabilities].
+The AWSSecretsManager provider enables secret retrieval from AWS Secrets Manager. Implementation uses AWS SDK for Go for authentication and secret fetching. This provider supports [TODO: List key capabilities].
 
 ## User Stories (As Built)
 

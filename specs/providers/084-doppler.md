@@ -12,7 +12,7 @@
 
 ## Summary
 
-The Doppler provider enables secret retrieval from DopplerProvider implements the provider.Provider interface for Doppler. Implementation uses CLI wrapper (executes doppler command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
+The Doppler provider enables secret retrieval from Doppler. Implementation uses CLI wrapper (executes doppler command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
 
 ## User Stories (As Built)
 

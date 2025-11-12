@@ -12,7 +12,7 @@
 
 ## Summary
 
-The AzureKeyVault provider enables secret retrieval from AzureKeyVaultProvider implements the Provider interface for Azure Key Vault. Implementation uses Azure SDK for Go for authentication and secret fetching. This provider supports [TODO: List key capabilities].
+The AzureKeyVault provider enables secret retrieval from Azure Key Vault. Implementation uses Azure SDK for Go for authentication and secret fetching. This provider supports [TODO: List key capabilities].
 
 ## User Stories (As Built)
 

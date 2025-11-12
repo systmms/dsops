@@ -12,7 +12,7 @@
 
 ## Summary
 
-The Bitwarden provider enables secret retrieval from BitwardenProvider implements the provider interface for Bitwarden. Implementation uses CLI wrapper (executes bitwarden command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
+The Bitwarden provider enables secret retrieval from Bitwarden. Implementation uses CLI wrapper (executes bitwarden command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
 
 ## User Stories (As Built)
 

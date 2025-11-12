@@ -12,7 +12,7 @@
 
 ## Summary
 
-The AWSSSM provider enables secret retrieval from AWSSSMProvider implements the Provider interface for AWS Systems Manager Parameter Store. Implementation uses AWS SDK for Go for authentication and secret fetching. This provider supports [TODO: List key capabilities].
+The AWSSSM provider enables secret retrieval from AWS Systems Manager Parameter Store. Implementation uses AWS SDK for Go for authentication and secret fetching. This provider supports [TODO: List key capabilities].
 
 ## User Stories (As Built)
 

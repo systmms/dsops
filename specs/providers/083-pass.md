@@ -12,7 +12,7 @@
 
 ## Summary
 
-The Pass provider enables secret retrieval from PassProvider implements the provider.Provider interface for pass (zx2c4). Implementation uses CLI wrapper (executes pass command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
+The Pass provider enables secret retrieval from pass (the standard Unix password manager). Implementation uses CLI wrapper (executes pass command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
 
 ## User Stories (As Built)
 

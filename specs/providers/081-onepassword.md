@@ -12,7 +12,7 @@
 
 ## Summary
 
-The OnePassword provider enables secret retrieval from OnePasswordProvider implements the provider.Provider interface for 1Password CLI. Implementation uses CLI wrapper (executes onepassword command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
+The OnePassword provider enables secret retrieval from 1Password. Implementation uses CLI wrapper (executes onepassword command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
 
 ## User Stories (As Built)
 
