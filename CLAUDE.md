@@ -108,12 +108,37 @@ This project uses [GitHub Spec-Kit](https://github.com/github/spec-kit) for spec
 
 ```
 specs/
-├── constitution.md              # Project governing principles
-├── features/                    # Feature specifications (001-049)
-├── rotation/                    # Rotation features (050-079)
-├── providers/                   # Provider implementations (080-099)
-└── future/                      # v0.2+ planned features (100+)
+├── 001-cli-framework/
+│   └── spec.md                  # Retrospective spec
+├── 002-configuration-parsing/
+│   └── spec.md
+├── 003-secret-resolution-engine/
+│   └── spec.md
+├── 004-transform-pipeline/
+│   └── spec.md
+├── 080-bitwarden/
+│   └── spec.md                  # Provider retrospective specs
+├── 081-onepassword/
+│   └── spec.md
+├── 082-literal/
+│   └── spec.md
+... (additional numbered spec directories)
+└── future/                      # Unstructured future ideas
 ```
+
+**Numbering convention:**
+- **001-049**: Core feature specifications
+- **050-079**: Rotation feature specifications
+- **080-099**: Secret store provider specifications
+- **100+**: Future/planned features
+
+Each spec directory follows the standard spec-kit structure:
+- `spec.md` - Feature specification (required)
+- `plan.md` - Technical implementation plan (created by `/speckit.plan`)
+- `tasks.md` - Task breakdown (created by `/speckit.tasks`)
+- `research.md` - Research findings and decisions
+- `data-model.md` - Data models and schemas
+- `contracts/` - API contracts and interfaces
 
 ### When to Create Specs
 
