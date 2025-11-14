@@ -6,24 +6,41 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **dsops** is a cross-platform CLI tool that pulls secrets from various providers (password managers like 1Password/Bitwarden, cloud secret stores like AWS Secrets Manager) and either renders environment files or executes commands with ephemeral environment variables. It's designed with security-first principles: secrets are never written to disk by default, all logging automatically redacts sensitive values, and the primary workflow is ephemeral execution.
 
-## Vision and Implementation Tracking
+## Project Documentation Structure
 
-**VISION.md** defines the complete product vision, architecture, security model, and roadmap for dsops. It serves as the source of truth for what the tool should become.
+**Constitution** (`.specify/memory/constitution.md`): Defines governing principles, development philosophy, and non-negotiable architectural decisions. This is the source of truth for "why" dsops is built the way it is.
 
-**VISION_IMPLEMENTATION.md** is a living document that tracks implementation progress against VISION.md. It contains detailed tables showing completion status of all features, providers, commands, and components.
+**Specifications** (`specs/`): Feature-specific implementation plans with user stories, acceptance criteria, and technical details. This is the source of truth for "how" features are built.
 
-**VISION_ROTATE.md** defines the complete secret rotation vision, including data-driven architecture using dsops-data.
+**Status Dashboard** (`docs/content/reference/status.md`): High-level implementation status with links to active specs and current priorities. **This is the single source of truth for "what's being worked on now".**
 
-**VISION_ROTATE_IMPLEMENTATION.md** tracks implementation progress for secret rotation features, including the new data-driven service architecture.
+**Always update tracking documents when doing work**:
+- **Active specs**: Update spec frontmatter (`Status: Draft` → `In Progress` → `Implemented`)
+- **Status dashboard**: Update docs/content/reference/status.md when major milestones completed
+- **Constitution**: Update only when adding/changing governing principles
 
-**Always update vision documents when doing rotation work**:
-- **VISION_ROTATE.md**: Update when adding new rotation features, capabilities, or architectural changes
-- **VISION_ROTATE_IMPLEMENTATION.md**: Update when completing rotation features - change status from ❌ **Not Started** → 🟢 **Started** → ✅ **Complete**
-- **VISION_IMPLEMENTATION.md**: Update when completing core features (non-rotation)
+**To find current priorities**: See [Status Dashboard](docs/content/reference/status.md) for active specifications and implementation focus areas.
 
-These documents are essential for tracking progress and planning future work.
+**Note**: All VISION*.md documents have been retired. Implementation tracking is now exclusively via spec-kit specifications.
 
 Current status: v0.1 MVP is 100% complete with Bitwarden, 1Password, and AWS Secrets Manager providers.
+
+## Finding Current Work and Priorities
+
+**Not sure what's being worked on?** → Check [Status Dashboard](docs/content/reference/status.md)
+
+The status dashboard shows:
+- ✅ **Active specifications** by category (testing, rotation, providers, etc.)
+- ✅ **Current implementation progress** (% complete, what's next)
+- ✅ **Priority features** for upcoming milestones
+- ✅ **Links to detailed specs** for each active feature
+
+**Examples**:
+- Working on testing? → Status dashboard links to active testing spec
+- Working on rotation? → Status dashboard links to active rotation specs
+- Need to see roadmap? → Status dashboard has v0.2, v0.3+ milestones
+
+**Do NOT reference specific spec numbers in CLAUDE.md** - they change status over time. Always reference status.md which is kept up-to-date.
 
 ## Development Environment
 
@@ -117,7 +134,7 @@ specs/
 ### Integration with Existing Documentation
 
 Specs complement but don't replace:
-- **VISION.md**: High-level product vision (specs reference sections)
+- **Constitution**: Governing principles and project philosophy (specs reference principles)
 - **ADRs**: Architectural decisions (specs link to relevant ADRs)
 - **Research docs**: Investigation findings (specs cite research)
 - **Hugo docs**: User/developer guides (specs inform documentation)
@@ -246,7 +263,8 @@ When adding new secret store providers:
 4. Add provider type to `cmd/dsops/commands/providers.go` descriptions
 5. Create example configuration in `examples/`
 6. Add documentation to `docs/PROVIDERS.md`
-7. Update `VISION_IMPLEMENTATION.md` to mark provider as complete
+7. Create retrospective spec in `specs/providers/` (e.g., SPEC-090 for new provider)
+8. Update `docs/content/reference/status.md` high-level metrics if needed
 
 ### Adding Service Support
 
@@ -259,7 +277,7 @@ When adding new service integrations:
    - `policies/` - rotation schedules and rules
    - `principals/` - access control definitions
 3. Service implementations use generic rotation engine + data-driven configuration
-4. Update `VISION_ROTATE_IMPLEMENTATION.md` when completing service integrations
+4. Update `SPEC-050` when completing rotation Phase 5 service integrations
 
 ## Provider Evaluation Framework
 
@@ -319,18 +337,24 @@ This framework ensures we prioritize providers that deliver maximum value while 
 
 ## Key Files to Know
 
-- **`VISION.md`**: Complete product vision and architecture
-- **`VISION_IMPLEMENTATION.md`**: Implementation progress tracking (update when completing features!)
-- **`VISION_ROTATE.md`**: Secret rotation vision including data-driven architecture (**update when adding rotation features**)
-- **`VISION_ROTATE_IMPLEMENTATION.md`**: Rotation feature implementation progress (**update when completing rotation work**)
+**Documentation & Tracking**:
+- **`.specify/memory/constitution.md`**: Project principles and governing philosophy
+- **`docs/content/reference/status.md`**: **Single source of truth for current priorities, active specs, and implementation status**
+- **`specs/`**: All feature specifications (organized by category: features/, rotation/, providers/, future/)
+
+**Core Code**:
 - **`internal/providers/registry.go`**: Provider registration system
 - **`internal/resolve/resolver.go`**: Core resolution logic
 - **`pkg/provider/provider.go`**: Provider interface definition
 - **`internal/logging/logger.go`**: Security-aware logging system
+
+**Documentation Resources**:
 - **`docs/PROVIDERS.md`**: Provider-specific documentation
 - **`docs/research/`**: Research findings - **always document research using the template**
 - **`docs/DSOPS_DATA_INTEGRATION.md`**: Architecture for integrating with dsops-data repository
 - **`examples/`**: Working configuration examples for testing and documentation
+
+**Finding Current Work**: See [Status Dashboard](docs/content/reference/status.md) for active specs in testing, rotation, and other areas.
 
 ## Research Documentation
 
@@ -340,7 +364,7 @@ When conducting research (market analysis, technical investigations, provider ev
 2. **Name files with date prefix**: `YYYY-MM-DD-topic-name.md`
 3. **Document sources**: Include all URLs, tools tested, and documentation reviewed
 4. **Focus on implications**: How findings affect dsops design and implementation
-5. **Update related docs**: If research impacts VISION.md or other docs, update them
+5. **Update related docs**: If research impacts constitution.md, specs, or other docs, update them
 
 This ensures knowledge is preserved and decisions are traceable.
 
@@ -348,11 +372,14 @@ This ensures knowledge is preserved and decisions are traceable.
 
 When working on secret rotation features:
 
-1. **Update VISION_ROTATE.md**: Document new rotation capabilities, architectural changes, or feature additions
-2. **Update VISION_ROTATE_IMPLEMENTATION.md**: Mark features as started/completed, update progress percentages
-3. **Follow data-driven approach**: Use dsops-data for service definitions rather than hardcoding
-4. **Test with dsops-data**: Use `--data-dir ./dsops-data` flag to test with community service definitions
-5. **Document integration patterns**: Show how new features work with existing dsops-data schemas
+1. **Check current rotation specs**: See [Status Dashboard](docs/content/reference/status.md) for active rotation specifications
+2. **Update active specs**: Mark features as started/in-progress/implemented in spec frontmatter
+3. **Update constitution.md**: If adding new architectural principles or rotation philosophies
+4. **Follow data-driven approach**: Use dsops-data for service definitions rather than hardcoding
+5. **Test with dsops-data**: Use `--data-dir ./dsops-data` flag to test with community service definitions
+6. **Document integration patterns**: Show how new features work with existing dsops-data schemas
+
+**Note**: All rotation work is tracked via spec-kit specifications in `specs/rotation/`. Check status.md for current rotation priorities.
 
 The rotation system is built on a data-driven architecture where service definitions come from the dsops-data repository, enabling support for hundreds of services without hardcoded implementations.
 

@@ -192,7 +192,7 @@ Every feature requires:
 5. **Tasks** → Break down into tasks using `/speckit.tasks`
 6. **Implement** → TDD cycle: test → implement → refactor
 7. **Document** → Update Hugo docs, examples, CLI help
-8. **Update tracking** → Mark spec as implemented, update VISION.md if needed
+8. **Update tracking** → Mark spec as implemented in frontmatter, update docs/content/reference/status.md if milestone
 
 ### Code Review Standards
 
