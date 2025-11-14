@@ -1,7 +1,7 @@
 # SPEC-005: Testing Strategy & Plan
 
-**Status**: Draft
-**Feature Branch**: TBD
+**Status**: In Progress
+**Feature Branch**: feature/005-testing-strategy
 **Target Milestone**: v0.2
 **Related**:
 - Constitution Principle VII (Test-Driven Development)
