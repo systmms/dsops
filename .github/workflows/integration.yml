@@ -1,0 +1,122 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      vault:
+        image: hashicorp/vault:1.15
+        env:
+          VAULT_DEV_ROOT_TOKEN_ID: test-root-token
+          VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+        ports:
+          - 8200:8200
+        options: >-
+          --cap-add=IPC_LOCK
+          --health-cmd "vault status"
+          --health-interval 2s
+          --health-timeout 1s
+          --health-retries 10
+
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test-password
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 2s
+          --health-timeout 1s
+          --health-retries 10
+
+      localstack:
+        image: localstack/localstack:latest
+        env:
+          SERVICES: secretsmanager,ssm
+          DEBUG: 1
+        ports:
+          - 4566:4566
+        options: >-
+          --health-cmd "curl -f http://localhost:4566/_localstack/health || exit 1"
+          --health-interval 2s
+          --health-timeout 1s
+          --health-retries 10
+
+      mongodb:
+        image: mongo:7
+        env:
+          MONGO_INITDB_ROOT_USERNAME: test
+          MONGO_INITDB_ROOT_PASSWORD: test-password
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")' --quiet"
+          --health-interval 2s
+          --health-timeout 1s
+          --health-retries 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for services to be healthy..."
+          timeout 30 bash -c 'until curl -f http://localhost:8200/v1/sys/health > /dev/null 2>&1; do sleep 1; done' || echo "Vault health check timed out"
+          timeout 30 bash -c 'until pg_isready -h localhost -p 5432 -U test > /dev/null 2>&1; do sleep 1; done' || echo "PostgreSQL health check timed out"
+          timeout 30 bash -c 'until curl -f http://localhost:4566/_localstack/health > /dev/null 2>&1; do sleep 1; done' || echo "LocalStack health check timed out"
+          echo "All services are ready"
+
+      - name: Run integration tests
+        run: go test -v -race -coverprofile=coverage-integration.txt -covermode=atomic ./tests/integration/...
+        env:
+          # Vault configuration
+          VAULT_ADDR: http://localhost:8200
+          VAULT_TOKEN: test-root-token
+          # PostgreSQL configuration
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test-password
+          POSTGRES_DB: testdb
+          # LocalStack configuration
+          AWS_ENDPOINT: http://localhost:4566
+          AWS_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          # MongoDB configuration
+          MONGODB_URI: mongodb://test:test-password@localhost:27017
+
+      - name: Upload integration coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage-integration.txt
+          flags: integration
+          name: codecov-integration
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
