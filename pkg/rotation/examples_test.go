@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/systmms/dsops/internal/dsopsdata"
@@ -61,7 +62,7 @@ func ExampleSecretValueRotator_basic() {
 
 	// Output:
 	// Rotation status: completed
-	// Rotated at: 2025-08-26 12:00
+	// Rotated at: 2025-11-15 12:00
 	// Verification tests passed: 1
 	// Audit trail entries: 4
 }
@@ -408,28 +409,45 @@ func (r *MockDatabaseRotator) SupportsSecret(ctx context.Context, secret rotatio
 }
 
 func (r *MockDatabaseRotator) Rotate(ctx context.Context, request rotation.RotationRequest) (*rotation.RotationResult, error) {
-	now := time.Now()
-	
-	result := &rotation.RotationResult{
-		Secret:    request.Secret,
-		Status:    rotation.StatusCompleted,
-		RotatedAt: &now,
-		VerificationResults: []rotation.VerificationResult{
-			{
-				Test: rotation.VerificationTest{
-					Name: "connection_test",
-					Type: rotation.TestTypeConnection,
-				},
-				Status:   rotation.TestStatusPassed,
-				Duration: 100 * time.Millisecond,
-				Message:  "Database connection successful",
+	// Use fixed timestamp for consistent example output
+	fixedTime := time.Date(2025, 11, 15, 12, 0, 0, 0, time.UTC)
+
+	// Build verification results based on request constraints
+	verificationResults := []rotation.VerificationResult{
+		{
+			Test: rotation.VerificationTest{
+				Name: "connection_test",
+				Type: rotation.TestTypeConnection,
 			},
+			Status:   rotation.TestStatusPassed,
+			Duration: 100 * time.Millisecond,
+			Message:  "Database connection successful",
 		},
+	}
+
+	// If there are required tests in constraints, add them to results
+	if request.Secret.Constraints != nil && len(request.Secret.Constraints.RequiredTests) > 1 {
+		verificationResults = append(verificationResults, rotation.VerificationResult{
+			Test: rotation.VerificationTest{
+				Name: "permission_test",
+				Type: rotation.TestTypeQuery,
+			},
+			Status:   rotation.TestStatusPassed,
+			Duration: 50 * time.Millisecond,
+			Message:  "Permission check successful",
+		})
+	}
+
+	result := &rotation.RotationResult{
+		Secret:              request.Secret,
+		Status:              rotation.StatusCompleted,
+		RotatedAt:           &fixedTime,
+		VerificationResults: verificationResults,
 		AuditTrail: []rotation.AuditEntry{
-			{Timestamp: now, Action: "rotation_started", Status: "success"},
-			{Timestamp: now, Action: "password_generated", Status: "success"},
-			{Timestamp: now, Action: "database_updated", Status: "success"},
-			{Timestamp: now, Action: "verification_completed", Status: "success"},
+			{Timestamp: fixedTime, Action: "rotation_started", Status: "success"},
+			{Timestamp: fixedTime, Action: "password_generated", Status: "success"},
+			{Timestamp: fixedTime, Action: "database_updated", Status: "success"},
+			{Timestamp: fixedTime, Action: "verification_completed", Status: "success"},
 		},
 	}
 
@@ -450,10 +468,10 @@ func (r *MockDatabaseRotator) Rollback(ctx context.Context, request rotation.Rol
 }
 
 func (r *MockDatabaseRotator) GetStatus(ctx context.Context, secret rotation.SecretInfo) (*rotation.RotationStatusInfo, error) {
-	now := time.Now()
+	fixedTime := time.Date(2025, 11, 15, 12, 0, 0, 0, time.UTC)
 	return &rotation.RotationStatusInfo{
 		Status:      rotation.StatusCompleted,
-		LastRotated: &now,
+		LastRotated: &fixedTime,
 		CanRotate:   true,
 	}, nil
 }
@@ -471,11 +489,11 @@ func (r *MockAPIKeyRotator) SupportsSecret(ctx context.Context, secret rotation.
 }
 
 func (r *MockAPIKeyRotator) Rotate(ctx context.Context, request rotation.RotationRequest) (*rotation.RotationResult, error) {
-	now := time.Now()
+	fixedTime := time.Date(2025, 11, 15, 12, 0, 0, 0, time.UTC)
 	return &rotation.RotationResult{
 		Secret:    request.Secret,
 		Status:    rotation.StatusCompleted,
-		RotatedAt: &now,
+		RotatedAt: &fixedTime,
 	}, nil
 }
 
@@ -488,11 +506,11 @@ func (r *MockAPIKeyRotator) Rollback(ctx context.Context, request rotation.Rollb
 }
 
 func (r *MockAPIKeyRotator) GetStatus(ctx context.Context, secret rotation.SecretInfo) (*rotation.RotationStatusInfo, error) {
-	now := time.Now()
+	fixedTime := time.Date(2025, 11, 15, 12, 0, 0, 0, time.UTC)
 	return &rotation.RotationStatusInfo{
 		Status:    rotation.StatusCompleted,
 		CanRotate: true,
-		LastRotated: &now,
+		LastRotated: &fixedTime,
 	}, nil
 }
 
@@ -509,11 +527,11 @@ func (r *MockCertificateRotator) SupportsSecret(ctx context.Context, secret rota
 }
 
 func (r *MockCertificateRotator) Rotate(ctx context.Context, request rotation.RotationRequest) (*rotation.RotationResult, error) {
-	now := time.Now()
+	fixedTime := time.Date(2025, 11, 15, 12, 0, 0, 0, time.UTC)
 	return &rotation.RotationResult{
 		Secret:    request.Secret,
 		Status:    rotation.StatusCompleted,
-		RotatedAt: &now,
+		RotatedAt: &fixedTime,
 	}, nil
 }
 
@@ -526,11 +544,11 @@ func (r *MockCertificateRotator) Rollback(ctx context.Context, request rotation.
 }
 
 func (r *MockCertificateRotator) GetStatus(ctx context.Context, secret rotation.SecretInfo) (*rotation.RotationStatusInfo, error) {
-	now := time.Now()
+	fixedTime := time.Date(2025, 11, 15, 12, 0, 0, 0, time.UTC)
 	return &rotation.RotationStatusInfo{
 		Status:    rotation.StatusCompleted,
 		CanRotate: true,
-		LastRotated: &now,
+		LastRotated: &fixedTime,
 	}, nil
 }
 
@@ -582,11 +600,11 @@ func (r *MockSchemaAwareRotator) SupportsSecret(ctx context.Context, secret rota
 }
 
 func (r *MockSchemaAwareRotator) Rotate(ctx context.Context, request rotation.RotationRequest) (*rotation.RotationResult, error) {
-	now := time.Now()
+	fixedTime := time.Date(2025, 11, 15, 12, 0, 0, 0, time.UTC)
 	return &rotation.RotationResult{
 		Secret:    request.Secret,
 		Status:    rotation.StatusCompleted,
-		RotatedAt: &now,
+		RotatedAt: &fixedTime,
 	}, nil
 }
 
@@ -599,11 +617,11 @@ func (r *MockSchemaAwareRotator) Rollback(ctx context.Context, request rotation.
 }
 
 func (r *MockSchemaAwareRotator) GetStatus(ctx context.Context, secret rotation.SecretInfo) (*rotation.RotationStatusInfo, error) {
-	now := time.Now()
+	fixedTime := time.Date(2025, 11, 15, 12, 0, 0, 0, time.UTC)
 	return &rotation.RotationStatusInfo{
 		Status:    rotation.StatusCompleted,
 		CanRotate: true,
-		LastRotated: &now,
+		LastRotated: &fixedTime,
 	}, nil
 }
 
@@ -629,6 +647,7 @@ func (e *MockRotationEngine) ListStrategies() []string {
 	for name := range e.strategies {
 		names = append(names, name)
 	}
+	sort.Strings(names)
 	return names
 }
 

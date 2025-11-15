@@ -13,13 +13,14 @@ import (
 // Example demonstrates basic secret store usage with URI references
 func ExampleSecretStore_basic() {
 	// Create a mock secret store for demonstration
+	fixedTime := time.Date(2025, 11, 15, 0, 0, 0, 0, time.UTC)
 	store := &MockSecretStore{
 		name: "example-store",
 		secrets: map[string]secretstore.SecretValue{
 			"database/credentials": {
 				Value:     `{"username":"dbuser","password":"secret123"}`,
 				Version:   "v1.0",
-				UpdatedAt: time.Now(),
+				UpdatedAt: fixedTime,
 				Metadata: map[string]string{
 					"environment": "production",
 					"created_by":  "platform-team",
@@ -317,7 +318,7 @@ func ExampleSecretRef_String() {
 
 	// Convert to URI string
 	uri := ref.String()
-	fmt.Printf("Original ref: %+v\n", ref)
+	fmt.Printf("Original ref: %s\n", ref.String())
 	fmt.Printf("URI: %s\n", uri)
 
 	// Parse back from URI
@@ -326,17 +327,17 @@ func ExampleSecretRef_String() {
 		log.Fatalf("Failed to parse URI: %v", err)
 	}
 
-	fmt.Printf("Parsed ref: %+v\n", parsed)
-	fmt.Printf("Round-trip successful: %t\n", 
+	fmt.Printf("Parsed ref: %s\n", parsed.String())
+	fmt.Printf("Round-trip successful: %t\n",
 		ref.Store == parsed.Store &&
 		ref.Path == parsed.Path &&
 		ref.Field == parsed.Field &&
 		ref.Version == parsed.Version)
 
 	// Output:
-	// Original ref: {Store:production-vault Path:services/api/credentials Field:api_key Version:latest Options:map[namespace:production region:us-east-1]}
-	// URI: store://production-vault/services/api/credentials#api_key?version=latest&namespace=production&region=us-east-1
-	// Parsed ref: {Store:production-vault Path:services/api/credentials Field:api_key Version:latest Options:map[namespace:production region:us-east-1]}
+	// Original ref: store://production-vault/services/api/credentials#api_key?namespace=production&region=us-east-1&version=latest
+	// URI: store://production-vault/services/api/credentials#api_key?namespace=production&region=us-east-1&version=latest
+	// Parsed ref: store://production-vault/services/api/credentials#api_key?namespace=production&region=us-east-1&version=latest
 	// Round-trip successful: true
 }
 
@@ -381,7 +382,7 @@ func (m *MockSecretStore) Resolve(ctx context.Context, ref secretstore.SecretRef
 	if ref.Field != "" {
 		// In a real implementation, this would extract the field from JSON/YAML
 		// For the mock, we'll just return the full value
-		fmt.Printf("Field extraction requested: %s\n", ref.Field)
+		// (No output for example test consistency)
 	}
 
 	return secret, nil

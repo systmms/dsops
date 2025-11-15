@@ -13,13 +13,15 @@ import (
 // Example demonstrates basic usage of a provider
 func ExampleProvider_basic() {
 	// Create a mock provider for demonstration
+	// Use fixed date for consistent example output
+	fixedDate := time.Date(2025, 11, 15, 0, 0, 0, 0, time.UTC)
 	mockProvider := &ExampleMockProvider{
 		name: "example-provider",
 		secrets: map[string]provider.SecretValue{
 			"database/password": {
 				Value:     "secret-password-123",
 				Version:   "v1",
-				UpdatedAt: time.Now(),
+				UpdatedAt: fixedDate,
 				Metadata: map[string]string{
 					"environment": "production",
 					"owner":       "platform-team",
@@ -53,7 +55,7 @@ func ExampleProvider_basic() {
 
 	// Output:
 	// Secret version: v1
-	// Updated at: 2025-08-26
+	// Updated at: 2025-11-15
 	// Environment: production
 }
 
