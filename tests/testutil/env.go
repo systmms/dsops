@@ -1,8 +1,11 @@
 package testutil
 
 import (
+	"fmt"
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 )
 
 // SetupTestEnv sets environment variables for the duration of a test.
@@ -133,4 +136,36 @@ func WithEnv(t *testing.T, vars map[string]string, fn func()) {
 	}()
 
 	fn()
+}
+
+// RandomString generates a random string with a prefix and random suffix.
+//
+// This is useful for generating unique names for test resources (users, tables, etc.)
+// to avoid conflicts between parallel tests.
+//
+// Example usage:
+//
+//	username := RandomString("test_user", 8)
+//	// Returns something like: "test_user_a7f9k2d5"
+//
+// Parameters:
+//   - prefix: String to prepend to the random suffix
+//   - length: Length of the random suffix (default 8 if 0)
+//
+// Returns:
+//   - A string in the format: prefix_randomsuffix
+func RandomString(prefix string, length int) string {
+	if length == 0 {
+		length = 8
+	}
+
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+	seededRand := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+
+	return fmt.Sprintf("%s_%s", prefix, string(b))
 }
