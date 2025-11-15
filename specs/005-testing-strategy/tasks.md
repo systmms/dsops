@@ -118,24 +118,24 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 - [X] T035 [P] [US1] Test TransformTemplate in internal/resolve/transforms_test.go (Go templates, variable substitution, template errors)
 - [X] T036 [P] [US1] Test transform pipeline chaining in internal/resolve/transforms_test.go (multiple transforms, order matters)
 
-### Configuration Tests (internal/config: 44.9% → 80%)
+### Configuration Tests (internal/config: 44.9% → 83.3%)
 
-- [ ] T037 [P] [US1] Test YAML parsing (v1 format) in internal/config/config_test.go (valid config, secretStores section, services section, envs section)
-- [ ] T038 [P] [US1] Test YAML parsing (v0 legacy format) in internal/config/config_test.go (providers section, backward compatibility)
-- [ ] T039 [P] [US1] Test config validation in internal/config/validation_test.go (missing version, unknown provider type, invalid references)
-- [ ] T040 [P] [US1] Test v0 → v1 migration in internal/config/migration_test.go (providers → secretStores, config transformation)
-- [ ] T041 [P] [US1] Test schema validation in internal/config/schema_test.go (required fields, type checking, format validation)
-- [ ] T042 [P] [US1] Test config merging in internal/config/merge_test.go (environment-specific overrides, precedence rules)
+- [X] T037 [P] [US1] Test YAML parsing (v1 format) in internal/config/config_test.go (valid config, secretStores section, services section, envs section)
+- [X] T038 [P] [US1] Test YAML parsing (v0 legacy format) in internal/config/legacy_format_test.go (providers section, backward compatibility)
+- [X] T039 [P] [US1] Test config validation in internal/config/validation_test.go (missing version, unknown provider type, invalid references)
+- [X] T040 [P] [US1] Test v0 → v1 migration in internal/config/legacy_format_test.go (backward compatibility via GetProvider, ToSecretRef conversion)
+- [X] T041 [P] [US1] Test schema validation in internal/config/validation_test.go (required fields, type checking, format validation)
+- [X] T042 [P] [US1] Test config merging - SKIPPED (no merging functionality exists in codebase)
 
-### Rotation Engine Tests (internal/rotation: 0% → 75%)
+### Rotation Engine Tests (internal/rotation: 0% → 81.6%)
 
-- [ ] T043 [P] [US1] Test immediate strategy in internal/rotation/strategies_test.go (immediate rotation, no overlap, validation)
-- [ ] T044 [P] [US1] Test two-key strategy in internal/rotation/strategies_test.go (old and new keys coexist, validation order)
-- [ ] T045 [P] [US1] Test overlap strategy in internal/rotation/strategies_test.go (grace period, old key removal)
-- [ ] T046 [P] [US1] Test connection verification in internal/rotation/verify_test.go (successful connection, failed connection, timeout)
-- [ ] T047 [P] [US1] Test grace period handling in internal/rotation/grace_test.go (timer management, expiration, cleanup)
-- [ ] T048 [P] [US1] Test rotation state machine in internal/rotation/engine_test.go (state transitions, error handling, rollback)
-- [ ] T049 [P] [US1] Test rotation storage in internal/rotation/storage/storage_test.go (save state, load state, state persistence)
+- [X] T043 [P] [US1] Test rotation capabilities system in internal/rotation/capabilities_test.go (provider capabilities, strategy validation, max active keys) - ADAPTED: Strategy implementations don't exist yet
+- [X] T044 [P] [US1] Test rotation capabilities in internal/rotation/capabilities_test.go (two-key requirements, overlap requirements, versioned requirements) - ADAPTED: Tests capabilities registry instead
+- [X] T045 [P] [US1] Test rotation capabilities in internal/rotation/capabilities_test.go (recommended strategies, provider support) - ADAPTED: Tests capabilities YAML loading
+- [X] T046 [P] [US1] SKIPPED - connection verification code doesn't exist yet
+- [X] T047 [P] [US1] SKIPPED - grace period handling code doesn't exist yet
+- [X] T048 [P] [US1] SKIPPED - rotation state machine code doesn't exist yet
+- [X] T049 [P] [US1] Test rotation storage in internal/rotation/storage/storage_test.go (save state, load state, state persistence, history, cleanup)
 
 ### Failing Test Fixes
 
