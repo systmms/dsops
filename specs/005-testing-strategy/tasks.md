@@ -263,11 +263,11 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 
 ### CI/CD Workflows
 
-- [ ] T071 [P] [US5] Create test workflow in .github/workflows/test.yml (unit tests with coverage, race detection, codecov upload)
-- [ ] T072 [P] [US5] Create integration test workflow in .github/workflows/integration.yml (Docker-based integration tests)
-- [ ] T073 [P] [US5] Add coverage gate to test workflow in .github/workflows/test.yml (fail if coverage <80%, clear error message)
-- [ ] T074 [US5] Configure codecov.io integration (codecov.yml config, GitHub App installation)
-- [ ] T075 [US5] Add coverage badge to README.md (codecov.io badge, links to coverage report)
+- [X] T071 [P] [US5] Create test workflow in .github/workflows/test.yml (unit tests with coverage, race detection, codecov upload)
+- [X] T072 [P] [US5] Create integration test workflow in .github/workflows/integration.yml (Docker-based integration tests)
+- [X] T073 [P] [US5] Add coverage gate to test workflow in .github/workflows/test.yml (fail if coverage <80%, clear error message)
+- [X] T074 [US5] Configure codecov.io integration (codecov.yml config, GitHub App installation)
+- [X] T075 [US5] Add coverage badge to README.md (codecov.io badge, links to coverage report)
 
 **Checkpoint US5**:
 - CI runs successfully on PRs
