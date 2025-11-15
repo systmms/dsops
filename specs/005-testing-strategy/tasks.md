@@ -108,15 +108,15 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 
 ### Resolution Engine Tests (internal/resolve: 0% → 85%)
 
-- [ ] T028 [P] [US1] Test dependency graph resolution in internal/resolve/resolver_test.go (simple resolution, dependency chains, parallel resolution)
-- [ ] T029 [P] [US1] Test circular dependency detection in internal/resolve/resolver_test.go (detect cycles, error messages)
-- [ ] T030 [P] [US1] Test error aggregation in internal/resolve/resolver_test.go (multiple errors, error formatting)
-- [ ] T031 [P] [US1] Test TransformJSONExtract in internal/resolve/transforms_test.go (simple paths, nested paths, arrays, invalid JSON)
-- [ ] T032 [P] [US1] Test TransformBase64Decode in internal/resolve/transforms_test.go (valid base64, invalid base64, empty input)
-- [ ] T033 [P] [US1] Test TransformYAMLExtract in internal/resolve/transforms_test.go (valid YAML, nested keys, invalid YAML)
-- [ ] T034 [P] [US1] Test TransformRegexReplace in internal/resolve/transforms_test.go (pattern matching, capture groups, invalid regex)
-- [ ] T035 [P] [US1] Test TransformTemplate in internal/resolve/transforms_test.go (Go templates, variable substitution, template errors)
-- [ ] T036 [P] [US1] Test transform pipeline chaining in internal/resolve/transforms_test.go (multiple transforms, order matters)
+- [X] T028 [P] [US1] Test dependency graph resolution in internal/resolve/resolver_test.go (simple resolution, dependency chains, parallel resolution)
+- [X] T029 [P] [US1] Test circular dependency detection in internal/resolve/resolver_test.go (detect cycles, error messages)
+- [X] T030 [P] [US1] Test error aggregation in internal/resolve/resolver_test.go (multiple errors, error formatting)
+- [X] T031 [P] [US1] Test TransformJSONExtract in internal/resolve/transforms_test.go (simple paths, nested paths, arrays, invalid JSON)
+- [X] T032 [P] [US1] Test TransformBase64Decode in internal/resolve/transforms_test.go (valid base64, invalid base64, empty input)
+- [X] T033 [P] [US1] Test TransformYAMLExtract in internal/resolve/transforms_test.go (valid YAML, nested keys, invalid YAML)
+- [X] T034 [P] [US1] Test TransformRegexReplace in internal/resolve/transforms_test.go (pattern matching, capture groups, invalid regex)
+- [X] T035 [P] [US1] Test TransformTemplate in internal/resolve/transforms_test.go (Go templates, variable substitution, template errors)
+- [X] T036 [P] [US1] Test transform pipeline chaining in internal/resolve/transforms_test.go (multiple transforms, order matters)
 
 ### Configuration Tests (internal/config: 44.9% → 80%)
 
