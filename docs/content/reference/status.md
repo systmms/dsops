@@ -3,7 +3,7 @@ title: "Project Status & Roadmap"
 description: "Current implementation status and future roadmap"
 lead: "High-level project status with links to detailed feature specifications and implementation plans."
 date: 2025-11-13T12:00:00-07:00
-lastmod: 2025-11-13T12:00:00-07:00
+lastmod: 2025-11-15T10:00:00-07:00
 draft: false
 weight: 30
 ---
@@ -27,22 +27,46 @@ See [retrospective specs](https://github.com/systmms/dsops/tree/main/specs) (SPE
 
 ### Testing Infrastructure
 
-**Current**: 20.0% test coverage (was 16.8%)
+**Current**: 22.1% test coverage (was 20.0% → improved +2.1%)
 **Target**: 80% test coverage
-**Progress**: Provider tests complete (T001-T027 ✅), Resolution engine tests complete (T028-T036 ✅)
+**Gap**: 57.9% remaining
+**Overall Progress**: 38% complete (Infrastructure ✅, Core business logic ⚠️, Providers/Commands ❌)
+
+**Package Coverage Highlights** (as of 2025-11-15):
+- ✅ **Excellent** (≥80%): secretstores (94%), validation (90%), services (87%), rotation (80%), config (83%)
+- ⚠️ **Good** (50-79%): resolve (71%), permissions (66%)
+- ❌ **Needs Work** (<50%): providers (11%, target 85%), commands (8%, target 70%), 8 packages at 0%
+
+**Recent Achievements**:
+- ✅ Test infrastructure complete (testutil/, fakes/, Docker Compose)
+- ✅ Integration tests operational (Vault, AWS/LocalStack, PostgreSQL)
+- ✅ Provider contract test framework implemented
+- ✅ TDD documentation published (workflow guide, test patterns, best practices)
+- ✅ Critical business logic well-tested (rotation, secretstores, services all ≥80%)
+
+**Remaining Work** (Critical Path):
+- ❌ Provider tests: 10.9% → 85% (74.1% gap) - **Primary blocker**
+- ❌ Command tests: 7.9% → 70% (62.1% gap) - **Secondary blocker**
+- ❌ Zero-coverage packages: 8 packages need tests (dsopsdata, execenv, template, errors, etc.)
+- ❌ CI/CD workflows: Coverage gates not yet enforced
+- ❌ Security tests: Incomplete (redaction partial, concurrency tests missing)
 
 **See [SPEC-005: Testing Strategy & Plan](https://github.com/systmms/dsops/blob/main/specs/features/005-testing-strategy.md) for:**
-- Detailed 3-phase implementation plan (10 weeks)
-- Package-by-package coverage targets and current baselines
-- Docker-based integration test infrastructure (Vault, LocalStack, PostgreSQL)
-- TDD workflow and testing best practices
-- CI/CD coverage gates and automation
+- Detailed 3-phase implementation plan
+- [TESTING-STATUS.md](https://github.com/systmms/dsops/blob/main/specs/005-testing-strategy/TESTING-STATUS.md) - Comprehensive status analysis (updated 2025-11-15)
+- Package-by-package coverage targets with current gaps
+- Docker-based integration test infrastructure (operational ✅)
+- TDD workflow and testing best practices (published ✅)
+- CI/CD coverage gates and automation (pending ❌)
 
-**Key deliverables**:
-- Provider contract tests (interface validation)
-- Integration tests (real provider CLIs)
-- Security tests (redaction validation, race detection)
-- GitHub Actions CI/CD workflows
+**Next Steps** (Priority Order):
+1. **P0 (Critical)**: Improve provider package coverage (10.9% → 85%) - ~40 hours
+2. **P0 (Critical)**: Improve command package coverage (7.9% → 70%) - ~32 hours
+3. **P1**: Complete zero-coverage packages (8 packages) - ~24 hours
+4. **P1**: Set up CI/CD workflows with coverage gates - ~8 hours
+5. **P2**: Security tests (concurrency, redaction, memory safety) - ~16 hours
+
+**Estimated Time to 80%**: 4-6 weeks at current pace
 
 ### Rotation Phase 5: Advanced Features
 

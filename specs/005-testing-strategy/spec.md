@@ -1,19 +1,23 @@
 # SPEC-005: Testing Strategy & Plan
 
-**Status**: In Progress
-**Feature Branch**: feature/005-testing-strategy
+**Status**: In Progress (38% Complete - Infrastructure ✅, Core Tests ⚠️, CI/CD ❌)
+**Feature Branch**: 005-testing-strategy
 **Target Milestone**: v0.2
+**Current Coverage**: 22.1% (Target: 80% - Gap: 57.9%)
 **Related**:
 - Constitution Principle VII (Test-Driven Development)
 - docs/content/reference/status.md (Project Roadmap - v0.2 Testing Goal)
+- [TESTING-STATUS.md](./TESTING-STATUS.md) - Detailed status analysis (2025-11-15)
 
 ## Summary
 
-Comprehensive testing strategy to achieve 80% test coverage across the dsops codebase while establishing TDD (Test-Driven Development) practices for future development. This spec defines the testing infrastructure, coverage goals, testing categories, and migration path from the current 20% average coverage to production-ready quality standards.
+Comprehensive testing strategy to achieve 80% test coverage across the dsops codebase while establishing TDD (Test-Driven Development) practices for future development. This spec defines the testing infrastructure, coverage goals, testing categories, and migration path from the current 22.1% average coverage to production-ready quality standards.
 
-**Current State**: Mixed coverage across packages (0-94%, ~20% average)
+**Current State**: Mixed coverage across packages (0-94%, 22.1% average). Infrastructure complete ✅, critical business logic packages excellent (80-94%), but provider/command packages need significant work.
 **Target State**: 80% minimum coverage with robust CI/CD gates
 **Approach**: Phased implementation prioritizing critical paths, with test infrastructure for provider integration testing
+
+**Status Update (2025-11-15)**: Test infrastructure is complete and operational. High coverage achieved in rotation (80%), secretstores (94%), services (87%). Critical gaps remain in providers (10.9%, target 85%) and commands (7.9%, target 70%). See [TESTING-STATUS.md](./TESTING-STATUS.md) for detailed analysis.
 
 ## User Stories
 
