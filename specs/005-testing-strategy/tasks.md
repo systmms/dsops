@@ -194,18 +194,18 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 
 ### Docker Infrastructure
 
-- [ ] T056 [US3] Create Docker Compose config in tests/integration/docker-compose.yml (Vault, PostgreSQL, LocalStack, MongoDB services with health checks)
-- [ ] T057 [US3] Implement DockerTestEnv in tests/testutil/docker.go (Docker lifecycle management, StartDockerEnv, Stop, WaitForHealthy)
-- [ ] T058 [US3] Implement VaultTestClient in tests/testutil/docker.go (Vault API wrapper for testing: Write, Read, Delete, ListSecrets)
-- [ ] T059 [US3] Implement LocalStackTestClient in tests/testutil/docker.go (AWS SDK wrapper for LocalStack: CreateSecret, PutParameter)
-- [ ] T060 [P] [US3] Implement IsDockerAvailable and SkipIfDockerUnavailable in tests/testutil/docker.go (Docker availability checks)
+- [X] T056 [US3] Create Docker Compose config in tests/integration/docker-compose.yml (Vault, PostgreSQL, LocalStack, MongoDB services with health checks)
+- [X] T057 [US3] Implement DockerTestEnv in tests/testutil/docker.go (Docker lifecycle management, StartDockerEnv, Stop, WaitForHealthy)
+- [X] T058 [US3] Implement VaultTestClient in tests/testutil/docker.go (Vault API wrapper for testing: Write, Read, Delete, ListSecrets)
+- [X] T059 [US3] Implement LocalStackTestClient in tests/testutil/docker.go (AWS SDK wrapper for LocalStack: CreateSecret, PutParameter)
+- [X] T060 [P] [US3] Implement IsDockerAvailable and SkipIfDockerUnavailable in tests/testutil/docker.go (Docker availability checks)
 
 ### Integration Tests
 
-- [ ] T061 [P] [US3] Create Vault integration test in tests/integration/providers/vault_test.go (Docker-based test with real Vault)
-- [ ] T062 [P] [US3] Create AWS Secrets Manager integration test in tests/integration/providers/aws_test.go (LocalStack-based test)
-- [ ] T063 [P] [US3] Create PostgreSQL integration test in tests/integration/rotation/postgres_test.go (database rotation with Docker)
-- [ ] T064 [US3] Add test-integration target to Makefile (docker-compose up, run integration tests, docker-compose down)
+- [X] T061 [P] [US3] Create Vault integration test in tests/integration/providers/vault_test.go (Docker-based test with real Vault)
+- [X] T062 [P] [US3] Create AWS Secrets Manager integration test in tests/integration/providers/aws_test.go (LocalStack-based test)
+- [X] T063 [P] [US3] Create PostgreSQL integration test in tests/integration/rotation/postgres_test.go (database rotation with Docker)
+- [X] T064 [US3] Add test-integration target to Makefile (docker-compose up, run integration tests, docker-compose down)
 
 **Checkpoint US3**:
 - Docker Compose starts all services with health checks passing
