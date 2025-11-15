@@ -231,12 +231,12 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 
 ### Security Tests
 
-- [ ] T065 [P] [US4] Test secret redaction in logs in internal/logging/redaction_test.go (Info level, Debug level, multiple secrets)
-- [ ] T066 [P] [US4] Test error message sanitization in internal/errors/errors_test.go (errors don't contain secret values, paths sanitized)
-- [ ] T067 [P] [US4] Test concurrent provider access in internal/providers/concurrency_test.go (100 goroutines, no race conditions)
-- [ ] T068 [P] [US4] Test concurrent resolution in internal/resolve/concurrency_test.go (parallel resolution, race detection)
-- [ ] T069 [P] [US4] Test secret cleanup after GC in internal/resolve/memory_test.go (secrets don't persist in memory)
-- [ ] T070 [US4] Add race detection to CI workflow in .github/workflows/test.yml (go test -race flag)
+- [X] T065 [P] [US4] Test secret redaction in logs in internal/logging/redaction_test.go (Info level, Debug level, multiple secrets)
+- [X] T066 [P] [US4] Test error message sanitization in internal/errors/errors_test.go (errors don't contain secret values, paths sanitized)
+- [X] T067 [P] [US4] Test concurrent provider access in internal/providers/concurrency_test.go (100 goroutines, no race conditions)
+- [X] T068 [P] [US4] Test concurrent resolution in internal/resolve/concurrency_test.go (parallel resolution, race detection)
+- [ ] T069 [P] [US4] Test secret cleanup after GC in internal/resolve/memory_test.go (secrets don't persist in memory) - SKIPPED (requires GC instrumentation)
+- [ ] T070 [US4] Add race detection to CI workflow in .github/workflows/test.yml (go test -race flag) - DEFERRED to CI implementation
 
 **Checkpoint US4**:
 - All security tests pass
