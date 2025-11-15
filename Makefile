@@ -72,14 +72,21 @@ test-race: ## Run tests with race detector
 .PHONY: test-integration
 test-integration: ## Run integration tests (requires Docker)
 	@echo "Running integration tests..."
+	@if ! command -v docker >/dev/null 2>&1; then \
+		echo "Error: Docker not found. Please install Docker to run integration tests."; \
+		exit 1; \
+	fi
 	@echo "Starting Docker Compose services..."
-	cd tests/integration && docker-compose up -d || true
-	@echo "Waiting for services to be healthy..."
-	@sleep 5
+	cd tests/integration && docker compose up -d --wait
 	@echo "Running integration tests..."
-	go test -race -v ./tests/integration/...
+	@go test -race -v -timeout=300s ./tests/integration/... || { \
+		echo "Tests failed, stopping Docker services..."; \
+		cd tests/integration && docker compose down -v; \
+		exit 1; \
+	}
 	@echo "Stopping Docker Compose services..."
-	cd tests/integration && docker-compose down || true
+	@cd tests/integration && docker compose down -v
+	@echo "Integration tests complete!"
 
 .PHONY: test-all
 test-all: ## Run all tests (unit + integration + race detection)
