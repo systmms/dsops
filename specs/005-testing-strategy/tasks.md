@@ -139,7 +139,7 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 
 ### Failing Test Fixes
 
-- [ ] T050 [US1] Fix failing tests in internal/services/ (investigate and fix 53.1% coverage with failing tests)
+- [X] T050 [US1] Fix failing tests in internal/services/ (investigate and fix 53.1% coverage with failing tests)
 
 **Checkpoint US1**:
 - Run `make test-coverage` → overall coverage ≥60%
