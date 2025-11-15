@@ -189,6 +189,11 @@ func (c *Config) GetProvider(name string) (ProviderConfig, error) {
 		return ProviderConfig(service), nil
 	}
 
+	// Check legacy providers (for backward compatibility)
+	if provider, ok := c.Definition.Providers[name]; ok {
+		return provider, nil
+	}
+
 	// Build a list of available providers
 	var available []string
 	for storeName := range c.Definition.SecretStores {
@@ -197,12 +202,15 @@ func (c *Config) GetProvider(name string) (ProviderConfig, error) {
 	for serviceName := range c.Definition.Services {
 		available = append(available, serviceName)
 	}
-	
+	for providerName := range c.Definition.Providers {
+		available = append(available, providerName)
+	}
+
 	suggestion := "Add the provider to the 'secretStores:' or 'services:' section of your dsops.yaml"
 	if len(available) > 0 {
 		suggestion = fmt.Sprintf("Available providers: %s. %s", strings.Join(available, ", "), suggestion)
 	}
-	
+
 	return ProviderConfig{}, dserrors.ConfigError{
 		Field:      "provider",
 		Value:      name,
