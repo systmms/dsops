@@ -88,15 +88,15 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 
 ### Provider Contract Tests (Foundation)
 
-- [ ] T014 [US1] Implement ProviderContractTest in tests/testutil/contract.go (generic contract test framework)
-- [ ] T015 [US1] Implement RunProviderContractTests in tests/testutil/contract.go (executes all contract tests)
-- [ ] T016 [US1] Create provider contract test suite in internal/providers/contract_test.go (testProviderName, testProviderResolve, testProviderDescribe, testProviderValidate, testProviderCapabilities)
+- [X] T014 [US1] Implement ProviderContractTest in tests/testutil/contract.go (generic contract test framework)
+- [X] T015 [US1] Implement RunProviderContractTests in tests/testutil/contract.go (executes all contract tests)
+- [X] T016 [US1] Create provider contract test suite in internal/providers/contract_test.go (testProviderName, testProviderResolve, testProviderDescribe, testProviderValidate, testProviderCapabilities)
 
 ### Provider Tests (internal/providers: 0.8% → 85%)
 
 - [ ] T017 [P] [US1] Test Bitwarden provider in internal/providers/bitwarden_test.go (unit tests + contract tests)
 - [ ] T018 [P] [US1] Test 1Password provider in internal/providers/onepassword_test.go (unit tests + contract tests)
-- [ ] T019 [P] [US1] Test Literal provider in internal/providers/literal_test.go (unit tests + contract tests)
+- [X] T019 [P] [US1] Test Literal provider in internal/providers/literal_test.go (unit tests + contract tests)
 - [ ] T020 [P] [US1] Test Pass provider in internal/providers/pass_test.go (unit tests + contract tests)
 - [ ] T021 [P] [US1] Test Doppler provider in internal/providers/doppler_test.go (unit tests + contract tests)
 - [ ] T022 [P] [US1] Test Vault provider in internal/providers/vault_test.go (unit tests + contract tests)
