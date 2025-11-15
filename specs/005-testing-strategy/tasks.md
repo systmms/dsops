@@ -94,17 +94,17 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 
 ### Provider Tests (internal/providers: 0.8% → 85%)
 
-- [ ] T017 [P] [US1] Test Bitwarden provider in internal/providers/bitwarden_test.go (unit tests + contract tests)
-- [ ] T018 [P] [US1] Test 1Password provider in internal/providers/onepassword_test.go (unit tests + contract tests)
+- [X] T017 [P] [US1] Test Bitwarden provider in internal/providers/bitwarden_test.go (unit tests + contract tests)
+- [X] T018 [P] [US1] Test 1Password provider in internal/providers/onepassword_test.go (unit tests + contract tests)
 - [X] T019 [P] [US1] Test Literal provider in internal/providers/literal_test.go (unit tests + contract tests)
-- [ ] T020 [P] [US1] Test Pass provider in internal/providers/pass_test.go (unit tests + contract tests)
-- [ ] T021 [P] [US1] Test Doppler provider in internal/providers/doppler_test.go (unit tests + contract tests)
-- [ ] T022 [P] [US1] Test Vault provider in internal/providers/vault_test.go (unit tests + contract tests)
-- [ ] T023 [P] [US1] Test AWS Secrets Manager provider in internal/providers/aws_secretsmanager_test.go (unit tests + contract tests)
-- [ ] T024 [P] [US1] Test AWS SSM provider in internal/providers/aws_ssm_test.go (unit tests + contract tests)
-- [ ] T025 [P] [US1] Test Azure Key Vault provider in internal/providers/azure_keyvault_test.go (unit tests + contract tests)
-- [ ] T026 [P] [US1] Test GCP Secret Manager provider in internal/providers/gcp_secretmanager_test.go (unit tests + contract tests)
-- [ ] T027 [US1] Test provider registry in internal/providers/registry_test.go (registration, factory functions, unknown provider errors)
+- [X] T020 [P] [US1] Test Pass provider in internal/providers/pass_test.go (unit tests + contract tests)
+- [X] T021 [P] [US1] Test Doppler provider in internal/providers/doppler_test.go (unit tests + contract tests)
+- [X] T022 [P] [US1] Test Vault provider in internal/providers/vault_test.go (unit tests + contract tests)
+- [X] T023 [P] [US1] Test AWS Secrets Manager provider in internal/providers/aws_secretsmanager_test.go (unit tests + contract tests)
+- [X] T024 [P] [US1] Test AWS SSM provider in internal/providers/aws_ssm_test.go (unit tests + contract tests)
+- [X] T025 [P] [US1] Test Azure Key Vault provider in internal/providers/azure_keyvault_test.go (unit tests + contract tests)
+- [X] T026 [P] [US1] Test GCP Secret Manager provider in internal/providers/gcp_secretmanager_test.go (unit tests + contract tests)
+- [X] T027 [US1] Test provider registry in internal/providers/registry_test.go (registration, factory functions, unknown provider errors)
 
 ### Resolution Engine Tests (internal/resolve: 0% → 85%)
 
