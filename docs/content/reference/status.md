@@ -27,8 +27,9 @@ See [retrospective specs](https://github.com/systmms/dsops/tree/main/specs) (SPE
 
 ### Testing Infrastructure
 
-**Current**: ~20% test coverage
+**Current**: 20.0% test coverage (was 16.8%)
 **Target**: 80% test coverage
+**Progress**: Provider tests complete (T001-T027 ✅), Resolution engine tests complete (T028-T036 ✅)
 
 **See [SPEC-005: Testing Strategy & Plan](https://github.com/systmms/dsops/blob/main/specs/features/005-testing-strategy.md) for:**
 - Detailed 3-phase implementation plan (10 weeks)
