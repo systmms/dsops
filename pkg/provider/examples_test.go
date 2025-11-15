@@ -13,7 +13,7 @@ import (
 // Example demonstrates basic usage of a provider
 func ExampleProvider_basic() {
 	// Create a mock provider for demonstration
-	mockProvider := &MockProvider{
+	mockProvider := &ExampleMockProvider{
 		name: "example-provider",
 		secrets: map[string]provider.SecretValue{
 			"database/password": {
@@ -59,7 +59,7 @@ func ExampleProvider_basic() {
 
 // Example demonstrates error handling with providers
 func ExampleProvider_errorHandling() {
-	mockProvider := &MockProvider{
+	mockProvider := &ExampleMockProvider{
 		name:    "example-provider",
 		secrets: make(map[string]provider.SecretValue), // Empty for demonstration
 	}
@@ -89,7 +89,7 @@ func ExampleProvider_errorHandling() {
 
 // Example demonstrates using provider capabilities
 func ExampleProvider_capabilities() {
-	mockProvider := &MockProvider{
+	mockProvider := &ExampleMockProvider{
 		name: "example-provider",
 		capabilities: provider.Capabilities{
 			SupportsVersioning: true,
@@ -130,7 +130,7 @@ func ExampleProvider_capabilities() {
 
 // Example demonstrates the Describe method for metadata-only operations
 func ExampleProvider_describe() {
-	mockProvider := &MockProvider{
+	mockProvider := &ExampleMockProvider{
 		name: "example-provider",
 		metadata: map[string]provider.Metadata{
 			"database/config": {
@@ -186,8 +186,8 @@ func ExampleProvider_describe() {
 // Example demonstrates using a provider with the Rotator interface
 func ExampleRotator() {
 	// Create a provider that also implements Rotator
-	rotatingProvider := &MockRotatingProvider{
-		MockProvider: MockProvider{
+	rotatingProvider := &ExampleRotatingProvider{
+		ExampleMockProvider: ExampleMockProvider{
 			name: "rotating-provider",
 			secrets: map[string]provider.SecretValue{
 				"api/key": {
@@ -247,8 +247,8 @@ func ExampleRotator() {
 	// Created new version: v2
 }
 
-// MockProvider implements the Provider interface for examples and testing
-type MockProvider struct {
+// ExampleMockProvider implements the Provider interface for examples
+type ExampleMockProvider struct {
 	name         string
 	secrets      map[string]provider.SecretValue
 	metadata     map[string]provider.Metadata
@@ -256,11 +256,11 @@ type MockProvider struct {
 	validateErr  error
 }
 
-func (m *MockProvider) Name() string {
+func (m *ExampleMockProvider) Name() string {
 	return m.name
 }
 
-func (m *MockProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
+func (m *ExampleMockProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
 	secret, exists := m.secrets[ref.Key]
 	if !exists {
 		return provider.SecretValue{}, provider.NotFoundError{
@@ -280,7 +280,7 @@ func (m *MockProvider) Resolve(ctx context.Context, ref provider.Reference) (pro
 	return secret, nil
 }
 
-func (m *MockProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
+func (m *ExampleMockProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
 	if m.metadata == nil {
 		// Default behavior - check if secret exists
 		_, exists := m.secrets[ref.Key]
@@ -295,21 +295,21 @@ func (m *MockProvider) Describe(ctx context.Context, ref provider.Reference) (pr
 	return meta, nil
 }
 
-func (m *MockProvider) Capabilities() provider.Capabilities {
+func (m *ExampleMockProvider) Capabilities() provider.Capabilities {
 	return m.capabilities
 }
 
-func (m *MockProvider) Validate(ctx context.Context) error {
+func (m *ExampleMockProvider) Validate(ctx context.Context) error {
 	return m.validateErr
 }
 
-// MockRotatingProvider implements both Provider and Rotator interfaces
-type MockRotatingProvider struct {
-	MockProvider
+// ExampleRotatingProvider implements both Provider and Rotator interfaces
+type ExampleRotatingProvider struct {
+	ExampleMockProvider
 	versionCounter int
 }
 
-func (m *MockRotatingProvider) CreateNewVersion(ctx context.Context, ref provider.Reference, newValue []byte, meta map[string]string) (string, error) {
+func (m *ExampleRotatingProvider) CreateNewVersion(ctx context.Context, ref provider.Reference, newValue []byte, meta map[string]string) (string, error) {
 	m.versionCounter++
 	newVersion := fmt.Sprintf("v%d", m.versionCounter+1)
 
@@ -325,7 +325,7 @@ func (m *MockRotatingProvider) CreateNewVersion(ctx context.Context, ref provide
 	return newVersion, nil
 }
 
-func (m *MockRotatingProvider) DeprecateVersion(ctx context.Context, ref provider.Reference, version string) error {
+func (m *ExampleRotatingProvider) DeprecateVersion(ctx context.Context, ref provider.Reference, version string) error {
 	// In a real implementation, this would mark the version as deprecated
 	// For the mock, we'll just remove it
 	if secret, exists := m.secrets[ref.Key]; exists && secret.Version == version {
@@ -334,7 +334,7 @@ func (m *MockRotatingProvider) DeprecateVersion(ctx context.Context, ref provide
 	return nil
 }
 
-func (m *MockRotatingProvider) GetRotationMetadata(ctx context.Context, ref provider.Reference) (provider.RotationMetadata, error) {
+func (m *ExampleRotatingProvider) GetRotationMetadata(ctx context.Context, ref provider.Reference) (provider.RotationMetadata, error) {
 	return provider.RotationMetadata{
 		SupportsRotation:   true,
 		SupportsVersioning: true,
