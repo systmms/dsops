@@ -1,6 +1,8 @@
 # dsops — Developer Secret Operations
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/systmms/dsops)](https://goreportcard.com/report/github.com/systmms/dsops)
+[![codecov](https://codecov.io/gh/systmms/dsops/branch/main/graph/badge.svg)](https://codecov.io/gh/systmms/dsops)
+[![Test Status](https://github.com/systmms/dsops/actions/workflows/test.yml/badge.svg)](https://github.com/systmms/dsops/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 > A fast, cross-platform CLI that pulls secrets from your vault(s) and renders `.env*` files or launches commands with ephemeral environment variables.
