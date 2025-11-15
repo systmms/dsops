@@ -164,11 +164,11 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 
 ### Documentation Tasks
 
-- [ ] T051 [P] [US2] Create TDD workflow guide in docs/developer/tdd-workflow.md (Red-Green-Refactor cycle, test patterns, examples)
-- [ ] T052 [P] [US2] Create testing strategy guide in docs/developer/testing.md (testing categories, when to use each, best practices)
-- [ ] T053 [P] [US2] Create test infrastructure guide in tests/README.md (Docker setup, running tests, test utilities)
-- [ ] T054 [P] [US2] Add test pattern examples to docs/developer/test-patterns.md (table-driven tests, integration tests, security tests)
-- [ ] T055 [US2] Update CLAUDE.md with testing workflow (reference TDD guide, testing best practices)
+- [X] T051 [P] [US2] Create TDD workflow guide in docs/developer/tdd-workflow.md (Red-Green-Refactor cycle, test patterns, examples)
+- [X] T052 [P] [US2] Create testing strategy guide in docs/developer/testing.md (testing categories, when to use each, best practices)
+- [X] T053 [P] [US2] Create test infrastructure guide in tests/README.md (Docker setup, running tests, test utilities)
+- [X] T054 [P] [US2] Add test pattern examples to docs/developer/test-patterns.md (table-driven tests, integration tests, security tests)
+- [X] T055 [US2] Update CLAUDE.md with testing workflow (reference TDD guide, testing best practices)
 
 **Checkpoint US2**:
 - TDD documentation complete and reviewed
