@@ -235,23 +235,25 @@ func ExampleSchemaAwareRotator() {
 	}
 
 	// Mock dsops-data repository
+	postgresType := &dsopsdata.ServiceType{
+		APIVersion: "v1",
+		Kind:       "ServiceType",
+	}
+	postgresType.Metadata.Name = "postgresql"
+	postgresType.Metadata.Description = "PostgreSQL Database"
+	postgresType.Metadata.Category = "database"
+	postgresType.Spec.CredentialKinds = []dsopsdata.CredentialKind{
+		{
+			Name:        "password",
+			Description: "Database password",
+			Capabilities: []string{"read", "write"},
+		},
+	}
+	postgresType.Spec.Defaults.RotationStrategy = "two-key"
+
 	repository := &dsopsdata.Repository{
 		ServiceTypes: map[string]*dsopsdata.ServiceType{
-			"postgresql": {
-				Name:         "postgresql",
-				RotationType: "password_rotation",
-				Credentials: []dsopsdata.CredentialType{
-					{
-						Name: "password",
-						Type: "password",
-						Constraints: dsopsdata.Constraints{
-							MinLength:     12,
-							MaxLength:     128,
-							RequiredChars: []string{"upper", "lower", "digit", "special"},
-						},
-					},
-				},
-			},
+			"postgresql": postgresType,
 		},
 	}
 
