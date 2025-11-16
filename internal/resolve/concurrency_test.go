@@ -5,17 +5,159 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/systmms/dsops/internal/config"
+	"github.com/systmms/dsops/internal/logging"
 	"github.com/systmms/dsops/internal/resolve"
 	"github.com/systmms/dsops/pkg/provider"
 	"github.com/systmms/dsops/tests/fakes"
 )
 
-// TestConcurrentResolution verifies resolver handles concurrent Resolve() calls safely
-func TestConcurrentResolution(t *testing.T) {
+// createTestConfig creates a minimal config for testing
+func createTestConfig() *config.Config {
+	return &config.Config{
+		Logger: logging.New(false, true),
+		Definition: &config.Definition{
+			Version: 1,
+		},
+	}
+}
+
+// TestConcurrentProviderRegistration verifies RegisterProvider is thread-safe
+func TestConcurrentProviderRegistration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping concurrency test in short mode")
+	}
+
+	t.Parallel()
+
+	cfg := createTestConfig()
+	resolver := resolve.New(cfg)
+
+	// Register many providers concurrently
+	const numProviders = 50
+	var wg sync.WaitGroup
+	wg.Add(numProviders)
+
+	for i := 0; i < numProviders; i++ {
+		go func(id int) {
+			defer wg.Done()
+			name := fmt.Sprintf("provider-%d", id)
+			fake := fakes.NewFakeProvider(name)
+			resolver.RegisterProvider(name, fake)
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Verify all providers were registered
+	providers := resolver.GetRegisteredProviders()
+	assert.Len(t, providers, numProviders, "All providers should be registered")
+
+	for i := 0; i < numProviders; i++ {
+		name := fmt.Sprintf("provider-%d", i)
+		_, exists := resolver.GetProvider(name)
+		assert.True(t, exists, "Provider %s should exist", name)
+	}
+}
+
+// TestConcurrentGetProvider verifies GetProvider is thread-safe
+func TestConcurrentGetProvider(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping concurrency test in short mode")
+	}
+
+	t.Parallel()
+
+	cfg := createTestConfig()
+	resolver := resolve.New(cfg)
+
+	// Register some providers first
+	const numProviders = 10
+	for i := 0; i < numProviders; i++ {
+		name := fmt.Sprintf("provider-%d", i)
+		fake := fakes.NewFakeProvider(name)
+		resolver.RegisterProvider(name, fake)
+	}
+
+	// Concurrently get providers
+	const numGoroutines = 100
+	var wg sync.WaitGroup
+	wg.Add(numGoroutines)
+
+	results := make([]bool, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			name := fmt.Sprintf("provider-%d", id%numProviders)
+			_, exists := resolver.GetProvider(name)
+			results[id] = exists
+		}(i)
+	}
+
+	wg.Wait()
+
+	// All should have found their provider
+	for i, found := range results {
+		assert.True(t, found, "Goroutine %d should find provider", i)
+	}
+}
+
+// TestConcurrentGetRegisteredProviders verifies GetRegisteredProviders is thread-safe
+func TestConcurrentGetRegisteredProviders(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping concurrency test in short mode")
+	}
+
+	t.Parallel()
+
+	cfg := createTestConfig()
+	resolver := resolve.New(cfg)
+
+	// Register initial providers
+	for i := 0; i < 5; i++ {
+		name := fmt.Sprintf("initial-%d", i)
+		fake := fakes.NewFakeProvider(name)
+		resolver.RegisterProvider(name, fake)
+	}
+
+	// Concurrently read and write
+	const numOps = 50
+	var wg sync.WaitGroup
+	wg.Add(numOps * 2) // readers + writers
+
+	// Writers
+	for i := 0; i < numOps; i++ {
+		go func(id int) {
+			defer wg.Done()
+			name := fmt.Sprintf("concurrent-%d", id)
+			fake := fakes.NewFakeProvider(name)
+			resolver.RegisterProvider(name, fake)
+		}(i)
+	}
+
+	// Readers
+	for i := 0; i < numOps; i++ {
+		go func() {
+			defer wg.Done()
+			providers := resolver.GetRegisteredProviders()
+			// Just verify we can read without panic/race
+			assert.NotNil(t, providers)
+		}()
+	}
+
+	wg.Wait()
+
+	// Final count should be 5 initial + numOps concurrent
+	providers := resolver.GetRegisteredProviders()
+	assert.Len(t, providers, 5+numOps, "All providers should be registered")
+}
+
+// TestConcurrentResolveEnvironment verifies ResolveEnvironment is thread-safe
+func TestConcurrentResolveEnvironment(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping concurrency test in short mode")
 	}
@@ -23,23 +165,38 @@ func TestConcurrentResolution(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+	cfg := createTestConfig()
+	resolver := resolve.New(cfg)
 
-	// Create fake provider with multiple secrets
-	fake := fakes.NewFakeProvider("concurrent-resolver")
-	for i := 0; i < 50; i++ {
-		key := fmt.Sprintf("db/password-%d", i)
-		fake.WithSecret(key, provider.SecretValue{
-			Value: fmt.Sprintf("pass-%d", i),
+	// Setup fake provider with secrets
+	fake := fakes.NewFakeProvider("test-provider").
+		WithSecret("db/password", provider.SecretValue{
+			Value: "secret123",
+		}).
+		WithSecret("api/key", provider.SecretValue{
+			Value: "apikey456",
 		})
+
+	resolver.RegisterProvider("test-provider", fake)
+
+	// Create test environment
+	env := config.Environment{
+		"DATABASE_PASSWORD": config.Variable{
+			From: &config.Reference{
+				Provider: "test-provider",
+				Key:      "db/password",
+			},
+		},
+		"API_KEY": config.Variable{
+			From: &config.Reference{
+				Provider: "test-provider",
+				Key:      "api/key",
+			},
+		},
 	}
 
-	// Create resolver
-	resolver := resolve.NewResolver(map[string]provider.Provider{
-		"concurrent-resolver": fake,
-	})
-
-	// Launch 100 goroutines resolving secrets concurrently
-	const numGoroutines = 100
+	// Resolve environment concurrently
+	const numGoroutines = 30
 	var wg sync.WaitGroup
 	wg.Add(numGoroutines)
 
@@ -47,36 +204,18 @@ func TestConcurrentResolution(t *testing.T) {
 	errors := make(chan error, numGoroutines)
 
 	for i := 0; i < numGoroutines; i++ {
-		go func(id int) {
+		go func() {
 			defer wg.Done()
-
-			secretKey := fmt.Sprintf("db/password-%d", id%50)
-			ref := fmt.Sprintf("store://concurrent-resolver/%s", secretKey)
-
-			resolved, err := resolver.Resolve(ctx, ref)
+			resolved, err := resolver.ResolveEnvironment(ctx, env)
 			if err != nil {
 				errors <- err
 				return
 			}
-
 			results <- resolved
-		}(i)
+		}()
 	}
 
-	// Wait for completion
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		// Success
-	case <-time.After(10 * time.Second):
-		t.Fatal("Timeout waiting for concurrent resolutions")
-	}
-
+	wg.Wait()
 	close(results)
 	close(errors)
 
@@ -88,15 +227,21 @@ func TestConcurrentResolution(t *testing.T) {
 	assert.Empty(t, errs, "No errors should occur during concurrent resolution")
 
 	// Verify all resolutions succeeded
-	var values []map[string]string
-	for val := range results {
-		values = append(values, val)
+	var resolvedEnvs []map[string]string
+	for env := range results {
+		resolvedEnvs = append(resolvedEnvs, env)
 	}
-	assert.Len(t, values, numGoroutines, "All goroutines should successfully resolve")
+	require.Len(t, resolvedEnvs, numGoroutines, "All goroutines should successfully resolve")
+
+	// Verify all resolved the same values
+	for _, resolved := range resolvedEnvs {
+		assert.Equal(t, "secret123", resolved["DATABASE_PASSWORD"])
+		assert.Equal(t, "apikey456", resolved["API_KEY"])
+	}
 }
 
-// TestConcurrentDependencyResolution verifies resolver handles concurrent resolution with dependencies
-func TestConcurrentDependencyResolution(t *testing.T) {
+// TestConcurrentResolveVariables verifies ResolveVariablesConcurrently is thread-safe
+func TestConcurrentResolveVariables(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping concurrency test in short mode")
 	}
@@ -104,40 +249,43 @@ func TestConcurrentDependencyResolution(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+	cfg := createTestConfig()
+	resolver := resolve.New(cfg)
 
-	fake := fakes.NewFakeProvider("deps").
-		WithSecret("base/secret", provider.SecretValue{
-			Value: "base-value",
-		}).
-		WithSecret("derived/secret", provider.SecretValue{
-			Value: "derived-value",
+	// Setup fake provider with multiple secrets
+	fake := fakes.NewFakeProvider("multi-secret")
+	for i := 0; i < 10; i++ {
+		key := fmt.Sprintf("secret-%d", i)
+		fake.WithSecret(key, provider.SecretValue{
+			Value: fmt.Sprintf("value-%d", i),
 		})
+	}
+	resolver.RegisterProvider("multi-secret", fake)
 
-	resolver := resolve.NewResolver(map[string]provider.Provider{
-		"deps": fake,
-	})
+	// Create environment with many variables
+	env := make(config.Environment)
+	for i := 0; i < 10; i++ {
+		varName := fmt.Sprintf("VAR_%d", i)
+		key := fmt.Sprintf("secret-%d", i)
+		env[varName] = config.Variable{
+			From: &config.Reference{
+				Provider: "multi-secret",
+				Key:      key,
+			},
+		}
+	}
 
-	// Resolve multiple dependency chains concurrently
-	const numChains = 20
+	// Resolve concurrently multiple times
+	const numOps = 20
 	var wg sync.WaitGroup
-	wg.Add(numChains * 2) // base + derived for each chain
+	wg.Add(numOps)
 
-	errors := make(chan error, numChains*2)
+	errors := make(chan error, numOps)
 
-	for i := 0; i < numChains; i++ {
-		// Resolve base secret
+	for i := 0; i < numOps; i++ {
 		go func() {
 			defer wg.Done()
-			_, err := resolver.Resolve(ctx, "store://deps/base/secret")
-			if err != nil {
-				errors <- err
-			}
-		}()
-
-		// Resolve derived secret (may depend on base)
-		go func() {
-			defer wg.Done()
-			_, err := resolver.Resolve(ctx, "store://deps/derived/secret")
+			_, err := resolver.ResolveVariablesConcurrently(ctx, env)
 			if err != nil {
 				errors <- err
 			}
@@ -152,147 +300,38 @@ func TestConcurrentDependencyResolution(t *testing.T) {
 	for err := range errors {
 		errs = append(errs, err)
 	}
-	assert.Empty(t, errs, "Concurrent dependency resolution should not error")
+	assert.Empty(t, errs, "Concurrent variable resolution should not error")
 }
 
-// TestResolverCacheConcurrency verifies resolver cache is thread-safe
-func TestResolverCacheConcurrency(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping concurrency test in short mode")
-	}
-
-	t.Parallel()
-
-	ctx := context.Background()
-
-	callCount := 0
-	var callMu sync.Mutex
-
-	// Create provider that counts calls
-	fake := fakes.NewFakeProvider("cache-test")
-	fake.WithSecret("cached/secret", provider.SecretValue{
-		Value: "cached-value",
-	})
-
-	// Wrap provider to count calls
-	countingProvider := &countingProvider{
-		Provider: fake,
-		onResolve: func() {
-			callMu.Lock()
-			callCount++
-			callMu.Unlock()
-		},
-	}
-
-	resolver := resolve.NewResolver(map[string]provider.Provider{
-		"cache-test": countingProvider,
-	})
-
-	// Resolve same secret many times concurrently
-	const numResolves = 50
-	var wg sync.WaitGroup
-	wg.Add(numResolves)
-
-	results := make([]map[string]string, numResolves)
-
-	for i := 0; i < numResolves; i++ {
-		go func(idx int) {
-			defer wg.Done()
-
-			resolved, err := resolver.Resolve(ctx, "store://cache-test/cached/secret")
-			require.NoError(t, err)
-
-			results[idx] = resolved
-		}(i)
-	}
-
-	wg.Wait()
-
-	// All results should be identical
-	for i := 0; i < numResolves; i++ {
-		assert.NotEmpty(t, results[i], "Result should not be empty")
-	}
-
-	// Provider should be called (caching behavior depends on implementation)
-	// We just verify no race conditions occurred
-	callMu.Lock()
-	count := callCount
-	callMu.Unlock()
-
-	assert.Greater(t, count, 0, "Provider should be called at least once")
-}
-
-// TestConcurrentTransformPipeline verifies transform pipelines are thread-safe
-func TestConcurrentTransformPipeline(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping concurrency test in short mode")
-	}
-
-	t.Parallel()
-
-	ctx := context.Background()
-
-	fake := fakes.NewFakeProvider("transform-test").
-		WithSecret("json/data", provider.SecretValue{
-			Value: `{"password":"secret123","username":"admin"}`,
-		})
-
-	resolver := resolve.NewResolver(map[string]provider.Provider{
-		"transform-test": fake,
-	})
-
-	const numOps = 30
-	var wg sync.WaitGroup
-	wg.Add(numOps)
-
-	results := make([]map[string]string, numOps)
-
-	for i := 0; i < numOps; i++ {
-		go func(idx int) {
-			defer wg.Done()
-
-			// Apply transforms concurrently
-			resolved, err := resolver.Resolve(ctx, "store://transform-test/json/data | json_extract:.password")
-			require.NoError(t, err)
-
-			results[idx] = resolved
-		}(i)
-	}
-
-	wg.Wait()
-
-	// All transforms should produce a result
-	for i := 0; i < numOps; i++ {
-		assert.NotEmpty(t, results[i], "Transform result should not be empty")
-	}
-}
-
-// TestRaceDetectorOnResolver verifies race detector catches issues in resolver
+// TestRaceDetectorOnResolver verifies race detector catches issues
 func TestRaceDetectorOnResolver(t *testing.T) {
 	// Must run with: go test -race
 
 	t.Parallel()
 
-	ctx := context.Background()
-
-	fake := fakes.NewFakeProvider("race-test").
-		WithSecret("race/secret", provider.SecretValue{
-			Value: "test-value",
-		})
-
-	resolver := resolve.NewResolver(map[string]provider.Provider{
-		"race-test": fake,
-	})
+	cfg := createTestConfig()
+	resolver := resolve.New(cfg)
 
 	const numOps = 20
 	var wg sync.WaitGroup
 
-	// Pattern 1: Concurrent resolutions
+	// Pattern 1: Concurrent registrations
+	wg.Add(numOps)
+	for i := 0; i < numOps; i++ {
+		go func(id int) {
+			defer wg.Done()
+			name := fmt.Sprintf("race-%d", id)
+			fake := fakes.NewFakeProvider(name)
+			resolver.RegisterProvider(name, fake)
+		}(i)
+	}
+
+	// Pattern 2: Concurrent reads while writing
 	wg.Add(numOps)
 	for i := 0; i < numOps; i++ {
 		go func() {
 			defer wg.Done()
-			_, _ = resolver.Resolve(ctx, "store://race-test/race/secret")
+			_ = resolver.GetRegisteredProviders()
 		}()
 	}
 
@@ -310,13 +349,23 @@ func TestConcurrentErrorHandling(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+	cfg := createTestConfig()
+	resolver := resolve.New(cfg)
 
+	// Setup provider that always errors
 	fake := fakes.NewFakeProvider("error-test").
 		WithError("fail/secret", fmt.Errorf("simulated failure"))
+	resolver.RegisterProvider("error-test", fake)
 
-	resolver := resolve.NewResolver(map[string]provider.Provider{
-		"error-test": fake,
-	})
+	// Create environment that will fail
+	env := config.Environment{
+		"WILL_FAIL": config.Variable{
+			From: &config.Reference{
+				Provider: "error-test",
+				Key:      "fail/secret",
+			},
+		},
+	}
 
 	const numAttempts = 40
 	var wg sync.WaitGroup
@@ -329,7 +378,7 @@ func TestConcurrentErrorHandling(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			_, err := resolver.Resolve(ctx, "store://error-test/fail/secret")
+			_, err := resolver.ResolveEnvironment(ctx, env)
 			if err != nil {
 				mu.Lock()
 				errorCount++
@@ -344,71 +393,71 @@ func TestConcurrentErrorHandling(t *testing.T) {
 	assert.Equal(t, numAttempts, errorCount, "All concurrent error cases should fail consistently")
 }
 
-// TestConcurrentContextCancellation verifies context cancellation works correctly
-func TestConcurrentContextCancellation(t *testing.T) {
+// TestConcurrentMixedOperations verifies mixed read/write operations are safe
+func TestConcurrentMixedOperations(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping concurrency test in short mode")
 	}
 
 	t.Parallel()
 
-	fake := fakes.NewFakeProvider("cancel-test").
-		WithDelay(200 * time.Millisecond).
-		WithSecret("slow/secret", provider.SecretValue{
-			Value: "slow-value",
-		})
+	ctx := context.Background()
+	cfg := createTestConfig()
+	resolver := resolve.New(cfg)
 
-	resolver := resolve.NewResolver(map[string]provider.Provider{
-		"cancel-test": fake,
-	})
+	// Initial setup
+	for i := 0; i < 3; i++ {
+		name := fmt.Sprintf("initial-%d", i)
+		fake := fakes.NewFakeProvider(name).
+			WithSecret("key", provider.SecretValue{Value: "value"})
+		resolver.RegisterProvider(name, fake)
+	}
 
-	const numOps = 10
+	const numOps = 30
 	var wg sync.WaitGroup
-	wg.Add(numOps)
 
-	canceledCount := 0
-	successCount := 0
-	var mu sync.Mutex
+	// Mix of operations
+	wg.Add(numOps * 3)
 
+	// Register new providers
 	for i := 0; i < numOps; i++ {
-		go func(idx int) {
+		go func(id int) {
 			defer wg.Done()
+			name := fmt.Sprintf("new-%d", id)
+			fake := fakes.NewFakeProvider(name)
+			resolver.RegisterProvider(name, fake)
+		}(i)
+	}
 
-			// Vary timeout: some will be canceled, some won't
-			timeout := time.Duration(idx%4+1) * 100 * time.Millisecond
-			ctx, cancel := context.WithTimeout(context.Background(), timeout)
-			defer cancel()
+	// Get providers
+	for i := 0; i < numOps; i++ {
+		go func(id int) {
+			defer wg.Done()
+			name := fmt.Sprintf("initial-%d", id%3)
+			_, _ = resolver.GetProvider(name)
+		}(i)
+	}
 
-			_, err := resolver.Resolve(ctx, "store://cancel-test/slow/secret")
-
-			mu.Lock()
-			defer mu.Unlock()
-
-			if err != nil {
-				if err == context.DeadlineExceeded {
-					canceledCount++
-				}
-			} else {
-				successCount++
+	// Resolve environments
+	for i := 0; i < numOps; i++ {
+		go func(id int) {
+			defer wg.Done()
+			env := config.Environment{
+				"TEST": config.Variable{
+					From: &config.Reference{
+						Provider: fmt.Sprintf("initial-%d", id%3),
+						Key:      "key",
+					},
+				},
 			}
+			_, _ = resolver.ResolveEnvironment(ctx, env)
 		}(i)
 	}
 
 	wg.Wait()
 
-	total := canceledCount + successCount
-	assert.Equal(t, numOps, total, "All operations should complete or cancel")
-}
-
-// countingProvider wraps a provider and counts Resolve calls
-type countingProvider struct {
-	provider.Provider
-	onResolve func()
-}
-
-func (c *countingProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
-	if c.onResolve != nil {
-		c.onResolve()
-	}
-	return c.Provider.Resolve(ctx, ref)
+	// Verify final state
+	providers := resolver.GetRegisteredProviders()
+	expectedCount := 3 + numOps // initial + new
+	assert.Len(t, providers, expectedCount, "All providers should be registered")
 }

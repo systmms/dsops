@@ -29,7 +29,7 @@ func captureStderr(fn func()) string {
 
 // TestSecretRedactionAtInfoLevel verifies secrets are redacted in Info-level logs
 func TestSecretRedactionAtInfoLevel(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because captureStderr() modifies global os.Stderr
 
 	logger := logging.New(false, true) // no debug, no color
 
@@ -47,7 +47,7 @@ func TestSecretRedactionAtInfoLevel(t *testing.T) {
 
 // TestSecretRedactionAtDebugLevel verifies secrets are redacted in Debug-level logs
 func TestSecretRedactionAtDebugLevel(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because captureStderr() modifies global os.Stderr
 
 	logger := logging.New(true, true) // debug enabled, no color
 
@@ -65,7 +65,7 @@ func TestSecretRedactionAtDebugLevel(t *testing.T) {
 
 // TestMultipleSecretsRedaction verifies multiple secrets in same log are all redacted
 func TestMultipleSecretsRedaction(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because captureStderr() modifies global os.Stderr
 
 	logger := logging.New(false, true)
 
@@ -92,7 +92,7 @@ func TestMultipleSecretsRedaction(t *testing.T) {
 
 // TestSecretRedactionInErrorMessages verifies secrets are redacted in error contexts
 func TestSecretRedactionInErrorMessages(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because captureStderr() modifies global os.Stderr
 
 	logger := logging.New(false, true)
 
@@ -110,7 +110,7 @@ func TestSecretRedactionInErrorMessages(t *testing.T) {
 
 // TestSecretRedactionWithFormatting verifies secrets are redacted regardless of formatting
 func TestSecretRedactionWithFormatting(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because subtests use captureStderr() which modifies global os.Stderr
 
 	tests := []struct {
 		name       string
@@ -147,7 +147,7 @@ func TestSecretRedactionWithFormatting(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// Note: Cannot use t.Parallel() because captureStderr() modifies global os.Stderr
 
 			logger := logging.New(false, true)
 
@@ -189,7 +189,7 @@ func TestSecretGoString(t *testing.T) {
 
 // TestSecretRedactionAcrossLogLevels verifies redaction works at all log levels
 func TestSecretRedactionAcrossLogLevels(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because subtests use captureStderr() which modifies global os.Stderr
 
 	secretValue := "multi-level-secret-abc"
 
@@ -207,7 +207,7 @@ func TestSecretRedactionAcrossLogLevels(t *testing.T) {
 	for _, tt := range levels {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// Note: Cannot use t.Parallel() because captureStderr() modifies global os.Stderr
 
 			logger := logging.New(tt.debug, true)
 
@@ -225,7 +225,7 @@ func TestSecretRedactionAcrossLogLevels(t *testing.T) {
 
 // TestEmptySecretRedaction verifies empty secrets are handled correctly
 func TestEmptySecretRedaction(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because captureStderr() modifies global os.Stderr
 
 	logger := logging.New(false, true)
 
@@ -240,7 +240,7 @@ func TestEmptySecretRedaction(t *testing.T) {
 
 // TestSecretRedactionWithNonSecretData verifies non-secret data is not redacted
 func TestSecretRedactionWithNonSecretData(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because captureStderr() modifies global os.Stderr
 
 	logger := logging.New(false, true)
 
@@ -314,7 +314,7 @@ func TestRedactFunction(t *testing.T) {
 
 // TestColorOutputDisabled verifies logs work correctly without color
 func TestColorOutputDisabled(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because captureStderr() modifies global os.Stderr
 
 	logger := logging.New(false, true) // noColor = true
 
@@ -329,7 +329,7 @@ func TestColorOutputDisabled(t *testing.T) {
 
 // TestDebugModeDisabled verifies debug logs don't appear when debug is off
 func TestDebugModeDisabled(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because captureStderr() modifies global os.Stderr
 
 	logger := logging.New(false, true) // debug = false
 
@@ -342,7 +342,7 @@ func TestDebugModeDisabled(t *testing.T) {
 
 // TestDebugModeEnabled verifies debug logs appear when debug is on
 func TestDebugModeEnabled(t *testing.T) {
-	t.Parallel()
+	// Note: Cannot use t.Parallel() because captureStderr() modifies global os.Stderr
 
 	logger := logging.New(true, true) // debug = true
 
