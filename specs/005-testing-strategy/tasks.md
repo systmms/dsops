@@ -288,13 +288,13 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 ### Remaining Package Tests (0% → 70%)
 
 - [ ] T076 [P] Test internal/dsopsdata package (data loading, service definition validation)
-- [ ] T077 [P] Test internal/execenv package (process execution, environment injection, exit code propagation)
-- [ ] T078 [P] Test internal/template package (dotenv rendering, JSON rendering, YAML rendering, Go templates)
-- [ ] T079 [P] Test internal/errors package (error formatting, error suggestions, error wrapping)
-- [ ] T080 [P] Test internal/policy package (guardrail enforcement, policy evaluation)
+- [X] T077 [P] Test internal/execenv package (process execution, environment injection, exit code propagation) - RESULT: 0% -> 67.5% (2025-11-16)
+- [X] T078 [P] Test internal/template package (dotenv rendering, JSON rendering, YAML rendering, Go templates) - RESULT: 0% -> 90.9% (2025-11-16)
+- [ ] T079 [P] Test internal/errors package (error formatting, error suggestions, error wrapping) - ALREADY 85.7%
+- [X] T080 [P] Test internal/policy package (guardrail enforcement, policy evaluation) - RESULT: 0% -> 100% (2025-11-16)
 - [ ] T081 [P] Test internal/incident package (leak reporting, incident logging)
 - [ ] T082 [P] Test internal/vault package (Vault-specific logic, token renewal)
-- [ ] T083 [P] Test internal/rotation/storage package (state persistence, state recovery)
+- [ ] T083 [P] Test internal/rotation/storage package (state persistence, state recovery) - ALREADY 83.0%
 
 ### Command Tests (cmd/dsops/commands: 7.9% → 70%)
 
@@ -320,14 +320,14 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 
 ### Final Validation
 
-- [X] T097 Run full test suite with coverage (`make test-coverage`) - RESULT: 22.1% (target: 80% - gap identified)
+- [X] T097 Run full test suite with coverage (`make test-coverage`) - RESULT: 26.3% overall (target: 80%). Fixed race condition bugs, added template/execenv/policy tests (2025-11-16)
 - [X] T098 Run race detector on full suite (`make test-race`) - RESULT: All tests pass with -race flag ✅
-- [X] T099 Verify all packages meet minimum coverage - RESULT: 10/27 packages meet targets (analysis complete)
+- [X] T099 Verify all packages meet minimum coverage - RESULT: 13/27 packages meet targets (progress: +3 packages this session)
 - [X] T100 Update docs/content/reference/status.md with testing milestone completion - UPDATED with detailed status (2025-11-15)
 
-**Final Checkpoint**:
-- ✅ Overall coverage ≥80%
-- ✅ All packages ≥70% (critical packages ≥85%)
+**Final Checkpoint** (Current Status):
+- ❌ Overall coverage ≥80% (currently 26.3%, needs additional Phase 5 tasks)
+- ⚠️ All packages ≥70% (13/27 meet target, key gaps: providers 10.9%, commands 7.9%)
 - ✅ Race detector passes
 - ✅ CI enforces coverage gates
 - ✅ Documentation complete
