@@ -166,6 +166,10 @@ func TestConcurrentResolveEnvironment(t *testing.T) {
 
 	ctx := context.Background()
 	cfg := createTestConfig()
+	// Add provider to config definition so GetProvider succeeds
+	cfg.Definition.Providers = map[string]config.ProviderConfig{
+		"test-provider": {Type: "fake", TimeoutMs: 30000},
+	}
 	resolver := resolve.New(cfg)
 
 	// Setup fake provider with secrets
@@ -250,6 +254,10 @@ func TestConcurrentResolveVariables(t *testing.T) {
 
 	ctx := context.Background()
 	cfg := createTestConfig()
+	// Add provider to config definition so GetProvider succeeds
+	cfg.Definition.Providers = map[string]config.ProviderConfig{
+		"multi-secret": {Type: "fake", TimeoutMs: 30000},
+	}
 	resolver := resolve.New(cfg)
 
 	// Setup fake provider with multiple secrets
