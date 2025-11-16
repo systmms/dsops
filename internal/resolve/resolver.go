@@ -17,6 +17,7 @@ type Resolver struct {
 	config    *config.Config
 	providers map[string]provider.Provider
 	logger    *logging.Logger
+	mu        sync.RWMutex // Protects providers map for concurrent access
 }
 
 // New creates a new resolver instance
@@ -30,18 +31,24 @@ func New(cfg *config.Config) *Resolver {
 
 // RegisterProvider registers a provider for use by the resolver
 func (r *Resolver) RegisterProvider(name string, p provider.Provider) {
+	r.mu.Lock()
 	r.providers[name] = p
+	r.mu.Unlock()
 	r.logger.Debug("Registered provider: %s", name)
 }
 
 // GetProvider returns a registered provider by name
 func (r *Resolver) GetProvider(name string) (provider.Provider, bool) {
+	r.mu.RLock()
 	p, exists := r.providers[name]
+	r.mu.RUnlock()
 	return p, exists
 }
 
 // GetRegisteredProviders returns a map of all registered providers
 func (r *Resolver) GetRegisteredProviders() map[string]provider.Provider {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	// Return a copy to prevent external modification
 	result := make(map[string]provider.Provider)
 	for name, p := range r.providers {
@@ -52,7 +59,9 @@ func (r *Resolver) GetRegisteredProviders() map[string]provider.Provider {
 
 // ValidateProvider validates a single provider with timeout
 func (r *Resolver) ValidateProvider(ctx context.Context, providerName string) error {
+	r.mu.RLock()
 	prov, exists := r.providers[providerName]
+	r.mu.RUnlock()
 	if !exists {
 		return dserrors.ConfigError{
 			Field:      "provider",
@@ -142,9 +151,12 @@ func (r *Resolver) Plan(ctx context.Context, envName string) (*PlanResult, error
 				providerName := variable.From.GetEffectiveProvider()
 				legacyRef := variable.From.ToLegacyProviderRef()
 				planned.Source = fmt.Sprintf("provider:%s key:%s", providerName, legacyRef.Key)
-				
+
 				// Check if provider exists
-				if _, exists := r.providers[providerName]; !exists {
+				r.mu.RLock()
+				_, exists := r.providers[providerName]
+				r.mu.RUnlock()
+				if !exists {
 					planned.Error = fmt.Errorf("provider '%s' not registered", providerName)
 					result.Errors = append(result.Errors, planned.Error)
 				}
@@ -327,7 +339,9 @@ func (r *Resolver) resolveFromProvider(ctx context.Context, ref *config.Referenc
 		}
 	}
 
+	r.mu.RLock()
 	prov, exists := r.providers[providerName]
+	r.mu.RUnlock()
 	if !exists {
 		return "", "", dserrors.ConfigError{
 			Field:      "provider",
