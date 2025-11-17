@@ -9,10 +9,17 @@
 
 This task breakdown implements a comprehensive testing strategy for dsops, organized by user story to enable independent implementation and testing. The approach prioritizes critical packages first (providers, resolution, config, rotation) and establishes TDD workflow and infrastructure.
 
-**Total Estimated Tasks**: 75+
-**Implementation Phases**: 5 (Setup + 3 User Story Phases + Polish)
+**Total Estimated Tasks**: 153 (100 original + 53 Phase 6 coverage gap closure)
+**Implementation Phases**: 6 (Setup + 3 User Story Phases + Polish + Coverage Gap Closure)
 **Target Timeline**: 10 weeks
 **Test Approach**: TDD (Test-Driven Development) - tests written before implementation
+
+**Phase 6 Progress (2025-11-17)**:
+- Completed: 12/53 tasks (T101-T104, T106, T116, T129, T130, T144-T147)
+- Test cases added: 237+ new test cases
+- internal/providers: 10.9% → 17.8% (+6.9%)
+- internal/resolve: 71.8% → 74.8% (+3.0%)
+- Overall coverage: 41.3% → 41.4%
 
 ## User Story Mapping
 
@@ -357,6 +364,113 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 
 ---
 
+## Phase 6: Coverage Gap Closure (Added 2025-11-17)
+
+**Goal**: Close the coverage gap from 41.3% to ≥80% by adding comprehensive tests for low-coverage packages.
+
+**Target Packages**:
+- `internal/providers`: 10.9% → 85%
+- `pkg/protocol`: 38.9% → 70%
+- `pkg/rotation`: 35.3% → 70%
+- `internal/resolve`: 71.8% → 85%
+
+**Estimated Test Cases**: 265-335 new tests
+
+### 6A: Provider Mock CLI Tests (T101-T115)
+
+**Goal**: Increase internal/providers coverage from 10.9% to 85% by testing provider execution logic with mock CLI tools.
+
+- [X] T101 Create mock command executor interface for CLI-based providers in tests/testutil/cmd_executor.go - RESULT: Created MockCommandExecutor with pattern matching, recorded calls, pre-configured responses for Bitwarden/1Password/Doppler/Pass (2025-11-17)
+- [X] T102 [P] Test Bitwarden parseKey() and field extraction (password, username, totp, notes, custom fields, uri) - 15 test cases - RESULT: Created 48 test cases covering parseKey (15), extractField (20), extractUriField (9), parseTimestamp (4) (2025-11-17)
+- [X] T103 [P] Test Bitwarden CLI mock execution (status parsing: unauthenticated/locked/unlocked, Resolve with mock output, Validate) - RESULT: Created 19 test cases for status parsing (8), item JSON parsing (7), status validation (4). CLI exec mocking requires provider refactor (2025-11-17)
+- [X] T104 [P] Test 1Password key parsing all formats (op://, dot notation, simple) - 12 test cases - RESULT: Created 35 test cases covering parseKey (15) and extractField (20) with op:// URI format, dot notation, special fields, case insensitivity, error cases (2025-11-17)
+- [ ] T105 [P] Test 1Password CLI mock execution (op account get, Resolve with mock JSON, Describe metadata)
+- [X] T106 [P] Test AWS Secrets Manager JSON path extraction (nested paths, arrays, type conversions, edge cases) - 20 test cases - RESULT: Created 44 test cases covering extractJSONPath (27), parseKey (12), handleError (1), getVersionString (4) (2025-11-17)
+- [ ] T107 [P] Test AWS rotation methods (CreateNewVersion, DeprecateVersion, GetRotationMetadata, version string handling)
+- [ ] T108 [P] Test Azure Key Vault version/JSON path parsing (version specifications, array extraction) - 18 test cases
+- [ ] T109 [P] Test Azure error conversion and suggestions (getAzureErrorSuggestion, Validate connection testing)
+- [ ] T110 [P] Test GCP Secret Manager resource name building (buildResourceName, parseReference) - 18 test cases
+- [ ] T111 [P] Test GCP rotation support methods (CreateNewVersion, DeprecateVersion, GetRotationMetadata, error suggestions)
+- [ ] T112 [P] Test Doppler command building and token masking (buildCommand, maskToken, environment injection) - 10 test cases
+- [ ] T113 [P] Test Pass GPG and metadata extraction (Validate, Resolve password+metadata, Describe folder detection) - 8 test cases
+- [ ] T114 Integration test: Provider error handling edge cases (NotFoundError, AuthError conversion, timeout scenarios)
+- [ ] T115 Checkpoint: Verify internal/providers coverage ≥85%
+
+**Checkpoint**: Provider tests cover execution logic, not just metadata. Mock command executor allows CLI-based provider testing without real CLIs.
+
+### 6B: Protocol Adapter Tests (T116-T128)
+
+**Goal**: Increase pkg/protocol coverage from 38.9% to 70% by testing adapter execution logic.
+
+- [X] T116 Add sqlmock dependency (github.com/DATA-DOG/go-sqlmock) for SQL adapter tests - RESULT: Added go-sqlmock v1.5.2 (2025-11-17)
+- [ ] T117 [P] Test SQL connection string builders (buildPostgreSQLConnString, buildMySQLConnString, buildSQLServerConnString) - 15 test cases
+- [ ] T118 [P] Test SQL template rendering (renderSQLTemplate with Go templates, getCommandTemplate retrieval) - 10 test cases
+- [ ] T119 [P] Test SQL transaction execution (executeCreate, executeVerify, executeRotate, executeRevoke, executeList) - 15 test cases
+- [ ] T120 [P] Test NoSQL template rendering (renderCommand with JSON templates, getCommandTemplate) - 12 test cases
+- [ ] T121 [P] Test NoSQL handler validation (MongoDB, Redis handler types) - 8 test cases
+- [ ] T122 [P] Test HTTP API request building and auth methods (addAuthentication: Bearer, API key, Basic auth) - 15 test cases
+- [ ] T123 [P] Test HTTP retry logic (executeWithRetries with exponential backoff, max retries, error conditions) - 8 test cases
+- [ ] T124 [P] Test HTTP response parsing (parseResponse edge cases, JSON parsing, status code handling) - 10 test cases
+- [ ] T125 [P] Test Certificate request building and rotation flow (buildCertificateRequest, executeRotate with revocation) - 12 test cases
+- [ ] T126 Integration test: HTTP adapter with httptest server (full round-trip testing)
+- [ ] T127 Integration test: SQL adapter with sqlmock (transaction simulation)
+- [ ] T128 Checkpoint: Verify pkg/protocol coverage ≥70%
+
+**Checkpoint**: All adapter Execute() methods tested with appropriate mocks. Connection strings, templates, and authentication all covered.
+
+### 6C: Rotation Strategy Tests (T129-T141)
+
+**Goal**: Increase pkg/rotation coverage from 35.3% to 70% by testing strategy implementations.
+
+- [X] T129 Create mock SecretValueRotator and TwoSecretRotator interfaces in tests/fakes/rotation_fakes.go - RESULT: Created FakeSecretValueRotator, FakeTwoSecretRotator, FakeSchemaAwareRotator, FakeRotationEngine, FakeRotationStorage (2025-11-17)
+- [X] T130 Create mock dsops-data repository for schema tests in tests/fakes/dsopsdata_fake.go - RESULT: Created FakeDsopsDataRepository with pre-configured PostgreSQL, Stripe, GitHub service types, rotation policies, and principals (2025-11-17)
+- [ ] T131 [P] Test TwoSecretStrategy rotation flow (secondary creation, verification, promotion, cleanup) - 15 test cases
+- [ ] T132 [P] Test TwoSecretStrategy error scenarios (verification failure, promotion failure, rollback) - 8 test cases
+- [ ] T133 [P] Test OverlapRotationStrategy timing and expiration (overlap period calculation, validity configuration) - 12 test cases
+- [ ] T134 [P] Test OverlapRotationStrategy overlap verification and rollback scenarios - 8 test cases
+- [ ] T135 [P] Test ImmediateRotationStrategy flow and warnings (immediate replacement, backup restoration) - 10 test cases
+- [ ] T136 [P] Test DefaultRotationEngine strategy selection (RegisterStrategy, GetStrategy, AutoSelectStrategy) - 10 test cases
+- [ ] T137 [P] Test DefaultRotationEngine batch rotation concurrency (BatchRotate, concurrent execution) - 8 test cases
+- [ ] T138 [P] Test Rotation TTL calculation and audit trail (GetServiceInstanceMetadata, Rotate with audit) - 10 test cases
+- [ ] T139 [P] Test Rotation history and status retrieval (GetRotationHistory, GetRotationStatus) - 8 test cases
+- [ ] T140 Test strategy rollback scenarios (all strategies with failure conditions)
+- [ ] T141 Checkpoint: Verify pkg/rotation coverage ≥70%
+
+**Checkpoint**: All rotation strategies tested with mock implementations. Engine batch rotation and audit trail functionality covered.
+
+### 6D: Resolve Edge Case Tests (T142-T150)
+
+**Goal**: Increase internal/resolve coverage from 71.8% to 85% by testing edge cases and error paths.
+
+- [ ] T142 [P] Test ValidateProvider with timeout scenarios (context deadlines, slow validation) - 6 test cases
+- [ ] T143 [P] Test Policy enforcement edge cases (enforcePolicies with mock PolicyEnforcer) - 8 test cases
+- [X] T144 [P] Test JSON path edge cases (extractJSONPath: empty path, nested objects, array access errors, nil values) - 10 test cases - RESULT: Created 57 test cases covering extractJSONPath (36), extractYAMLPath (12), base64Encode/Decode (9) (2025-11-17)
+- [X] T145 [P] Test YAML path extraction edge cases (extractYAMLPath with complex YAML structures) - 8 test cases - RESULT: Completed as part of T144 with 12 test cases covering multiline strings, YAML special chars, invalid YAML, error handling (2025-11-17)
+- [X] T146 [P] Test joinValues with different delimiters and formats (array handling, delimiter detection) - 6 test cases - RESULT: Created 25 test cases covering JSON array inputs (13), delimiter detection (9), edge cases (3) (2025-11-17)
+- [X] T147 [P] Test transform error messages (type conversion edge cases, float64 precision, invalid transforms) - 8 test cases - RESULT: Created 36 test cases covering applyTransform (28), transform chaining (3), unicode/special chars (5) (2025-11-17)
+- [ ] T148 Test concurrent resolution race conditions (parallel resolveFromProvider, shared state)
+- [ ] T149 Test error aggregation edge cases (partial failures, error collection, reporting)
+- [ ] T150 Checkpoint: Verify internal/resolve coverage ≥85%
+
+**Checkpoint**: Edge cases in transforms and resolution pipeline covered. Policy enforcement and concurrent resolution tested.
+
+### Final Validation (T151-T153)
+
+- [ ] T151 Run full test suite with coverage (`make test-coverage`) - Target: ≥80% overall coverage
+- [ ] T152 Run race detector on all new tests (`make test-race`) - All new tests must pass with -race flag
+- [ ] T153 Update docs/content/reference/status.md with final coverage metrics and Phase 6 completion
+
+**Final Checkpoint**:
+- ❓ Overall coverage ≥80% (target: 80%+, current: 41.3%)
+- ❓ internal/providers ≥85% (target: 85%, current: 10.9%)
+- ❓ pkg/protocol ≥70% (target: 70%, current: 38.9%)
+- ❓ pkg/rotation ≥70% (target: 70%, current: 35.3%)
+- ❓ internal/resolve ≥85% (target: 85%, current: 71.8%)
+- ❓ Race detector passes on all new tests
+- ❓ Status dashboard updated with Phase 6 results
+
+---
+
 ## Parallel Execution Opportunities
 
 ### Within US1 (Critical Packages):
@@ -373,6 +487,12 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 **Parallel Group 7** (Remaining Packages): T076-T083 can run in parallel (independent packages)
 **Parallel Group 8** (Commands): T084-T089 can run in parallel (independent commands)
 **Parallel Group 9** (E2E): T090-T092 can run in parallel (independent scenarios)
+
+### Coverage Gap Closure (Phase 6):
+**Parallel Group 10** (Provider Tests): T102-T113 can run in parallel (different providers, independent test cases)
+**Parallel Group 11** (Protocol Tests): T117-T125 can run in parallel (different adapters, independent execution)
+**Parallel Group 12** (Rotation Tests): T131-T139 can run in parallel (different strategies, independent test cases)
+**Parallel Group 13** (Resolve Tests): T142-T147 can run in parallel (different transform edge cases)
 
 ---
 
@@ -423,5 +543,7 @@ make check  # lint + vet + test-race + coverage gate
 ---
 
 **Task Breakdown Complete**: 2025-11-14
-**Total Tasks**: 100
-**Ready for**: `/speckit.implement` to execute tasks systematically
+**Phase 6 Added**: 2025-11-17 (Coverage Gap Closure)
+**Total Tasks**: 153 (100 original + 53 Phase 6)
+**Completed**: 100/153 (Phase 1-5 complete, Phase 6 pending)
+**Ready for**: `/speckit.implement` to execute remaining tasks systematically
