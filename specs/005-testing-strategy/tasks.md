@@ -307,16 +307,16 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 
 ### End-to-End Tests
 
-- [ ] T090 [P] Test init → plan → exec workflow in tests/integration/e2e/workflow_test.go
-- [ ] T091 [P] Test multi-provider workflow in tests/integration/e2e/multi_provider_test.go (AWS + Bitwarden + Vault)
-- [ ] T092 [P] Test rotation workflow in tests/integration/e2e/rotation_test.go (end-to-end rotation with verification)
+- [X] T090 [P] Test init → plan → exec workflow in tests/integration/e2e/workflow_test.go - RESULT: Added comprehensive E2E workflow tests (2025-11-17)
+- [X] T091 [P] Test multi-provider workflow in tests/integration/e2e/multi_provider_test.go (AWS + Bitwarden + Vault) - RESULT: Added multi-provider workflow tests (2025-11-17)
+- [X] T092 [P] Test rotation workflow in tests/integration/e2e/rotation_test.go (end-to-end rotation with verification) - RESULT: Added comprehensive rotation workflow tests (2025-11-17)
 
 ### Edge Cases & Error Paths
 
-- [ ] T093 [P] Test invalid configuration handling (malformed YAML, missing required fields)
-- [ ] T094 [P] Test provider authentication failures (invalid credentials, network errors)
-- [ ] T095 [P] Test boundary conditions (empty configs, very large secrets, special characters)
-- [ ] T096 [P] Test error recovery (partial failures, retry logic, timeout handling)
+- [X] T093 [P] Test invalid configuration handling (malformed YAML, missing required fields) - RESULT: Added comprehensive invalid config tests (2025-11-17)
+- [X] T094 [P] Test provider authentication failures (invalid credentials, network errors) - RESULT: Added auth failure and timeout tests (2025-11-17)
+- [X] T095 [P] Test boundary conditions (empty configs, very large secrets, special characters) - RESULT: Added boundary condition tests (2025-11-17)
+- [X] T096 [P] Test error recovery (partial failures, retry logic, timeout handling) - RESULT: Added error recovery and aggregation tests (2025-11-17)
 
 ### Final Validation
 
@@ -341,8 +341,15 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
   - pkg/provider: 1.1% → 81.3% (error types, type structs, Rotator mock, contract tests)
   - pkg/protocol: 18.0% → 38.9% (HTTPAPIAdapter Execute tests with httptest mock server)
   - pkg/rotation: 32.1% → 35.3% (strategy selector tests, ProviderCapabilities tests)
-- Remaining: T090-T092 (e2e tests), T093-T096 (edge cases)
-- Critical blockers:
+- **COMPLETED T090-T096 (2025-11-17)**:
+  - T090: E2E workflow tests (config load → resolve → render) - 8 test cases
+  - T091: Multi-provider workflow tests (AWS + Bitwarden + Vault) - 7 test cases
+  - T092: Rotation workflow tests (strategy selection, audit trails) - 16 test cases
+  - T093: Invalid configuration handling (malformed YAML, missing fields) - 6 test cases
+  - T094: Provider authentication failures (connection refused, auth denied) - 5 test cases
+  - T095: Boundary conditions (large secrets, unicode, special chars) - 7 test cases
+  - T096: Error recovery (partial failures, aggregation, context cancellation) - 5 test cases
+- Critical blockers remaining:
   - Provider tests (10.9%): Resolve/Describe methods require real CLI tools (bw, op, pass) - integration tests needed
   - pkg/protocol (38.9%): SQL/NoSQL/Certificate adapters need Execute() tests with mocks
   - pkg/rotation (35.3%): TwoSecretRotator, storage, and other strategies need tests
