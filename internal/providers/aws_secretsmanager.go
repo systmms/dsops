@@ -14,37 +14,66 @@ import (
 	"github.com/systmms/dsops/pkg/provider"
 )
 
+// SecretsManagerClientAPI defines the interface for AWS Secrets Manager operations
+// This allows for mocking in tests
+type SecretsManagerClientAPI interface {
+	GetSecretValue(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error)
+	DescribeSecret(ctx context.Context, params *secretsmanager.DescribeSecretInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.DescribeSecretOutput, error)
+	ListSecrets(ctx context.Context, params *secretsmanager.ListSecretsInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.ListSecretsOutput, error)
+	UpdateSecret(ctx context.Context, params *secretsmanager.UpdateSecretInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.UpdateSecretOutput, error)
+	UpdateSecretVersionStage(ctx context.Context, params *secretsmanager.UpdateSecretVersionStageInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.UpdateSecretVersionStageOutput, error)
+}
+
 // AWSSecretsManagerProvider implements the provider interface for AWS Secrets Manager
 type AWSSecretsManagerProvider struct {
 	name   string
-	client *secretsmanager.Client
+	client SecretsManagerClientAPI
 	region string
 }
 
+// ProviderOption is a functional option for configuring providers
+type ProviderOption func(*AWSSecretsManagerProvider)
+
+// WithSecretsManagerClient sets a custom Secrets Manager client (for testing)
+func WithSecretsManagerClient(client SecretsManagerClientAPI) ProviderOption {
+	return func(p *AWSSecretsManagerProvider) {
+		p.client = client
+	}
+}
+
 // NewAWSSecretsManagerProvider creates a new AWS Secrets Manager provider
-func NewAWSSecretsManagerProvider(name string, providerConfig map[string]interface{}) (*AWSSecretsManagerProvider, error) {
+func NewAWSSecretsManagerProvider(name string, providerConfig map[string]interface{}, opts ...ProviderOption) (*AWSSecretsManagerProvider, error) {
 	// Get region from config
 	region := "us-east-1" // Default region
 	if r, ok := providerConfig["region"].(string); ok && r != "" {
 		region = r
 	}
 
-	// Load AWS config
-	cfg, err := config.LoadDefaultConfig(context.Background(),
-		config.WithRegion(region),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+	p := &AWSSecretsManagerProvider{
+		name:   name,
+		region: region,
 	}
 
-	// Create Secrets Manager client
-	client := secretsmanager.NewFromConfig(cfg)
+	// Apply options (allows mock client injection)
+	for _, opt := range opts {
+		opt(p)
+	}
 
-	return &AWSSecretsManagerProvider{
-		name:   name,
-		client: client,
-		region: region,
-	}, nil
+	// If no client was provided via options, create real client
+	if p.client == nil {
+		// Load AWS config
+		cfg, err := config.LoadDefaultConfig(context.Background(),
+			config.WithRegion(region),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load AWS config: %w", err)
+		}
+
+		// Create Secrets Manager client
+		p.client = secretsmanager.NewFromConfig(cfg)
+	}
+
+	return p, nil
 }
 
 // Name returns the provider name
