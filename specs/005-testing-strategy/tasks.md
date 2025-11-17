@@ -325,24 +325,28 @@ US1: Test Infrastructure + Critical Packages (P0) ← PRIMARY DELIVERABLE
 - [X] T099 Verify all packages meet minimum coverage - RESULT: 19/27 packages meet targets. Commands improved from 7.9% to 25.5% (2025-11-16)
 - [X] T100 Update docs/content/reference/status.md with testing milestone completion - UPDATED with detailed status (2025-11-15)
 
-**Final Checkpoint** (Current Status - Updated 2025-11-16):
-- ❌ Overall coverage ≥80% (39.4% - still below target, needs provider/pkg tests)
-- ⚠️ All packages ≥70% (19/27 meet target after T084-T089 completion)
-  - Packages meeting targets: dsopsdata (84.4%), incident (81.8%), vault (69.8%), commands (25.5%), + previous packages
-  - Key gaps remaining: providers 10.9% (CLI tool deps), pkg/protocol 18.0%, pkg/rotation 32.1%, pkg/provider 1.1%
+**Final Checkpoint** (Current Status - Updated 2025-11-17):
+- ❌ Overall coverage ≥80% (42.6% - improved from 39.4%, still below target)
+- ⚠️ All packages ≥70% (20/27 meet target after pkg/* coverage improvements)
+  - Packages meeting targets: pkg/provider (81.3%), dsopsdata (84.4%), incident (81.8%), vault (69.8%), + previous packages
+  - Key gaps remaining: providers 10.9% (CLI tool deps), pkg/protocol 38.9%, pkg/rotation 35.3%, commands 25.5%
 - ✅ Race detector passes
 - ✅ CI enforces coverage gates
 - ✅ Documentation complete
 - ✅ Test execution time <10 minutes
 
-**Phase 5 Progress (2025-11-16)**:
-- Completed: T076, T079, T081, T082, T083 (package tests), T084-T089 (command tests)
+**Phase 5 Progress (2025-11-17)**:
+- Completed: T076-T089 (package tests, command tests)
+- NEW: Added comprehensive tests for pkg/* packages:
+  - pkg/provider: 1.1% → 81.3% (error types, type structs, Rotator mock, contract tests)
+  - pkg/protocol: 18.0% → 38.9% (HTTPAPIAdapter Execute tests with httptest mock server)
+  - pkg/rotation: 32.1% → 35.3% (strategy selector tests, ProviderCapabilities tests)
 - Remaining: T090-T092 (e2e tests), T093-T096 (edge cases)
 - Critical blockers:
   - Provider tests (10.9%): Resolve/Describe methods require real CLI tools (bw, op, pass) - integration tests needed
-  - pkg/provider (1.1%): Interface/capability definitions have low coverage
-  - pkg/protocol (18.0%): Protocol types need comprehensive test coverage
-  - pkg/rotation (32.1%): Rotation interfaces need integration tests
+  - pkg/protocol (38.9%): SQL/NoSQL/Certificate adapters need Execute() tests with mocks
+  - pkg/rotation (35.3%): TwoSecretRotator, storage, and other strategies need tests
+  - cmd/dsops/commands (25.5%): More command test coverage needed
 
 ---
 
