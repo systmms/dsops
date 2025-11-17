@@ -10,13 +10,15 @@ import (
 
 	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/logging"
+	pkgexec "github.com/systmms/dsops/pkg/exec"
 	"github.com/systmms/dsops/pkg/provider"
 )
 
 // PassProvider implements the provider.Provider interface for pass (zx2c4).
 type PassProvider struct {
-	config PassConfig
-	logger *logging.Logger
+	config   PassConfig
+	logger   *logging.Logger
+	executor pkgexec.CommandExecutor
 }
 
 // PassConfig represents the configuration for the pass provider.
@@ -29,8 +31,20 @@ type PassConfig struct {
 func NewPassProvider(config PassConfig) *PassProvider {
 	logger := logging.New(false, false)
 	return &PassProvider{
-		config: config,
-		logger: logger,
+		config:   config,
+		logger:   logger,
+		executor: pkgexec.DefaultExecutor(),
+	}
+}
+
+// NewPassProviderWithExecutor creates a new pass provider with a custom executor.
+// This is primarily for testing, allowing command execution to be mocked.
+func NewPassProviderWithExecutor(config PassConfig, executor pkgexec.CommandExecutor) *PassProvider {
+	logger := logging.New(false, false)
+	return &PassProvider{
+		config:   config,
+		logger:   logger,
+		executor: executor,
 	}
 }
 
@@ -64,8 +78,8 @@ func (p *PassProvider) Validate(ctx context.Context) error {
 	}
 
 	// Test basic functionality by listing the password store
-	cmd := p.buildCommand(ctx, "list")
-	if err := cmd.Run(); err != nil {
+	_, _, err := p.executePass(ctx, "list")
+	if err != nil {
 		return dserrors.UserError{
 			Message:    "Failed to access pass password store",
 			Suggestion: "Initialize pass with 'pass init <gpg-key-id>' or check that your GPG key is set up correctly",
@@ -84,11 +98,14 @@ func (p *PassProvider) Resolve(ctx context.Context, ref provider.Reference) (pro
 	p.logger.Debug("Fetching secret %s from pass", logging.Secret(secretPath))
 
 	// Use 'pass show' to get the password
-	cmd := p.buildCommand(ctx, "show", secretPath)
-	output, err := cmd.Output()
+	stdout, stderr, err := p.executePass(ctx, "show", secretPath)
 	if err != nil {
-		if strings.Contains(err.Error(), "not in the password store") || 
-		   strings.Contains(string(output), "not in the password store") {
+		errMsg := err.Error()
+		stderrStr := string(stderr)
+		stdoutStr := string(stdout)
+		if strings.Contains(errMsg, "not in the password store") ||
+			strings.Contains(stderrStr, "not in the password store") ||
+			strings.Contains(stdoutStr, "not in the password store") {
 			return provider.SecretValue{}, dserrors.UserError{
 				Message:    fmt.Sprintf("Secret '%s' not found in pass", secretPath),
 				Suggestion: "Check the secret path with 'pass ls' or 'pass find <keyword>'",
@@ -106,8 +123,8 @@ func (p *PassProvider) Resolve(ctx context.Context, ref provider.Reference) (pro
 	}
 
 	// pass stores the password on the first line, with optional additional data on subsequent lines
-	secretValue := strings.TrimSpace(string(output))
-	
+	secretValue := strings.TrimSpace(string(stdout))
+
 	// Extract just the password (first line) if there are multiple lines
 	lines := strings.Split(secretValue, "\n")
 	password := lines[0]
@@ -135,8 +152,7 @@ func (p *PassProvider) Describe(ctx context.Context, ref provider.Reference) (pr
 	secretPath := ref.Key
 
 	// Check if the secret exists by trying to show it
-	cmd := p.buildCommand(ctx, "show", secretPath)
-	output, err := cmd.Output()
+	stdout, _, err := p.executePass(ctx, "show", secretPath)
 	if err != nil {
 		return provider.Metadata{}, dserrors.UserError{
 			Message:    fmt.Sprintf("Secret '%s' not found in pass", secretPath),
@@ -146,7 +162,7 @@ func (p *PassProvider) Describe(ctx context.Context, ref provider.Reference) (pr
 		}
 	}
 
-	secretContent := strings.TrimSpace(string(output))
+	secretContent := strings.TrimSpace(string(stdout))
 	lines := strings.Split(secretContent, "\n")
 
 	tags := map[string]string{
@@ -176,7 +192,38 @@ func (p *PassProvider) Describe(ctx context.Context, ref provider.Reference) (pr
 	}, nil
 }
 
+// executePass runs a pass command with proper environment setup.
+// This method handles environment variable configuration for custom password store paths and GPG keys.
+func (p *PassProvider) executePass(ctx context.Context, args ...string) (stdout []byte, stderr []byte, err error) {
+	// If custom environment variables are needed, we wrap the command in a shell
+	if p.config.PasswordStore != "" || p.config.GpgKey != "" {
+		// Build the environment prefix
+		envPrefix := ""
+		if p.config.PasswordStore != "" {
+			envPrefix += fmt.Sprintf("PASSWORD_STORE_DIR=%s ", p.config.PasswordStore)
+		}
+		if p.config.GpgKey != "" {
+			envPrefix += fmt.Sprintf("PASSWORD_STORE_KEY=%s ", p.config.GpgKey)
+		}
+
+		// Build the full pass command
+		passCmd := "pass"
+		for _, arg := range args {
+			// Quote arguments to handle spaces safely
+			passCmd += fmt.Sprintf(" %q", arg)
+		}
+
+		// Execute via shell with environment variables
+		return p.executor.Execute(ctx, "sh", "-c", envPrefix+passCmd)
+	}
+
+	// Direct execution without custom environment
+	return p.executor.Execute(ctx, "pass", args...)
+}
+
 // buildCommand creates a pass CLI command with proper environment setup.
+// Deprecated: Use executePass instead. This method is kept for backward compatibility
+// but will be removed in a future version.
 func (p *PassProvider) buildCommand(ctx context.Context, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "pass", args...)
 

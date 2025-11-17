@@ -9,19 +9,38 @@ import (
 	"strings"
 	"time"
 
+	pkgexec "github.com/systmms/dsops/pkg/exec"
 	"github.com/systmms/dsops/pkg/provider"
 )
 
 // BitwardenProvider implements the provider interface for Bitwarden
 type BitwardenProvider struct {
-	name    string
-	profile string // Optional profile name
+	name     string
+	profile  string // Optional profile name
+	executor pkgexec.CommandExecutor
 }
 
 // NewBitwardenProvider creates a new Bitwarden provider
 func NewBitwardenProvider(name string, config map[string]interface{}) *BitwardenProvider {
 	bw := &BitwardenProvider{
-		name: name,
+		name:     name,
+		executor: pkgexec.DefaultExecutor(),
+	}
+
+	// Extract profile from config
+	if profile, ok := config["profile"].(string); ok {
+		bw.profile = profile
+	}
+
+	return bw
+}
+
+// NewBitwardenProviderWithExecutor creates a new Bitwarden provider with a custom executor.
+// This is primarily for testing, allowing command execution to be mocked.
+func NewBitwardenProviderWithExecutor(name string, config map[string]interface{}, executor pkgexec.CommandExecutor) *BitwardenProvider {
+	bw := &BitwardenProvider{
+		name:     name,
+		executor: executor,
 	}
 
 	// Extract profile from config
@@ -115,12 +134,12 @@ func (bw *BitwardenProvider) Validate(ctx context.Context) error {
 	}
 
 	// Check authentication status
-	cmd := exec.CommandContext(ctx, "bw", "status")
+	args := []string{"status"}
 	if bw.profile != "" {
-		cmd.Args = append(cmd.Args, "--session", bw.profile)
+		args = append(args, "--session", bw.profile)
 	}
 
-	output, err := cmd.Output()
+	output, _, err := bw.executor.Execute(ctx, "bw", args...)
 	if err != nil {
 		return fmt.Errorf("failed to check bitwarden status: %w", err)
 	}
@@ -172,27 +191,27 @@ func (bw *BitwardenProvider) parseKey(key string) (itemID, field string) {
 
 // getItem retrieves an item from Bitwarden by ID or name
 func (bw *BitwardenProvider) getItem(ctx context.Context, itemID string) (*BitwardenItem, error) {
-	cmd := exec.CommandContext(ctx, "bw", "get", "item", itemID)
+	args := []string{"get", "item", itemID}
 	if bw.profile != "" {
-		cmd.Args = append(cmd.Args, "--session", bw.profile)
+		args = append(args, "--session", bw.profile)
 	}
 
-	output, err := cmd.Output()
+	stdout, stderr, err := bw.executor.Execute(ctx, "bw", args...)
 	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			stderr := string(exitError.Stderr)
-			if strings.Contains(stderr, "Not found") || strings.Contains(stderr, "not found") {
-				return nil, &provider.NotFoundError{
-					Provider: bw.name,
-					Key:      itemID,
-				}
+		stderrStr := string(stderr)
+		errStr := err.Error()
+		if strings.Contains(stderrStr, "Not found") || strings.Contains(stderrStr, "not found") ||
+			strings.Contains(errStr, "Not found") || strings.Contains(errStr, "not found") {
+			return nil, &provider.NotFoundError{
+				Provider: bw.name,
+				Key:      itemID,
 			}
 		}
 		return nil, fmt.Errorf("failed to get bitwarden item '%s': %w", itemID, err)
 	}
 
 	var item BitwardenItem
-	if err := json.Unmarshal(output, &item); err != nil {
+	if err := json.Unmarshal(stdout, &item); err != nil {
 		return nil, fmt.Errorf("failed to parse bitwarden item: %w", err)
 	}
 

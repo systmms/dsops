@@ -4,22 +4,39 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
+	pkgexec "github.com/systmms/dsops/pkg/exec"
 	"github.com/systmms/dsops/pkg/provider"
 )
 
 // OnePasswordProvider implements the provider.Provider interface for 1Password CLI
 type OnePasswordProvider struct {
-	Account string `yaml:"account,omitempty"`
+	Account  string `yaml:"account,omitempty"`
+	executor pkgexec.CommandExecutor
 }
 
 // NewOnePasswordProvider creates a new 1Password provider instance
 func NewOnePasswordProvider(config map[string]interface{}) (provider.Provider, error) {
-	p := &OnePasswordProvider{}
-	
+	p := &OnePasswordProvider{
+		executor: pkgexec.DefaultExecutor(),
+	}
+
+	if account, ok := config["account"].(string); ok {
+		p.Account = account
+	}
+
+	return p, nil
+}
+
+// NewOnePasswordProviderWithExecutor creates a new 1Password provider with a custom executor.
+// This is primarily for testing, allowing command execution to be mocked.
+func NewOnePasswordProviderWithExecutor(config map[string]interface{}, executor pkgexec.CommandExecutor) (provider.Provider, error) {
+	p := &OnePasswordProvider{
+		executor: executor,
+	}
+
 	if account, ok := config["account"].(string); ok {
 		p.Account = account
 	}
@@ -52,8 +69,8 @@ func (op *OnePasswordProvider) Validate(ctx context.Context) error {
 		args = append(args, "--account", op.Account)
 	}
 
-	cmd := exec.CommandContext(ctx, "op", args...)
-	if err := cmd.Run(); err != nil {
+	_, _, err := op.executor.Execute(ctx, "op", args...)
+	if err != nil {
 		return fmt.Errorf("1Password CLI authentication required. Run: op signin")
 	}
 
@@ -63,31 +80,29 @@ func (op *OnePasswordProvider) Validate(ctx context.Context) error {
 func (op *OnePasswordProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
 	// Parse key - support both URI format and simple format
 	itemRef, fieldName := op.parseKey(ref.Key)
-	
+
 	// Get the item data
 	args := []string{"item", "get", itemRef, "--format", "json"}
 	if op.Account != "" {
 		args = append(args, "--account", op.Account)
 	}
 
-	cmd := exec.CommandContext(ctx, "op", args...)
-	cmd.Env = os.Environ()
-
-	output, err := cmd.Output()
+	stdout, stderr, err := op.executor.Execute(ctx, "op", args...)
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			stderr := string(exitErr.Stderr)
-			if strings.Contains(stderr, "not found") {
-				return provider.SecretValue{}, fmt.Errorf("item '%s' not found in 1Password", itemRef)
-			}
-			return provider.SecretValue{}, fmt.Errorf("1Password CLI error: %s", stderr)
+		stderrStr := string(stderr)
+		errStr := err.Error()
+		if strings.Contains(stderrStr, "not found") || strings.Contains(errStr, "not found") {
+			return provider.SecretValue{}, fmt.Errorf("item '%s' not found in 1Password", itemRef)
+		}
+		if stderrStr != "" {
+			return provider.SecretValue{}, fmt.Errorf("1Password CLI error: %s", stderrStr)
 		}
 		return provider.SecretValue{}, fmt.Errorf("failed to execute 1Password CLI: %w", err)
 	}
 
 	// Parse JSON response
 	var item OnePasswordItem
-	if err := json.Unmarshal(output, &item); err != nil {
+	if err := json.Unmarshal(stdout, &item); err != nil {
 		return provider.SecretValue{}, fmt.Errorf("failed to parse 1Password response: %w", err)
 	}
 
@@ -104,23 +119,20 @@ func (op *OnePasswordProvider) Resolve(ctx context.Context, ref provider.Referen
 
 func (op *OnePasswordProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
 	itemRef, _ := op.parseKey(ref.Key)
-	
+
 	// Get basic item info without field values
 	args := []string{"item", "get", itemRef, "--format", "json"}
 	if op.Account != "" {
 		args = append(args, "--account", op.Account)
 	}
 
-	cmd := exec.CommandContext(ctx, "op", args...)
-	cmd.Env = os.Environ()
-
-	output, err := cmd.Output()
+	stdout, _, err := op.executor.Execute(ctx, "op", args...)
 	if err != nil {
 		return provider.Metadata{}, fmt.Errorf("failed to get item metadata: %w", err)
 	}
 
 	var item OnePasswordItem
-	if err := json.Unmarshal(output, &item); err != nil {
+	if err := json.Unmarshal(stdout, &item); err != nil {
 		return provider.Metadata{}, fmt.Errorf("failed to parse item metadata: %w", err)
 	}
 
