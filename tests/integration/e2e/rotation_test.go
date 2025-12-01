@@ -3,6 +3,7 @@ package e2e
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -17,7 +18,7 @@ type FakeRotationStrategy struct {
 	name         string
 	supportedTypes []rotation.SecretType
 	rotateFunc   func(ctx context.Context, req rotation.RotationRequest) (*rotation.RotationResult, error)
-	callCount    int
+	callCount    int64 // Use int64 for atomic operations
 }
 
 func NewFakeRotationStrategy(name string, supportedTypes []rotation.SecretType) *FakeRotationStrategy {
@@ -45,7 +46,7 @@ func (f *FakeRotationStrategy) SupportsSecret(ctx context.Context, secret rotati
 }
 
 func (f *FakeRotationStrategy) Rotate(ctx context.Context, request rotation.RotationRequest) (*rotation.RotationResult, error) {
-	f.callCount++
+	atomic.AddInt64(&f.callCount, 1) // Thread-safe increment
 
 	if f.rotateFunc != nil {
 		return f.rotateFunc(ctx, request)
@@ -89,7 +90,7 @@ func (f *FakeRotationStrategy) GetStatus(ctx context.Context, secret rotation.Se
 }
 
 func (f *FakeRotationStrategy) GetCallCount() int {
-	return f.callCount
+	return int(atomic.LoadInt64(&f.callCount)) // Thread-safe read
 }
 
 func (f *FakeRotationStrategy) SetRotateFunc(fn func(ctx context.Context, req rotation.RotationRequest) (*rotation.RotationResult, error)) {

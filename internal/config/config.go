@@ -189,7 +189,9 @@ func (c *Config) GetProvider(name string) (ProviderConfig, error) {
 		return ProviderConfig(service), nil
 	}
 
-	// Check legacy providers (for backward compatibility)
+	// Check legacy providers (for backward compatibility).
+	// The Providers field was used in pre-v1.0 configurations before the SecretStores/Services separation.
+	// This fallback exists to support older configuration files that still use the Providers field.
 	if provider, ok := c.Definition.Providers[name]; ok {
 		return provider, nil
 	}

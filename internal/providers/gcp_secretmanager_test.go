@@ -1,15 +1,42 @@
 package providers_test
 
 import (
+	"context"
 	"os"
 	"testing"
 
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/systmms/dsops/internal/providers"
 	"github.com/systmms/dsops/pkg/provider"
 	"github.com/systmms/dsops/tests/testutil"
+	"google.golang.org/api/option"
 )
+
+// mockGCPClient implements providers.GCPSecretManagerClientAPI for testing
+type mockGCPClient struct{}
+
+func (m *mockGCPClient) AccessSecretVersion(ctx context.Context, req *secretmanagerpb.AccessSecretVersionRequest, opts ...option.ClientOption) (*secretmanagerpb.AccessSecretVersionResponse, error) {
+	return nil, nil
+}
+
+func (m *mockGCPClient) GetSecret(ctx context.Context, req *secretmanagerpb.GetSecretRequest, opts ...option.ClientOption) (*secretmanagerpb.Secret, error) {
+	return nil, nil
+}
+
+func (m *mockGCPClient) ListSecrets(ctx context.Context, req *secretmanagerpb.ListSecretsRequest, opts ...option.ClientOption) *secretmanager.SecretIterator {
+	return nil
+}
+
+func (m *mockGCPClient) AddSecretVersion(ctx context.Context, req *secretmanagerpb.AddSecretVersionRequest, opts ...option.ClientOption) (*secretmanagerpb.SecretVersion, error) {
+	return nil, nil
+}
+
+func (m *mockGCPClient) DisableSecretVersion(ctx context.Context, req *secretmanagerpb.DisableSecretVersionRequest, opts ...option.ClientOption) (*secretmanagerpb.SecretVersion, error) {
+	return nil, nil
+}
 
 func TestGCPSecretManagerProviderContract(t *testing.T) {
 	if _, exists := os.LookupEnv("DSOPS_TEST_GCP"); !exists {
@@ -42,7 +69,8 @@ func TestGCPSecretManagerProviderName(t *testing.T) {
 	t.Parallel()
 
 	config := map[string]interface{}{"project_id": "my-project"}
-	p, err := providers.NewGCPSecretManagerProvider("gcp-sm", config)
+	mockClient := &mockGCPClient{}
+	p, err := providers.NewGCPSecretManagerProvider("gcp-sm", config, providers.WithGCPSecretManagerClient(mockClient))
 	require.NoError(t, err)
 	assert.Equal(t, "gcp-sm", p.Name())
 }
@@ -51,7 +79,8 @@ func TestGCPSecretManagerProviderCapabilities(t *testing.T) {
 	t.Parallel()
 
 	config := map[string]interface{}{"project_id": "my-project"}
-	p, err := providers.NewGCPSecretManagerProvider("test", config)
+	mockClient := &mockGCPClient{}
+	p, err := providers.NewGCPSecretManagerProvider("test", config, providers.WithGCPSecretManagerClient(mockClient))
 	require.NoError(t, err)
 
 	caps := p.Capabilities()
