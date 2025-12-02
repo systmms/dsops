@@ -1,9 +1,9 @@
-# SPEC-089: GCPSecretManager Provider
+# SPEC-015: Vault Provider
 
 **Status**: Implemented (Retrospective)
 **Feature Branch**: `main` (merged)
 **Implementation Date**: 2025-08-26
-**Provider Type**: `gcp_secretmanager`
+**Provider Type**: `vault/vault`
 **Related**:
 - VISION.md Section 5 (Secret Stores & Services)
 - SPEC-002: Configuration Parsing
@@ -12,13 +12,13 @@
 
 ## Summary
 
-The GCPSecretManager provider enables secret retrieval from gcp_secretmanager secret management system. Implementation uses Google Cloud SDK for authentication and secret fetching. This provider supports [TODO: List key capabilities].
+The Vault provider enables secret retrieval from vault/vault secret management system. Implementation uses Direct integration for authentication and secret fetching. This provider supports [TODO: List key capabilities].
 
 ## User Stories (As Built)
 
-### User Story 1: Authenticate with GCPSecretManager (P1)
+### User Story 1: Authenticate with Vault (P1)
 
-Users authenticate with GCPSecretManager using Provider-specific authentication method.
+Users authenticate with Vault using HashiCorp Vault token (from VAULT_TOKEN environment variable).
 
 **Why this priority**: Authentication is prerequisite for all secret operations. Without auth, provider cannot function.
 
@@ -28,11 +28,11 @@ Users authenticate with GCPSecretManager using Provider-specific authentication 
 3. **Given** network failure, **Then** timeout with retry suggestion
 
 
-### User Story 2: Fetch Secrets from GCPSecretManager (P1)
+### User Story 2: Fetch Secrets from Vault (P1)
 
-Users reference secrets using `store://gcp_secretmanager/path` URI format.
+Users reference secrets using `store://vault/vault/path` URI format.
 
-**Why this priority**: Core functionality. Enables secret resolution from GCPSecretManager.
+**Why this priority**: Core functionality. Enables secret resolution from Vault.
 
 **Acceptance Criteria** (✅ Validated by tests):
 1. **Given** valid secret reference, **Then** secret value returned
@@ -40,9 +40,9 @@ Users reference secrets using `store://gcp_secretmanager/path` URI format.
 3. **Given** insufficient permissions, **Then** error explains permission issue
 
 
-### User Story 3: Handle GCPSecretManager-Specific Features (P2)
+### User Story 3: Handle Vault-Specific Features (P2)
 
-Users leverage GCPSecretManager-specific capabilities ([Provider-specific features]).
+Users leverage Vault-specific capabilities ([Provider-specific features]).
 
 **Acceptance Criteria** (✅ Validated):
 
@@ -52,37 +52,37 @@ Users leverage GCPSecretManager-specific capabilities ([Provider-specific featur
 ### Architecture
 
 **Key Files**:
-- `internal/providers/gcp_secretmanager.go` - Provider implementation
-- `internal/providers/gcp_secretmanager_test.go` - Test suite
+- `internal/providers/vault/vault.go` - Provider implementation
+- `internal/providers/vault/vault_test.go` - Test suite
 - `internal/providers/registry.go` - Provider registration
 - `pkg/provider/provider.go` - Provider interface
 
 ### Provider Interface Implementation
 
 ```go
-type GCPSecretManagerProvider struct {
+type VaultProvider struct {
     [TODO: Add struct fields]
 }
 
-func (p *GCPSecretManagerProvider) Name() string {
-    return "gcp_secretmanager"
+func (p *VaultProvider) Name() string {
+    return "vault/vault"
 }
 
-func (p *GCPSecretManagerProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
+func (p *VaultProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
     [TODO: Describe resolution logic]
 }
 
-func (p *GCPSecretManagerProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
+func (p *VaultProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
     [TODO: Describe metadata logic]
 }
 
-func (p *GCPSecretManagerProvider) Capabilities() provider.Capabilities {
+func (p *VaultProvider) Capabilities() provider.Capabilities {
     return provider.Capabilities{
         [TODO: List capabilities]
     }
 }
 
-func (p *GCPSecretManagerProvider) Validate(ctx context.Context) error {
+func (p *VaultProvider) Validate(ctx context.Context) error {
     [TODO: Describe validation logic]
 }
 ```
@@ -91,9 +91,22 @@ func (p *GCPSecretManagerProvider) Validate(ctx context.Context) error {
 
 ```yaml
 secretStores:
-  gcp_secretmanager-dev:
-    type: gcp_secretmanager
-    # Provider-specific configuration fields
+  vault/vault-dev:
+    type: vault/vault
+    address: value  # Vault server address
+    token: value  # Vault token (discouraged, use env var)
+    auth_method: value  # Authentication method: token, userpass, ldap, aws, k8s
+    namespace: value  # Vault namespace (Vault Enterprise)
+    userpass_username: value  # For userpass auth
+    userpass_password: value  # For userpass auth (discouraged)
+    ldap_username: value  # For LDAP auth
+    ldap_password: value  # For LDAP auth (discouraged)
+    aws_role: value  # For AWS auth
+    k8s_role: value  # For Kubernetes auth
+    ca_cert: value  # Path to CA certificate
+    client_cert: value  # Path to client certificate
+    client_key: value  # Path to client key
+    tls_skip: value  # Skip TLS verification (not recommended)
 ```
 
 **Configuration Fields**:
@@ -111,7 +124,7 @@ secretStores:
 ### Secret Resolution
 
 **Resolution Process**:
-1. Parse reference URI (`store://gcp_secretmanager/path/to/secret`)
+1. Parse reference URI (`store://vault/vault/path/to/secret`)
 2. Extract path/key components
 3. [TODO]
 4. [TODO]
@@ -152,7 +165,7 @@ secretStores:
 **Test Coverage**: N/A%
 
 **Test Files**:
-- `internal/providers/gcp_secretmanager_test.go` - Unit and integration tests
+- `internal/providers/vault/vault_test.go` - Unit and integration tests
 
 
 **Test Categories**:
@@ -166,8 +179,8 @@ secretStores:
 
 ## Documentation
 
-- **Provider Guide**: `docs/content/providers/gcp_secretmanager.md`
-- **Configuration Reference**: `docs/content/reference/providers.md#gcp_secretmanager`
+- **Provider Guide**: `docs/content/providers/vault/vault.md`
+- **Configuration Reference**: `docs/content/reference/providers.md#vault/vault`
 - **Examples**: 
 
 **Example Configuration**:
@@ -181,7 +194,7 @@ secretStores:
 **What Could Be Improved**:
 [TODO: What could improve]
 
-**GCPSecretManager-Specific Notes**:
+**Vault-Specific Notes**:
 [TODO: Provider-specific notes]
 
 ## Future Enhancements (v0.2+)
@@ -194,5 +207,5 @@ secretStores:
 - **SPEC-002**: Configuration Parsing (provider config schema)
 - **SPEC-003**: Secret Resolution Engine (resolution pipeline)
 - **SPEC-005**: Provider Registry (provider registration)
-- **SPEC-010**: Doctor Command (provider validation)
+- **SPEC-008**: Doctor Command (provider validation)
 

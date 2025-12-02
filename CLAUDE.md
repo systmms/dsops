@@ -115,25 +115,21 @@ specs/
 ├── 005-testing-strategy/        # Testing infrastructure
 ├── 006-plan-command/            # Plan command (dry-run)
 ├── 007-exec-command/            # Exec command (ephemeral execution)
-├── 010-doctor-command/          # Doctor command (diagnostics)
-├── 050-phase-5-completion/      # Rotation features
-├── 080-bitwarden/               # Provider specs (080-089)
-├── 081-onepassword/
-├── 082-literal/
-├── 083-pass/
-├── 084-doppler/
-├── 085-vault/
-├── 086-aws-secretsmanager/
-├── 087-aws-ssm/
-├── 088-azure-keyvault/
-└── 089-gcp-secretmanager/
+├── 008-doctor-command/          # Doctor command (diagnostics)
+├── 009-phase-5-completion/      # Rotation features
+├── 010-bitwarden/               # Provider specs
+├── 011-onepassword/
+├── 012-literal/
+├── 013-pass/
+├── 014-doppler/
+├── 015-vault/
+├── 016-aws-secretsmanager/
+├── 017-aws-ssm/
+├── 018-azure-keyvault/
+└── 019-gcp-secretmanager/
 ```
 
-**Numbering convention:**
-- **001-049**: Core feature specifications
-- **050-079**: Rotation feature specifications
-- **080-099**: Secret store provider specifications
-- **100+**: Future/planned features
+**Numbering**: Sequential (001, 002, 003...) - next spec uses highest existing number + 1
 
 Each spec directory follows the standard spec-kit structure:
 - `spec.md` - Feature specification (required)

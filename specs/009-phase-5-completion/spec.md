@@ -1,4 +1,4 @@
-# SPEC-050: Rotation Phase 5 Completion
+# SPEC-009: Rotation Phase 5 Completion
 
 **Status**: Draft
 **Feature Branch**: TBD
@@ -1158,7 +1158,7 @@ type RolloutWave struct {
 
 - **SPEC-003**: Secret Resolution Engine (rotation integrates with resolution)
 - **SPEC-005**: Testing Strategy & Plan (rotation testing requirements)
-- **SPEC-080-089**: Provider Specifications (secret store integration)
+- **SPEC-010-019**: Provider Specifications (secret store integration)
 - **ADR-001**: Provider → SecretStore + Service Terminology (rotation context)
 
 ## References

@@ -1,9 +1,9 @@
-# SPEC-082: Literal Provider
+# SPEC-010: Bitwarden Provider
 
 **Status**: Implemented (Retrospective)
 **Feature Branch**: `main` (merged)
 **Implementation Date**: 2025-08-26
-**Provider Type**: `literal`
+**Provider Type**: `bitwarden`
 **Related**:
 - VISION.md Section 5 (Secret Stores & Services)
 - SPEC-002: Configuration Parsing
@@ -12,13 +12,13 @@
 
 ## Summary
 
-The Literal provider enables secret retrieval from LiteralProvider provides literal values for testing and simple use cases. Implementation uses Direct integration for authentication and secret fetching. This provider supports [TODO: List key capabilities].
+The Bitwarden provider enables secret retrieval from Bitwarden. Implementation uses CLI wrapper (executes bitwarden command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
 
 ## User Stories (As Built)
 
-### User Story 1: Authenticate with Literal (P1)
+### User Story 1: Authenticate with Bitwarden (P1)
 
-Users authenticate with Literal using Provider-specific authentication method.
+Users authenticate with Bitwarden using CLI authentication (requires bitwarden CLI to be logged in).
 
 **Why this priority**: Authentication is prerequisite for all secret operations. Without auth, provider cannot function.
 
@@ -28,11 +28,11 @@ Users authenticate with Literal using Provider-specific authentication method.
 3. **Given** network failure, **Then** timeout with retry suggestion
 
 
-### User Story 2: Fetch Secrets from Literal (P1)
+### User Story 2: Fetch Secrets from Bitwarden (P1)
 
-Users reference secrets using `store://literal/path` URI format.
+Users reference secrets using `store://bitwarden/path` URI format.
 
-**Why this priority**: Core functionality. Enables secret resolution from Literal.
+**Why this priority**: Core functionality. Enables secret resolution from Bitwarden.
 
 **Acceptance Criteria** (✅ Validated by tests):
 1. **Given** valid secret reference, **Then** secret value returned
@@ -40,9 +40,9 @@ Users reference secrets using `store://literal/path` URI format.
 3. **Given** insufficient permissions, **Then** error explains permission issue
 
 
-### User Story 3: Handle Literal-Specific Features (P2)
+### User Story 3: Handle Bitwarden-Specific Features (P2)
 
-Users leverage Literal-specific capabilities ([Provider-specific features]).
+Users leverage Bitwarden-specific capabilities ([Provider-specific features]).
 
 **Acceptance Criteria** (✅ Validated):
 
@@ -52,37 +52,37 @@ Users leverage Literal-specific capabilities ([Provider-specific features]).
 ### Architecture
 
 **Key Files**:
-- `internal/providers/literal.go` - Provider implementation
-- `internal/providers/literal_test.go` - Test suite
+- `internal/providers/bitwarden.go` - Provider implementation
+- `internal/providers/bitwarden_test.go` - Test suite
 - `internal/providers/registry.go` - Provider registration
 - `pkg/provider/provider.go` - Provider interface
 
 ### Provider Interface Implementation
 
 ```go
-type LiteralProvider struct {
+type BitwardenProvider struct {
     [TODO: Add struct fields]
 }
 
-func (p *LiteralProvider) Name() string {
-    return "literal"
+func (p *BitwardenProvider) Name() string {
+    return "bitwarden"
 }
 
-func (p *LiteralProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
+func (p *BitwardenProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
     [TODO: Describe resolution logic]
 }
 
-func (p *LiteralProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
+func (p *BitwardenProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
     [TODO: Describe metadata logic]
 }
 
-func (p *LiteralProvider) Capabilities() provider.Capabilities {
+func (p *BitwardenProvider) Capabilities() provider.Capabilities {
     return provider.Capabilities{
         [TODO: List capabilities]
     }
 }
 
-func (p *LiteralProvider) Validate(ctx context.Context) error {
+func (p *BitwardenProvider) Validate(ctx context.Context) error {
     [TODO: Describe validation logic]
 }
 ```
@@ -91,8 +91,8 @@ func (p *LiteralProvider) Validate(ctx context.Context) error {
 
 ```yaml
 secretStores:
-  literal-dev:
-    type: literal
+  bitwarden-dev:
+    type: bitwarden
     # Provider-specific configuration fields
 ```
 
@@ -111,7 +111,7 @@ secretStores:
 ### Secret Resolution
 
 **Resolution Process**:
-1. Parse reference URI (`store://literal/path/to/secret`)
+1. Parse reference URI (`store://bitwarden/path/to/secret`)
 2. Extract path/key components
 3. [TODO]
 4. [TODO]
@@ -126,7 +126,7 @@ secretStores:
 
 | Capability | Supported | Notes |
 |------------|-----------|-------|
-| Versioning | ✅ | [TODO] |
+| Versioning | ❌ | [TODO] |
 | Metadata | ✅ | [TODO] |
 | List Secrets | ❌ | [TODO] |
 | Rotation | ❌ | [TODO] |
@@ -152,7 +152,7 @@ secretStores:
 **Test Coverage**: 0.0%
 
 **Test Files**:
-- `internal/providers/literal_test.go` - Unit and integration tests
+- `internal/providers/bitwarden_test.go` - Unit and integration tests
 
 
 **Test Categories**:
@@ -166,9 +166,9 @@ secretStores:
 
 ## Documentation
 
-- **Provider Guide**: `docs/content/providers/literal.md`
-- **Configuration Reference**: `docs/content/reference/providers.md#literal`
-- **Examples**: examples/test-literal.yaml
+- **Provider Guide**: `docs/content/providers/bitwarden.md`
+- **Configuration Reference**: `docs/content/reference/providers.md#bitwarden`
+- **Examples**: examples/bitwarden.yaml
 
 **Example Configuration**:
 [TODO: Add example config]
@@ -181,7 +181,7 @@ secretStores:
 **What Could Be Improved**:
 [TODO: What could improve]
 
-**Literal-Specific Notes**:
+**Bitwarden-Specific Notes**:
 [TODO: Provider-specific notes]
 
 ## Future Enhancements (v0.2+)
@@ -194,5 +194,5 @@ secretStores:
 - **SPEC-002**: Configuration Parsing (provider config schema)
 - **SPEC-003**: Secret Resolution Engine (resolution pipeline)
 - **SPEC-005**: Provider Registry (provider registration)
-- **SPEC-010**: Doctor Command (provider validation)
+- **SPEC-008**: Doctor Command (provider validation)
 

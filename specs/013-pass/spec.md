@@ -1,9 +1,9 @@
-# SPEC-086: AWSSecretsManager Provider
+# SPEC-013: Pass Provider
 
 **Status**: Implemented (Retrospective)
 **Feature Branch**: `main` (merged)
 **Implementation Date**: 2025-08-26
-**Provider Type**: `aws_secretsmanager`
+**Provider Type**: `pass`
 **Related**:
 - VISION.md Section 5 (Secret Stores & Services)
 - SPEC-002: Configuration Parsing
@@ -12,13 +12,13 @@
 
 ## Summary
 
-The AWSSecretsManager provider enables secret retrieval from AWS Secrets Manager. Implementation uses AWS SDK for Go for authentication and secret fetching. This provider supports [TODO: List key capabilities].
+The Pass provider enables secret retrieval from pass (the standard Unix password manager). Implementation uses CLI wrapper (executes pass command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
 
 ## User Stories (As Built)
 
-### User Story 1: Authenticate with AWSSecretsManager (P1)
+### User Story 1: Authenticate with Pass (P1)
 
-Users authenticate with AWSSecretsManager using Provider-specific authentication method.
+Users authenticate with Pass using Provider-specific authentication method.
 
 **Why this priority**: Authentication is prerequisite for all secret operations. Without auth, provider cannot function.
 
@@ -28,11 +28,11 @@ Users authenticate with AWSSecretsManager using Provider-specific authentication
 3. **Given** network failure, **Then** timeout with retry suggestion
 
 
-### User Story 2: Fetch Secrets from AWSSecretsManager (P1)
+### User Story 2: Fetch Secrets from Pass (P1)
 
-Users reference secrets using `store://aws_secretsmanager/path` URI format.
+Users reference secrets using `store://pass/path` URI format.
 
-**Why this priority**: Core functionality. Enables secret resolution from AWSSecretsManager.
+**Why this priority**: Core functionality. Enables secret resolution from Pass.
 
 **Acceptance Criteria** (✅ Validated by tests):
 1. **Given** valid secret reference, **Then** secret value returned
@@ -40,9 +40,9 @@ Users reference secrets using `store://aws_secretsmanager/path` URI format.
 3. **Given** insufficient permissions, **Then** error explains permission issue
 
 
-### User Story 3: Handle AWSSecretsManager-Specific Features (P2)
+### User Story 3: Handle Pass-Specific Features (P2)
 
-Users leverage AWSSecretsManager-specific capabilities ([Provider-specific features]).
+Users leverage Pass-specific capabilities ([Provider-specific features]).
 
 **Acceptance Criteria** (✅ Validated):
 
@@ -52,37 +52,37 @@ Users leverage AWSSecretsManager-specific capabilities ([Provider-specific featu
 ### Architecture
 
 **Key Files**:
-- `internal/providers/aws_secretsmanager.go` - Provider implementation
-- `internal/providers/aws_secretsmanager_test.go` - Test suite
+- `internal/providers/pass.go` - Provider implementation
+- `internal/providers/pass_test.go` - Test suite
 - `internal/providers/registry.go` - Provider registration
 - `pkg/provider/provider.go` - Provider interface
 
 ### Provider Interface Implementation
 
 ```go
-type AWSSecretsManagerProvider struct {
+type PassProvider struct {
     [TODO: Add struct fields]
 }
 
-func (p *AWSSecretsManagerProvider) Name() string {
-    return "aws_secretsmanager"
+func (p *PassProvider) Name() string {
+    return "pass"
 }
 
-func (p *AWSSecretsManagerProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
+func (p *PassProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
     [TODO: Describe resolution logic]
 }
 
-func (p *AWSSecretsManagerProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
+func (p *PassProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
     [TODO: Describe metadata logic]
 }
 
-func (p *AWSSecretsManagerProvider) Capabilities() provider.Capabilities {
+func (p *PassProvider) Capabilities() provider.Capabilities {
     return provider.Capabilities{
         [TODO: List capabilities]
     }
 }
 
-func (p *AWSSecretsManagerProvider) Validate(ctx context.Context) error {
+func (p *PassProvider) Validate(ctx context.Context) error {
     [TODO: Describe validation logic]
 }
 ```
@@ -91,9 +91,10 @@ func (p *AWSSecretsManagerProvider) Validate(ctx context.Context) error {
 
 ```yaml
 secretStores:
-  aws_secretsmanager-dev:
-    type: aws_secretsmanager
-    # Provider-specific configuration fields
+  pass-dev:
+    type: pass
+    password_store,omitempty: value  # Custom password store path (optional)
+    gpg_key,omitempty: value  # Specific GPG key to use (optional)
 ```
 
 **Configuration Fields**:
@@ -111,7 +112,7 @@ secretStores:
 ### Secret Resolution
 
 **Resolution Process**:
-1. Parse reference URI (`store://aws_secretsmanager/path/to/secret`)
+1. Parse reference URI (`store://pass/path/to/secret`)
 2. Extract path/key components
 3. [TODO]
 4. [TODO]
@@ -126,7 +127,7 @@ secretStores:
 
 | Capability | Supported | Notes |
 |------------|-----------|-------|
-| Versioning | ✅ | [TODO] |
+| Versioning | ❌ | [TODO] |
 | Metadata | ✅ | [TODO] |
 | List Secrets | ❌ | [TODO] |
 | Rotation | ❌ | [TODO] |
@@ -149,10 +150,10 @@ secretStores:
 
 ## Testing
 
-**Test Coverage**: 0.0%
+**Test Coverage**: N/A%
 
 **Test Files**:
-- `internal/providers/aws_secretsmanager_test.go` - Unit and integration tests
+- `internal/providers/pass_test.go` - Unit and integration tests
 
 
 **Test Categories**:
@@ -166,9 +167,9 @@ secretStores:
 
 ## Documentation
 
-- **Provider Guide**: `docs/content/providers/aws_secretsmanager.md`
-- **Configuration Reference**: `docs/content/reference/providers.md#aws_secretsmanager`
-- **Examples**: 
+- **Provider Guide**: `docs/content/providers/pass.md`
+- **Configuration Reference**: `docs/content/reference/providers.md#pass`
+- **Examples**: examples/test-1password.yaml,examples/pass.yaml
 
 **Example Configuration**:
 [TODO: Add example config]
@@ -181,7 +182,7 @@ secretStores:
 **What Could Be Improved**:
 [TODO: What could improve]
 
-**AWSSecretsManager-Specific Notes**:
+**Pass-Specific Notes**:
 [TODO: Provider-specific notes]
 
 ## Future Enhancements (v0.2+)
@@ -194,5 +195,5 @@ secretStores:
 - **SPEC-002**: Configuration Parsing (provider config schema)
 - **SPEC-003**: Secret Resolution Engine (resolution pipeline)
 - **SPEC-005**: Provider Registry (provider registration)
-- **SPEC-010**: Doctor Command (provider validation)
+- **SPEC-008**: Doctor Command (provider validation)
 

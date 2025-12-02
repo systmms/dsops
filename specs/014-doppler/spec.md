@@ -1,9 +1,9 @@
-# SPEC-081: OnePassword Provider
+# SPEC-014: Doppler Provider
 
 **Status**: Implemented (Retrospective)
 **Feature Branch**: `main` (merged)
 **Implementation Date**: 2025-08-26
-**Provider Type**: `onepassword`
+**Provider Type**: `doppler`
 **Related**:
 - VISION.md Section 5 (Secret Stores & Services)
 - SPEC-002: Configuration Parsing
@@ -12,13 +12,13 @@
 
 ## Summary
 
-The OnePassword provider enables secret retrieval from 1Password. Implementation uses CLI wrapper (executes onepassword command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
+The Doppler provider enables secret retrieval from Doppler. Implementation uses CLI wrapper (executes doppler command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
 
 ## User Stories (As Built)
 
-### User Story 1: Authenticate with OnePassword (P1)
+### User Story 1: Authenticate with Doppler (P1)
 
-Users authenticate with OnePassword using CLI authentication (requires onepassword CLI to be logged in).
+Users authenticate with Doppler using Provider-specific authentication method.
 
 **Why this priority**: Authentication is prerequisite for all secret operations. Without auth, provider cannot function.
 
@@ -28,11 +28,11 @@ Users authenticate with OnePassword using CLI authentication (requires onepasswo
 3. **Given** network failure, **Then** timeout with retry suggestion
 
 
-### User Story 2: Fetch Secrets from OnePassword (P1)
+### User Story 2: Fetch Secrets from Doppler (P1)
 
-Users reference secrets using `store://onepassword/path` URI format.
+Users reference secrets using `store://doppler/path` URI format.
 
-**Why this priority**: Core functionality. Enables secret resolution from OnePassword.
+**Why this priority**: Core functionality. Enables secret resolution from Doppler.
 
 **Acceptance Criteria** (✅ Validated by tests):
 1. **Given** valid secret reference, **Then** secret value returned
@@ -40,9 +40,9 @@ Users reference secrets using `store://onepassword/path` URI format.
 3. **Given** insufficient permissions, **Then** error explains permission issue
 
 
-### User Story 3: Handle OnePassword-Specific Features (P2)
+### User Story 3: Handle Doppler-Specific Features (P2)
 
-Users leverage OnePassword-specific capabilities ([Provider-specific features]).
+Users leverage Doppler-specific capabilities ([Provider-specific features]).
 
 **Acceptance Criteria** (✅ Validated):
 
@@ -52,37 +52,37 @@ Users leverage OnePassword-specific capabilities ([Provider-specific features]).
 ### Architecture
 
 **Key Files**:
-- `internal/providers/onepassword.go` - Provider implementation
-- `internal/providers/onepassword_test.go` - Test suite
+- `internal/providers/doppler.go` - Provider implementation
+- `internal/providers/doppler_test.go` - Test suite
 - `internal/providers/registry.go` - Provider registration
 - `pkg/provider/provider.go` - Provider interface
 
 ### Provider Interface Implementation
 
 ```go
-type OnePasswordProvider struct {
+type DopplerProvider struct {
     [TODO: Add struct fields]
 }
 
-func (p *OnePasswordProvider) Name() string {
-    return "onepassword"
+func (p *DopplerProvider) Name() string {
+    return "doppler"
 }
 
-func (p *OnePasswordProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
+func (p *DopplerProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
     [TODO: Describe resolution logic]
 }
 
-func (p *OnePasswordProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
+func (p *DopplerProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
     [TODO: Describe metadata logic]
 }
 
-func (p *OnePasswordProvider) Capabilities() provider.Capabilities {
+func (p *DopplerProvider) Capabilities() provider.Capabilities {
     return provider.Capabilities{
         [TODO: List capabilities]
     }
 }
 
-func (p *OnePasswordProvider) Validate(ctx context.Context) error {
+func (p *DopplerProvider) Validate(ctx context.Context) error {
     [TODO: Describe validation logic]
 }
 ```
@@ -91,9 +91,11 @@ func (p *OnePasswordProvider) Validate(ctx context.Context) error {
 
 ```yaml
 secretStores:
-  onepassword-dev:
-    type: onepassword
-    # Provider-specific configuration fields
+  doppler-dev:
+    type: doppler
+    token,omitempty: value  # Service token
+    project,omitempty: value  # Project name
+    config,omitempty: value  # Config/environment name
 ```
 
 **Configuration Fields**:
@@ -111,7 +113,7 @@ secretStores:
 ### Secret Resolution
 
 **Resolution Process**:
-1. Parse reference URI (`store://onepassword/path/to/secret`)
+1. Parse reference URI (`store://doppler/path/to/secret`)
 2. Extract path/key components
 3. [TODO]
 4. [TODO]
@@ -149,10 +151,10 @@ secretStores:
 
 ## Testing
 
-**Test Coverage**: 0.0%
+**Test Coverage**: N/A%
 
 **Test Files**:
-- `internal/providers/onepassword_test.go` - Unit and integration tests
+- `internal/providers/doppler_test.go` - Unit and integration tests
 
 
 **Test Categories**:
@@ -166,9 +168,9 @@ secretStores:
 
 ## Documentation
 
-- **Provider Guide**: `docs/content/providers/onepassword.md`
-- **Configuration Reference**: `docs/content/reference/providers.md#onepassword`
-- **Examples**: 
+- **Provider Guide**: `docs/content/providers/doppler.md`
+- **Configuration Reference**: `docs/content/reference/providers.md#doppler`
+- **Examples**: examples/doppler.yaml,examples/doppler-copy.yaml,examples/doppler-simple.yaml,examples/doppler-test.yaml
 
 **Example Configuration**:
 [TODO: Add example config]
@@ -181,7 +183,7 @@ secretStores:
 **What Could Be Improved**:
 [TODO: What could improve]
 
-**OnePassword-Specific Notes**:
+**Doppler-Specific Notes**:
 [TODO: Provider-specific notes]
 
 ## Future Enhancements (v0.2+)
@@ -194,5 +196,5 @@ secretStores:
 - **SPEC-002**: Configuration Parsing (provider config schema)
 - **SPEC-003**: Secret Resolution Engine (resolution pipeline)
 - **SPEC-005**: Provider Registry (provider registration)
-- **SPEC-010**: Doctor Command (provider validation)
+- **SPEC-008**: Doctor Command (provider validation)
 

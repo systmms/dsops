@@ -204,4 +204,4 @@ The executor blocks these dangerous commands:
 - **SPEC-001**: CLI Framework (command registration, global flags)
 - **SPEC-003**: Secret Resolution Engine (resolver infrastructure)
 - **SPEC-006**: Plan Command (dry-run validation before exec)
-- **SPEC-010**: Doctor Command (validate providers before exec)
+- **SPEC-008**: Doctor Command (validate providers before exec)

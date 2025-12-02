@@ -1,4 +1,4 @@
-# SPEC-010: Doctor Command
+# SPEC-008: Doctor Command
 
 **Status**: Implemented (Retrospective)
 **Feature Branch**: `main` (merged)
@@ -6,7 +6,7 @@
 **Related**:
 - SPEC-001: CLI Framework
 - SPEC-002: Configuration Parsing
-- SPEC-080 through SPEC-089: Provider Specifications
+- SPEC-010 through SPEC-019: Provider Specifications
 
 ## Summary
 
@@ -209,4 +209,4 @@ Variable errors:
 - **SPEC-001**: CLI Framework (command registration, global flags)
 - **SPEC-002**: Configuration Parsing (config file loading)
 - **SPEC-006**: Plan Command (environment validation logic shared)
-- **SPEC-080 through SPEC-089**: Provider implementations that doctor validates
+- **SPEC-010 through SPEC-019**: Provider implementations that doctor validates
