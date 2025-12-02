@@ -50,6 +50,7 @@ build/
 *.p12
 *.pfx
 secrets/
+!tests/fixtures/secrets/
 credentials/
 
 # OS specific
@@ -59,6 +60,9 @@ Thumbs.db
 # Test artifacts
 test-results/
 *.log
+tests/tmp/
+tests/**/*.tmp
+tests/**/testdata/*.generated.*
 
 # Local dsops files
 dsops.lock

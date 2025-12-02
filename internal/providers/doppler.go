@@ -11,13 +11,15 @@ import (
 
 	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/logging"
+	pkgexec "github.com/systmms/dsops/pkg/exec"
 	"github.com/systmms/dsops/pkg/provider"
 )
 
 // DopplerProvider implements the provider.Provider interface for Doppler.
 type DopplerProvider struct {
-	config DopplerConfig
-	logger *logging.Logger
+	config   DopplerConfig
+	logger   *logging.Logger
+	executor pkgexec.CommandExecutor
 }
 
 // DopplerConfig represents the configuration for the Doppler provider.
@@ -40,8 +42,20 @@ type dopplerSecretsResponse map[string]dopplerSecret
 func NewDopplerProvider(config DopplerConfig) *DopplerProvider {
 	logger := logging.New(false, false)
 	return &DopplerProvider{
-		config: config,
-		logger: logger,
+		config:   config,
+		logger:   logger,
+		executor: pkgexec.DefaultExecutor(),
+	}
+}
+
+// NewDopplerProviderWithExecutor creates a new Doppler provider with a custom executor.
+// This is primarily for testing, allowing command execution to be mocked.
+func NewDopplerProviderWithExecutor(config DopplerConfig, executor pkgexec.CommandExecutor) *DopplerProvider {
+	logger := logging.New(false, false)
+	return &DopplerProvider{
+		config:   config,
+		logger:   logger,
+		executor: executor,
 	}
 }
 
@@ -75,8 +89,8 @@ func (p *DopplerProvider) Validate(ctx context.Context) error {
 	}
 
 	// Test authentication
-	cmd := p.buildCommand(ctx, "secrets", "get", "--json")
-	if err := cmd.Run(); err != nil {
+	_, _, err := p.executeDoppler(ctx, "secrets", "get", "--json")
+	if err != nil {
 		return dserrors.UserError{
 			Message:    "Failed to authenticate with Doppler",
 			Suggestion: "Ensure your service token is valid and has access to the specified project/config",
@@ -95,10 +109,12 @@ func (p *DopplerProvider) Resolve(ctx context.Context, ref provider.Reference) (
 	p.logger.Debug("Fetching secret %s from Doppler", logging.Secret(secretName))
 
 	// Get the specific secret
-	cmd := p.buildCommand(ctx, "secrets", "get", secretName, "--json")
-	output, err := cmd.Output()
+	stdout, stderr, err := p.executeDoppler(ctx, "secrets", "get", secretName, "--json")
 	if err != nil {
-		if strings.Contains(string(output), "not found") || strings.Contains(err.Error(), "not found") {
+		stdoutStr := string(stdout)
+		stderrStr := string(stderr)
+		errStr := err.Error()
+		if strings.Contains(stdoutStr, "not found") || strings.Contains(stderrStr, "not found") || strings.Contains(errStr, "not found") {
 			return provider.SecretValue{}, dserrors.UserError{
 				Message:    fmt.Sprintf("Secret '%s' not found in Doppler", secretName),
 				Suggestion: fmt.Sprintf("Verify the secret name exists in project '%s' config '%s'", p.config.Project, p.config.Config),
@@ -116,7 +132,7 @@ func (p *DopplerProvider) Resolve(ctx context.Context, ref provider.Reference) (
 	}
 
 	var secretResponse dopplerSecret
-	if err := json.Unmarshal(output, &secretResponse); err != nil {
+	if err := json.Unmarshal(stdout, &secretResponse); err != nil {
 		return provider.SecretValue{}, dserrors.UserError{
 			Message:    "Invalid response format from Doppler",
 			Suggestion: "This might be a temporary issue with the Doppler service",
@@ -139,8 +155,7 @@ func (p *DopplerProvider) Describe(ctx context.Context, ref provider.Reference) 
 	secretName := ref.Key
 
 	// Get all secrets to find metadata about the specific one
-	cmd := p.buildCommand(ctx, "secrets", "get", "--json")
-	output, err := cmd.Output()
+	stdout, _, err := p.executeDoppler(ctx, "secrets", "get", "--json")
 	if err != nil {
 		return provider.Metadata{}, dserrors.UserError{
 			Message:    "Failed to describe secrets from Doppler",
@@ -151,7 +166,7 @@ func (p *DopplerProvider) Describe(ctx context.Context, ref provider.Reference) 
 	}
 
 	var secrets dopplerSecretsResponse
-	if err := json.Unmarshal(output, &secrets); err != nil {
+	if err := json.Unmarshal(stdout, &secrets); err != nil {
 		return provider.Metadata{}, dserrors.UserError{
 			Message:    "Invalid response format from Doppler",
 			Suggestion: "This might be a temporary issue with the Doppler service",
@@ -179,7 +194,41 @@ func (p *DopplerProvider) Describe(ctx context.Context, ref provider.Reference) 
 	}, nil
 }
 
+// executeDoppler runs a doppler command with proper environment setup.
+// This method handles authentication via environment variables.
+func (p *DopplerProvider) executeDoppler(ctx context.Context, args ...string) (stdout []byte, stderr []byte, err error) {
+	// If custom environment variables are needed, wrap in shell
+	if p.config.Token != "" || p.config.Project != "" || p.config.Config != "" {
+		// Build the environment prefix
+		envPrefix := ""
+		if p.config.Token != "" {
+			envPrefix += fmt.Sprintf("DOPPLER_TOKEN=%s ", p.config.Token)
+		}
+		if p.config.Project != "" {
+			envPrefix += fmt.Sprintf("DOPPLER_PROJECT=%s ", p.config.Project)
+		}
+		if p.config.Config != "" {
+			envPrefix += fmt.Sprintf("DOPPLER_CONFIG=%s ", p.config.Config)
+		}
+
+		// Build the full doppler command
+		dopplerCmd := "doppler"
+		for _, arg := range args {
+			// Quote arguments to handle spaces safely
+			dopplerCmd += fmt.Sprintf(" %q", arg)
+		}
+
+		// Execute via shell with environment variables
+		return p.executor.Execute(ctx, "sh", "-c", envPrefix+dopplerCmd)
+	}
+
+	// Direct execution without custom environment
+	return p.executor.Execute(ctx, "doppler", args...)
+}
+
 // buildCommand creates a doppler CLI command with proper authentication.
+// Deprecated: Use executeDoppler instead. This method is kept for backward compatibility
+// but will be removed in a future version.
 func (p *DopplerProvider) buildCommand(ctx context.Context, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "doppler", args...)
 

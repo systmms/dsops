@@ -354,11 +354,115 @@ This framework ensures we prioritize providers that deliver maximum value while 
 
 ## Testing Strategy
 
-- **Unit Tests**: Test individual components in isolation
-- **Provider Contract Tests**: Validate all providers implement the interface correctly
-- **Integration Tests**: Test with real provider CLIs (requires authentication)
-- **Security Tests**: Ensure secret redaction works correctly
-- Use `optional: true` in test configurations to gracefully handle missing provider authentication
+dsops follows Test-Driven Development (TDD) as mandated by Constitution Principle VII. All new code must have tests written **before** implementation.
+
+### Coverage Requirements
+
+- **Overall target**: ≥80% coverage (enforced by CI)
+- **Critical packages**: ≥85% (providers, resolve, config, rotation)
+- **Standard packages**: ≥70% (commands, template, execenv)
+
+### Test Categories
+
+1. **Unit Tests** - Pure logic testing with no external dependencies
+   - Use `t.Parallel()` for independent tests
+   - Table-driven pattern for multiple cases
+   - Test both success and error paths
+
+2. **Provider Contract Tests** - Validate all providers implement `provider.Provider` interface consistently
+   - Generic contract tests applied to all providers
+   - Validates Resolve(), Describe(), Validate(), Capabilities()
+   - Includes concurrency testing
+
+3. **Integration Tests** - Test with real services using Docker
+   - Skip with `testing.Short()` for fast local development
+   - Use `testutil.StartDockerEnv()` for Docker lifecycle
+   - Services: Vault, PostgreSQL, LocalStack, MongoDB
+
+4. **Security Tests** - Validate secret redaction and prevent leaks
+   - All secret-handling code must have redaction tests
+   - Use `testutil.NewTestLogger()` to capture logs
+   - Run with race detector (`-race` flag)
+
+### TDD Workflow (Red-Green-Refactor)
+
+**Always follow this cycle**:
+
+1. **RED**: Write failing test that defines desired behavior
+2. **GREEN**: Write minimal code to make test pass
+3. **REFACTOR**: Improve code quality while keeping tests green
+4. **REPEAT**: Continue for each acceptance criterion
+
+### Running Tests
+
+```bash
+# Fast unit tests (local development)
+make test
+go test -short ./...
+
+# With coverage report
+make test-coverage
+
+# Integration tests (requires Docker)
+make test-integration
+
+# Race detection (required before commit)
+make test-race
+go test -race ./...
+
+# Full test suite
+make test-all
+```
+
+### Test Utilities
+
+- **`tests/testutil/`** - Test helpers and utilities
+  - `TestConfigBuilder` - Programmatic config building
+  - `FakeProvider` - Manual fake for unit tests
+  - `DockerTestEnv` - Docker lifecycle management
+  - `TestLogger` - Log capture for redaction tests
+
+- **`tests/fakes/`** - Manual test doubles
+  - `FakeProvider` - Fake `provider.Provider` implementation
+
+- **`tests/fixtures/`** - Test data and configurations
+  - Pre-built configs for common scenarios
+  - Mock secret data (never real credentials)
+
+### Documentation
+
+**Comprehensive testing guides**:
+- **[TDD Workflow Guide](docs/developer/tdd-workflow.md)** - Red-Green-Refactor cycle with examples
+- **[Testing Strategy Guide](docs/developer/testing.md)** - Test categories, coverage requirements, best practices
+- **[Test Patterns](docs/developer/test-patterns.md)** - Common patterns and ready-to-use examples
+- **[Test Infrastructure Guide](tests/README.md)** - Docker setup, test utilities, troubleshooting
+
+### CI/CD Enforcement
+
+Pull requests automatically blocked if:
+- ❌ Tests fail
+- ❌ Coverage drops below 80%
+- ❌ Race conditions detected
+- ❌ New code lacks tests
+
+### Best Practices
+
+✅ **DO**:
+- Write tests before implementation (TDD)
+- Use table-driven tests for multiple cases
+- Test error paths, not just happy paths
+- Use `t.Parallel()` for independent tests
+- Check `testing.Short()` to skip slow tests
+- Use `FakeProvider` for unit tests
+- Use `DockerTestEnv` for integration tests
+
+❌ **DON'T**:
+- Skip writing tests ("I'll add them later")
+- Test implementation details (test behavior)
+- Use Docker for pure logic tests
+- Leak secrets in test fixtures
+- Ignore test failures locally
+- Commit failing tests
 
 ## Key Files to Know
 

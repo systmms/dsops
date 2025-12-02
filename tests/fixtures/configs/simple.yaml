@@ -1,0 +1,16 @@
+# Simple test configuration for unit tests
+version: 1
+
+secretStores:
+  test:
+    type: literal
+    values:
+      DATABASE_URL: "postgres://localhost:5432/testdb"
+      API_KEY: "test-api-key-123"
+
+envs:
+  test:
+    DATABASE_URL:
+      from: store://test/DATABASE_URL
+    API_KEY:
+      from: store://test/API_KEY

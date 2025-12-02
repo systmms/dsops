@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"strings"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 )
@@ -40,10 +41,24 @@ type CapabilitiesRegistry struct {
 	Strategies map[string]StrategyDefinition `yaml:"strategies"`
 }
 
-var registry *CapabilitiesRegistry
+var (
+	registry   *CapabilitiesRegistry
+	registryMu sync.RWMutex
+)
 
 // LoadCapabilities loads the embedded capabilities YAML
 func LoadCapabilities() (*CapabilitiesRegistry, error) {
+	registryMu.RLock()
+	if registry != nil {
+		defer registryMu.RUnlock()
+		return registry, nil
+	}
+	registryMu.RUnlock()
+
+	registryMu.Lock()
+	defer registryMu.Unlock()
+
+	// Double-check after acquiring write lock
 	if registry != nil {
 		return registry, nil
 	}

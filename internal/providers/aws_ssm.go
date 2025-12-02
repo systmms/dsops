@@ -14,10 +14,17 @@ import (
 	dserrors "github.com/systmms/dsops/internal/errors"
 )
 
+// SSMClientAPI defines the interface for AWS SSM Parameter Store operations
+// This allows for mocking in tests
+type SSMClientAPI interface {
+	GetParameter(ctx context.Context, params *ssm.GetParameterInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterOutput, error)
+	DescribeParameters(ctx context.Context, params *ssm.DescribeParametersInput, optFns ...func(*ssm.Options)) (*ssm.DescribeParametersOutput, error)
+}
+
 // AWSSSMProvider implements the Provider interface for AWS Systems Manager Parameter Store
 type AWSSSMProvider struct {
 	name   string
-	client *ssm.Client
+	client SSMClientAPI
 	logger *logging.Logger
 	config SSMConfig
 }
@@ -31,10 +38,20 @@ type SSMConfig struct {
 	ParameterPrefix string
 }
 
+// SSMProviderOption is a functional option for configuring SSM providers
+type SSMProviderOption func(*AWSSSMProvider)
+
+// WithSSMClient sets a custom SSM client (for testing)
+func WithSSMClient(client SSMClientAPI) SSMProviderOption {
+	return func(p *AWSSSMProvider) {
+		p.client = client
+	}
+}
+
 // NewAWSSSMProvider creates a new AWS SSM Parameter Store provider
-func NewAWSSSMProvider(name string, configMap map[string]interface{}) (*AWSSSMProvider, error) {
+func NewAWSSSMProvider(name string, configMap map[string]interface{}, opts ...SSMProviderOption) (*AWSSSMProvider, error) {
 	logger := logging.New(false, false)
-	
+
 	config := SSMConfig{
 		WithDecryption: true, // Default to decrypting SecureString parameters
 	}
@@ -56,18 +73,27 @@ func NewAWSSSMProvider(name string, configMap map[string]interface{}) (*AWSSSMPr
 		config.ParameterPrefix = prefix
 	}
 
-	// Create AWS client
-	client, err := createSSMClient(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create SSM client: %w", err)
-	}
-
-	return &AWSSSMProvider{
+	p := &AWSSSMProvider{
 		name:   name,
-		client: client,
 		logger: logger,
 		config: config,
-	}, nil
+	}
+
+	// Apply options (allows mock client injection)
+	for _, opt := range opts {
+		opt(p)
+	}
+
+	// If no client was provided via options, create real client
+	if p.client == nil {
+		client, err := createSSMClient(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create SSM client: %w", err)
+		}
+		p.client = client
+	}
+
+	return p, nil
 }
 
 // createSSMClient creates an AWS SSM client with the given configuration

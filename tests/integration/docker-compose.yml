@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # HashiCorp Vault - Secret store for integration tests
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: dsops-test-vault
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: test-root-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 2s
+      timeout: 1s
+      retries: 10
+      start_period: 5s
+
+  # PostgreSQL - Database for rotation testing
+  postgres:
+    image: postgres:15-alpine
+    container_name: dsops-test-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test-password
+      POSTGRES_DB: testdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test"]
+      interval: 2s
+      timeout: 1s
+      retries: 10
+      start_period: 3s
+
+  # LocalStack - AWS services emulation (Secrets Manager, SSM)
+  localstack:
+    image: localstack/localstack:latest
+    container_name: dsops-test-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: secretsmanager,ssm
+      DEBUG: 0
+      EAGER_SERVICE_LOADING: 1
+    volumes:
+      - "./localstack-init:/etc/localstack/init/ready.d"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 2s
+      timeout: 1s
+      retries: 15
+      start_period: 10s
+
+  # MongoDB - NoSQL database for rotation testing
+  mongodb:
+    image: mongo:7
+    container_name: dsops-test-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: test
+      MONGO_INITDB_ROOT_PASSWORD: test-password
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 2s
+      timeout: 1s
+      retries: 10
+      start_period: 5s
+
+networks:
+  default:
+    name: dsops-test-network

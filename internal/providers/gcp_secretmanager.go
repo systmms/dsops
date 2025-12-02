@@ -19,10 +19,20 @@ import (
 	dserrors "github.com/systmms/dsops/internal/errors"
 )
 
+// GCPSecretManagerClientAPI defines the interface for GCP Secret Manager operations
+// This allows for mocking in tests
+type GCPSecretManagerClientAPI interface {
+	AccessSecretVersion(ctx context.Context, req *secretmanagerpb.AccessSecretVersionRequest, opts ...option.ClientOption) (*secretmanagerpb.AccessSecretVersionResponse, error)
+	GetSecret(ctx context.Context, req *secretmanagerpb.GetSecretRequest, opts ...option.ClientOption) (*secretmanagerpb.Secret, error)
+	ListSecrets(ctx context.Context, req *secretmanagerpb.ListSecretsRequest, opts ...option.ClientOption) *secretmanager.SecretIterator
+	AddSecretVersion(ctx context.Context, req *secretmanagerpb.AddSecretVersionRequest, opts ...option.ClientOption) (*secretmanagerpb.SecretVersion, error)
+	DisableSecretVersion(ctx context.Context, req *secretmanagerpb.DisableSecretVersionRequest, opts ...option.ClientOption) (*secretmanagerpb.SecretVersion, error)
+}
+
 // GCPSecretManagerProvider implements the Provider interface for Google Cloud Secret Manager
 type GCPSecretManagerProvider struct {
 	name       string
-	client     *secretmanager.Client
+	client     GCPSecretManagerClientAPI
 	logger     *logging.Logger
 	config     GCPSecretManagerConfig
 	projectID  string
@@ -37,10 +47,20 @@ type GCPSecretManagerConfig struct {
 	UsePlaintextNames      bool   // Use plaintext names instead of resource names
 }
 
+// GCPProviderOption is a functional option for configuring GCP providers
+type GCPProviderOption func(*GCPSecretManagerProvider)
+
+// WithGCPSecretManagerClient sets a custom GCP Secret Manager client (for testing)
+func WithGCPSecretManagerClient(client GCPSecretManagerClientAPI) GCPProviderOption {
+	return func(p *GCPSecretManagerProvider) {
+		p.client = client
+	}
+}
+
 // NewGCPSecretManagerProvider creates a new GCP Secret Manager provider
-func NewGCPSecretManagerProvider(name string, configMap map[string]interface{}) (*GCPSecretManagerProvider, error) {
+func NewGCPSecretManagerProvider(name string, configMap map[string]interface{}, opts ...GCPProviderOption) (*GCPSecretManagerProvider, error) {
 	logger := logging.New(false, false)
-	
+
 	config := GCPSecretManagerConfig{
 		Location:          "global",
 		UsePlaintextNames: true, // Default to user-friendly names
@@ -77,19 +97,55 @@ func NewGCPSecretManagerProvider(name string, configMap map[string]interface{}) 
 		}
 	}
 
-	// Create GCP client
-	client, err := createGCPSecretManagerClient(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create GCP Secret Manager client: %w", err)
-	}
-
-	return &GCPSecretManagerProvider{
+	p := &GCPSecretManagerProvider{
 		name:      name,
-		client:    client,
 		logger:    logger,
 		config:    config,
 		projectID: config.ProjectID,
-	}, nil
+	}
+
+	// Apply options (allows mock client injection)
+	for _, opt := range opts {
+		opt(p)
+	}
+
+	// If no client was provided via options, create real client
+	if p.client == nil {
+		client, err := createGCPSecretManagerClient(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create GCP Secret Manager client: %w", err)
+		}
+		// Wrap the real client to match our interface
+		p.client = &gcpClientWrapper{client: client}
+	}
+
+	return p, nil
+}
+
+// gcpClientWrapper wraps the real GCP client to match our interface
+// This is necessary because the real client has slightly different method signatures
+type gcpClientWrapper struct {
+	client *secretmanager.Client
+}
+
+func (w *gcpClientWrapper) AccessSecretVersion(ctx context.Context, req *secretmanagerpb.AccessSecretVersionRequest, opts ...option.ClientOption) (*secretmanagerpb.AccessSecretVersionResponse, error) {
+	return w.client.AccessSecretVersion(ctx, req)
+}
+
+func (w *gcpClientWrapper) GetSecret(ctx context.Context, req *secretmanagerpb.GetSecretRequest, opts ...option.ClientOption) (*secretmanagerpb.Secret, error) {
+	return w.client.GetSecret(ctx, req)
+}
+
+func (w *gcpClientWrapper) ListSecrets(ctx context.Context, req *secretmanagerpb.ListSecretsRequest, opts ...option.ClientOption) *secretmanager.SecretIterator {
+	return w.client.ListSecrets(ctx, req)
+}
+
+func (w *gcpClientWrapper) AddSecretVersion(ctx context.Context, req *secretmanagerpb.AddSecretVersionRequest, opts ...option.ClientOption) (*secretmanagerpb.SecretVersion, error) {
+	return w.client.AddSecretVersion(ctx, req)
+}
+
+func (w *gcpClientWrapper) DisableSecretVersion(ctx context.Context, req *secretmanagerpb.DisableSecretVersionRequest, opts ...option.ClientOption) (*secretmanagerpb.SecretVersion, error) {
+	return w.client.DisableSecretVersion(ctx, req)
 }
 
 // createGCPSecretManagerClient creates a GCP Secret Manager client

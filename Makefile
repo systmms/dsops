@@ -57,24 +57,58 @@ run: build ## Build and run dsops with arguments (use ARGS="...")
 	$(BUILD_DIR)/$(BINARY_NAME) $(ARGS)
 
 .PHONY: test
-test: test-unit ## Run all tests
+test: test-short ## Run unit tests (alias for test-short)
 
-.PHONY: test-unit
-test-unit: ## Run unit tests
+.PHONY: test-short
+test-short: ## Run unit tests only (fast, no integration tests)
 	@echo "Running unit tests..."
-	go test -race -v ./internal/... ./pkg/...
+	go test -short -race -v ./internal/... ./pkg/... ./cmd/...
+
+.PHONY: test-race
+test-race: ## Run tests with race detector
+	@echo "Running tests with race detector..."
+	go test -race -short -v ./internal/... ./pkg/... ./cmd/...
 
 .PHONY: test-integration
-test-integration: ## Run integration tests
+test-integration: ## Run integration tests (requires Docker)
 	@echo "Running integration tests..."
-	go test -race -v -tags=integration ./test/integration/...
+	@if ! command -v docker >/dev/null 2>&1; then \
+		echo "Error: Docker not found. Please install Docker to run integration tests."; \
+		exit 1; \
+	fi
+	@echo "Starting Docker Compose services..."
+	cd tests/integration && docker compose up -d --wait
+	@echo "Running integration tests..."
+	@go test -race -v -timeout=300s ./tests/integration/... || { \
+		echo "Tests failed, stopping Docker services..."; \
+		cd tests/integration && docker compose down -v; \
+		exit 1; \
+	}
+	@echo "Stopping Docker Compose services..."
+	@cd tests/integration && docker compose down -v
+	@echo "Integration tests complete!"
+
+.PHONY: test-all
+test-all: ## Run all tests (unit + integration + race detection)
+	@echo "Running all tests..."
+	go test -race -v ./...
 
 .PHONY: test-coverage
-test-coverage: ## Run tests with coverage
+test-coverage: ## Run tests with coverage report
 	@echo "Running tests with coverage..."
-	go test -race -coverprofile=coverage.out -covermode=atomic ./internal/... ./pkg/...
-	go tool cover -html=coverage.out -o coverage.html
+	go test -race -coverprofile=coverage.txt -covermode=atomic ./internal/... ./pkg/... ./cmd/...
+	go tool cover -html=coverage.txt -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+	@echo ""
+	@echo "Coverage summary:"
+	@go tool cover -func=coverage.txt | grep total || true
+
+.PHONY: coverage-report
+coverage-report: ## Generate HTML coverage report from existing coverage.txt
+	@echo "Generating HTML coverage report..."
+	go tool cover -html=coverage.txt -o coverage.html
+	@echo "Coverage report: coverage.html"
+	@which open > /dev/null && open coverage.html || true
 
 .PHONY: lint
 lint: ## Run linter

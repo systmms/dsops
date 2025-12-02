@@ -1,0 +1,20 @@
+# Multi-provider test configuration
+version: 1
+
+secretStores:
+  vault:
+    type: vault
+    addr: "http://localhost:8200"
+    token: "test-root-token"
+
+  literal:
+    type: literal
+    values:
+      LOCAL_VAR: "local-value"
+
+envs:
+  test:
+    DATABASE_PASSWORD:
+      from: store://vault/secret/data/database/password
+    LOCAL_VAR:
+      from: store://literal/LOCAL_VAR

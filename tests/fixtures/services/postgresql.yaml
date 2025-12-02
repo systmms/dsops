@@ -1,0 +1,8 @@
+# PostgreSQL service definition for rotation tests
+type: postgresql
+host: localhost
+port: 5432
+database: testdb
+username: test
+password: test-password
+ssl_mode: disable
