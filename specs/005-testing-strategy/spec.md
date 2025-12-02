@@ -629,8 +629,8 @@ To reach 80% overall coverage, the following work remains:
 - **SPEC-001**: CLI Framework (command testing patterns)
 - **SPEC-002**: Configuration Parsing (config validation tests)
 - **SPEC-003**: Secret Resolution Engine (resolution testing)
-- **SPEC-050**: Rotation Phase 5 Completion (rotation testing requirements)
-- **SPEC-080-089**: Provider Specifications (provider contract tests)
+- **SPEC-009**: Rotation Phase 5 Completion (rotation testing requirements)
+- **SPEC-010-019**: Provider Specifications (provider contract tests)
 
 ## References
 

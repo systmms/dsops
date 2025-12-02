@@ -108,29 +108,28 @@ This project uses [GitHub Spec-Kit](https://github.com/github/spec-kit) for spec
 
 ```
 specs/
-├── 001-cli-framework/
-│   └── spec.md                  # Retrospective spec
-├── 002-configuration-parsing/
-│   └── spec.md
-├── 003-secret-resolution-engine/
-│   └── spec.md
-├── 004-transform-pipeline/
-│   └── spec.md
-├── 080-bitwarden/
-│   └── spec.md                  # Provider retrospective specs
-├── 081-onepassword/
-│   └── spec.md
-├── 082-literal/
-│   └── spec.md
-... (additional numbered spec directories)
-└── future/                      # Unstructured future ideas
+├── 001-cli-framework/           # Core CLI framework
+├── 002-configuration-parsing/   # Config parsing
+├── 003-secret-resolution-engine/ # Resolution engine
+├── 004-transform-pipeline/      # Transform pipeline
+├── 005-testing-strategy/        # Testing infrastructure
+├── 006-plan-command/            # Plan command (dry-run)
+├── 007-exec-command/            # Exec command (ephemeral execution)
+├── 008-doctor-command/          # Doctor command (diagnostics)
+├── 009-phase-5-completion/      # Rotation features
+├── 010-bitwarden/               # Provider specs
+├── 011-onepassword/
+├── 012-literal/
+├── 013-pass/
+├── 014-doppler/
+├── 015-vault/
+├── 016-aws-secretsmanager/
+├── 017-aws-ssm/
+├── 018-azure-keyvault/
+└── 019-gcp-secretmanager/
 ```
 
-**Numbering convention:**
-- **001-049**: Core feature specifications
-- **050-079**: Rotation feature specifications
-- **080-099**: Secret store provider specifications
-- **100+**: Future/planned features
+**Numbering**: Sequential (001, 002, 003...) - next spec uses highest existing number + 1
 
 Each spec directory follows the standard spec-kit structure:
 - `spec.md` - Feature specification (required)

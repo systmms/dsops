@@ -179,4 +179,4 @@ policies:
 - **SPEC-001**: CLI Framework (`--config` flag integration)
 - **SPEC-003**: Secret Resolution Engine (consumes parsed config)
 - **SPEC-004**: Transform Pipeline (uses `transforms:` section)
-- **SPEC-080-093**: Provider Specs (config schema for each provider)
+- **SPEC-010-019**: Provider Specs (config schema for each provider)

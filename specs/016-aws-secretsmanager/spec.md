@@ -1,9 +1,9 @@
-# SPEC-084: Doppler Provider
+# SPEC-016: AWSSecretsManager Provider
 
 **Status**: Implemented (Retrospective)
 **Feature Branch**: `main` (merged)
 **Implementation Date**: 2025-08-26
-**Provider Type**: `doppler`
+**Provider Type**: `aws_secretsmanager`
 **Related**:
 - VISION.md Section 5 (Secret Stores & Services)
 - SPEC-002: Configuration Parsing
@@ -12,13 +12,13 @@
 
 ## Summary
 
-The Doppler provider enables secret retrieval from Doppler. Implementation uses CLI wrapper (executes doppler command-line tool) for authentication and secret fetching. This provider supports [TODO: List key capabilities].
+The AWSSecretsManager provider enables secret retrieval from AWS Secrets Manager. Implementation uses AWS SDK for Go for authentication and secret fetching. This provider supports [TODO: List key capabilities].
 
 ## User Stories (As Built)
 
-### User Story 1: Authenticate with Doppler (P1)
+### User Story 1: Authenticate with AWSSecretsManager (P1)
 
-Users authenticate with Doppler using Provider-specific authentication method.
+Users authenticate with AWSSecretsManager using Provider-specific authentication method.
 
 **Why this priority**: Authentication is prerequisite for all secret operations. Without auth, provider cannot function.
 
@@ -28,11 +28,11 @@ Users authenticate with Doppler using Provider-specific authentication method.
 3. **Given** network failure, **Then** timeout with retry suggestion
 
 
-### User Story 2: Fetch Secrets from Doppler (P1)
+### User Story 2: Fetch Secrets from AWSSecretsManager (P1)
 
-Users reference secrets using `store://doppler/path` URI format.
+Users reference secrets using `store://aws_secretsmanager/path` URI format.
 
-**Why this priority**: Core functionality. Enables secret resolution from Doppler.
+**Why this priority**: Core functionality. Enables secret resolution from AWSSecretsManager.
 
 **Acceptance Criteria** (✅ Validated by tests):
 1. **Given** valid secret reference, **Then** secret value returned
@@ -40,9 +40,9 @@ Users reference secrets using `store://doppler/path` URI format.
 3. **Given** insufficient permissions, **Then** error explains permission issue
 
 
-### User Story 3: Handle Doppler-Specific Features (P2)
+### User Story 3: Handle AWSSecretsManager-Specific Features (P2)
 
-Users leverage Doppler-specific capabilities ([Provider-specific features]).
+Users leverage AWSSecretsManager-specific capabilities ([Provider-specific features]).
 
 **Acceptance Criteria** (✅ Validated):
 
@@ -52,37 +52,37 @@ Users leverage Doppler-specific capabilities ([Provider-specific features]).
 ### Architecture
 
 **Key Files**:
-- `internal/providers/doppler.go` - Provider implementation
-- `internal/providers/doppler_test.go` - Test suite
+- `internal/providers/aws_secretsmanager.go` - Provider implementation
+- `internal/providers/aws_secretsmanager_test.go` - Test suite
 - `internal/providers/registry.go` - Provider registration
 - `pkg/provider/provider.go` - Provider interface
 
 ### Provider Interface Implementation
 
 ```go
-type DopplerProvider struct {
+type AWSSecretsManagerProvider struct {
     [TODO: Add struct fields]
 }
 
-func (p *DopplerProvider) Name() string {
-    return "doppler"
+func (p *AWSSecretsManagerProvider) Name() string {
+    return "aws_secretsmanager"
 }
 
-func (p *DopplerProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
+func (p *AWSSecretsManagerProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
     [TODO: Describe resolution logic]
 }
 
-func (p *DopplerProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
+func (p *AWSSecretsManagerProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
     [TODO: Describe metadata logic]
 }
 
-func (p *DopplerProvider) Capabilities() provider.Capabilities {
+func (p *AWSSecretsManagerProvider) Capabilities() provider.Capabilities {
     return provider.Capabilities{
         [TODO: List capabilities]
     }
 }
 
-func (p *DopplerProvider) Validate(ctx context.Context) error {
+func (p *AWSSecretsManagerProvider) Validate(ctx context.Context) error {
     [TODO: Describe validation logic]
 }
 ```
@@ -91,11 +91,9 @@ func (p *DopplerProvider) Validate(ctx context.Context) error {
 
 ```yaml
 secretStores:
-  doppler-dev:
-    type: doppler
-    token,omitempty: value  # Service token
-    project,omitempty: value  # Project name
-    config,omitempty: value  # Config/environment name
+  aws_secretsmanager-dev:
+    type: aws_secretsmanager
+    # Provider-specific configuration fields
 ```
 
 **Configuration Fields**:
@@ -113,7 +111,7 @@ secretStores:
 ### Secret Resolution
 
 **Resolution Process**:
-1. Parse reference URI (`store://doppler/path/to/secret`)
+1. Parse reference URI (`store://aws_secretsmanager/path/to/secret`)
 2. Extract path/key components
 3. [TODO]
 4. [TODO]
@@ -128,7 +126,7 @@ secretStores:
 
 | Capability | Supported | Notes |
 |------------|-----------|-------|
-| Versioning | ❌ | [TODO] |
+| Versioning | ✅ | [TODO] |
 | Metadata | ✅ | [TODO] |
 | List Secrets | ❌ | [TODO] |
 | Rotation | ❌ | [TODO] |
@@ -151,10 +149,10 @@ secretStores:
 
 ## Testing
 
-**Test Coverage**: N/A%
+**Test Coverage**: 0.0%
 
 **Test Files**:
-- `internal/providers/doppler_test.go` - Unit and integration tests
+- `internal/providers/aws_secretsmanager_test.go` - Unit and integration tests
 
 
 **Test Categories**:
@@ -168,9 +166,9 @@ secretStores:
 
 ## Documentation
 
-- **Provider Guide**: `docs/content/providers/doppler.md`
-- **Configuration Reference**: `docs/content/reference/providers.md#doppler`
-- **Examples**: examples/doppler.yaml,examples/doppler-copy.yaml,examples/doppler-simple.yaml,examples/doppler-test.yaml
+- **Provider Guide**: `docs/content/providers/aws_secretsmanager.md`
+- **Configuration Reference**: `docs/content/reference/providers.md#aws_secretsmanager`
+- **Examples**: 
 
 **Example Configuration**:
 [TODO: Add example config]
@@ -183,7 +181,7 @@ secretStores:
 **What Could Be Improved**:
 [TODO: What could improve]
 
-**Doppler-Specific Notes**:
+**AWSSecretsManager-Specific Notes**:
 [TODO: Provider-specific notes]
 
 ## Future Enhancements (v0.2+)
@@ -196,5 +194,5 @@ secretStores:
 - **SPEC-002**: Configuration Parsing (provider config schema)
 - **SPEC-003**: Secret Resolution Engine (resolution pipeline)
 - **SPEC-005**: Provider Registry (provider registration)
-- **SPEC-010**: Doctor Command (provider validation)
+- **SPEC-008**: Doctor Command (provider validation)
 
