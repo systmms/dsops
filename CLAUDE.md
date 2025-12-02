@@ -113,6 +113,9 @@ specs/
 ├── 003-secret-resolution-engine/ # Resolution engine
 ├── 004-transform-pipeline/      # Transform pipeline
 ├── 005-testing-strategy/        # Testing infrastructure
+├── 006-plan-command/            # Plan command (dry-run)
+├── 007-exec-command/            # Exec command (ephemeral execution)
+├── 010-doctor-command/          # Doctor command (diagnostics)
 ├── 050-phase-5-completion/      # Rotation features
 ├── 080-bitwarden/               # Provider specs (080-089)
 ├── 081-onepassword/
