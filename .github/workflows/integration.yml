@@ -3,20 +3,30 @@ name: Integration Tests
 on:
   push:
     branches: [ main, develop ]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'specs/**'
-      - '.specify/**'
-      - 'examples/**'
+    paths:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+      - '.github/workflows/**'
+      - '!**.md'
+      - '!docs/**'
+      - '!specs/**'
+      - '!.specify/**'
+      - '!examples/**'
   pull_request:
     branches: [ main, develop ]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'specs/**'
-      - '.specify/**'
-      - 'examples/**'
+    paths:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+      - '.github/workflows/**'
+      - '!**.md'
+      - '!docs/**'
+      - '!specs/**'
+      - '!.specify/**'
+      - '!examples/**'
   workflow_dispatch:
 
 permissions:
