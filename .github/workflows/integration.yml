@@ -47,7 +47,7 @@ jobs:
           - 8200:8200
         options: >-
           --cap-add=IPC_LOCK
-          --health-cmd "vault status"
+          --health-cmd "wget -q --spider http://127.0.0.1:8200/v1/sys/health || exit 1"
           --health-interval 2s
           --health-timeout 1s
           --health-retries 10
@@ -144,13 +144,3 @@ jobs:
           AWS_SECRET_ACCESS_KEY: test
           # MongoDB configuration
           MONGODB_URI: mongodb://test:test-password@localhost:27017
-
-      - name: Upload integration coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./coverage-integration.txt
-          flags: integration
-          name: codecov-integration
-          fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
