@@ -108,22 +108,22 @@ This project uses [GitHub Spec-Kit](https://github.com/github/spec-kit) for spec
 
 ```
 specs/
-├── 001-cli-framework/
-│   └── spec.md                  # Retrospective spec
-├── 002-configuration-parsing/
-│   └── spec.md
-├── 003-secret-resolution-engine/
-│   └── spec.md
-├── 004-transform-pipeline/
-│   └── spec.md
-├── 080-bitwarden/
-│   └── spec.md                  # Provider retrospective specs
+├── 001-cli-framework/           # Core CLI framework
+├── 002-configuration-parsing/   # Config parsing
+├── 003-secret-resolution-engine/ # Resolution engine
+├── 004-transform-pipeline/      # Transform pipeline
+├── 005-testing-strategy/        # Testing infrastructure
+├── 050-phase-5-completion/      # Rotation features
+├── 080-bitwarden/               # Provider specs (080-089)
 ├── 081-onepassword/
-│   └── spec.md
 ├── 082-literal/
-│   └── spec.md
-... (additional numbered spec directories)
-└── future/                      # Unstructured future ideas
+├── 083-pass/
+├── 084-doppler/
+├── 085-vault/
+├── 086-aws-secretsmanager/
+├── 087-aws-ssm/
+├── 088-azure-keyvault/
+└── 089-gcp-secretmanager/
 ```
 
 **Numbering convention:**
