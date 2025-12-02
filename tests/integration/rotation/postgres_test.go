@@ -82,6 +82,36 @@ func TestPostgreSQLConnectionSetup(t *testing.T) {
 		assert.True(t, exists, "User should still exist after password change")
 	})
 
+	t.Run("concurrent_user_operations", func(t *testing.T) {
+		pgClient := env.PostgresClient()
+
+		// Create multiple users concurrently
+		numUsers := 10
+		results := make(chan error, numUsers)
+
+		for i := 0; i < numUsers; i++ {
+			i := i // Capture loop variable
+			go func() {
+				username := testutil.RandomString("test_concurrent_user", 10)
+				password := "concurrent_password_" + string(rune(i))
+
+				err := pgClient.CreateTestUser(username, password)
+				results <- err
+
+				// Cleanup
+				if err == nil {
+					_ = pgClient.DropTestUser(username)
+				}
+			}()
+		}
+
+		// Collect results
+		for i := 0; i < numUsers; i++ {
+			err := <-results
+			assert.NoError(t, err, "Concurrent user creation should succeed")
+		}
+	})
+
 	t.Run("table_creation_and_query", func(t *testing.T) {
 		pgClient := env.PostgresClient()
 

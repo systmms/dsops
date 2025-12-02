@@ -686,8 +686,8 @@ func (e *MockRotationEngine) ScheduleRotation(ctx context.Context, request rotat
 }
 
 type MockDatabase struct {
-	// users field is commented out as unused, but kept for potential future use
-	// users map[string]string
+	// users is intentionally unused - this is a mock type for examples
+	_ [0]func() // zero-width field to prevent unused warnings
 }
 
 // Additional mock implementations would go here...
