@@ -1,12 +1,22 @@
 # SPEC-009: Rotation Phase 5 Completion
 
-**Status**: Draft
-**Feature Branch**: TBD
+**Status**: In Progress
+**Feature Branch**: 009-phase-5-completion
 **Target Milestone**: v0.2
 **Related**:
 - VISION_ROTATE.md Section 4 (Advanced Features)
 - VISION_ROTATE_IMPLEMENTATION.md Phase 5 (Advanced Features)
 - VISION.md Section 8 (Secret Rotation)
+
+## Clarifications
+
+### Session 2025-12-03
+
+- Q: What notification delivery model should be used? → A: Async with bounded queue (background goroutine, drop oldest if full)
+- Q: How should concurrent rotation requests be handled? → A: Interactive prompt with rotation details + choice (reject/queue/replace/concurrent); `--on-conflict` flag for automation with `reject` as default
+- Q: Should health check failure threshold reset between rotations? → A: Per-rotation scope (counter resets at start of each rotation's health monitoring period)
+- Q: What should the notification queue bounds be? → A: 100 events, emit `dsops_notifications_dropped_total` Prometheus counter on drop
+- Q: How should gradual rollout discover service instances? → A: Pluggable with 4 providers: explicit (default), kubernetes, cloud, endpoint (configurable per service)
 
 ## Summary
 
