@@ -51,6 +51,31 @@ type PostgresTestClient struct {
 	db *sql.DB
 }
 
+// QueryRowResult wraps sql.Row with context cancellation
+// This ensures the context is not cancelled until Scan() is called
+type QueryRowResult struct {
+	row    *sql.Row
+	cancel context.CancelFunc
+}
+
+// Scan scans the row and cancels the context
+func (r *QueryRowResult) Scan(dest ...interface{}) error {
+	defer r.cancel()
+	return r.row.Scan(dest...)
+}
+
+// QueryResult wraps sql.Rows with context cancellation
+type QueryResult struct {
+	*sql.Rows
+	cancel context.CancelFunc
+}
+
+// Close closes the rows and cancels the context
+func (r *QueryResult) Close() error {
+	defer r.cancel()
+	return r.Rows.Close()
+}
+
 // MongoTestClient wraps MongoDB connection
 type MongoTestClient struct {
 	// TODO: Add MongoDB client when needed
@@ -661,16 +686,22 @@ func (p *PostgresTestClient) Exec(query string, args ...interface{}) error {
 }
 
 // Query executes a SQL query
-func (p *PostgresTestClient) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (p *PostgresTestClient) Query(query string, args ...interface{}) (*QueryResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 
-	return p.db.QueryContext(ctx, query, args...)
+	rows, err := p.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	return &QueryResult{Rows: rows, cancel: cancel}, nil
 }
 
 // QueryRow executes a SQL query that returns a single row
-func (p *PostgresTestClient) QueryRow(query string, args ...interface{}) *sql.Row {
-	return p.db.QueryRowContext(context.Background(), query, args...)
+func (p *PostgresTestClient) QueryRow(query string, args ...interface{}) *QueryRowResult {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	row := p.db.QueryRowContext(ctx, query, args...)
+	return &QueryRowResult{row: row, cancel: cancel}
 }
 
 // CreateTestUser creates a test PostgreSQL user
