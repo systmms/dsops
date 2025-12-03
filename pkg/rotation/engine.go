@@ -9,18 +9,20 @@ import (
 
 	"github.com/systmms/dsops/internal/dsopsdata"
 	"github.com/systmms/dsops/internal/logging"
+	"github.com/systmms/dsops/internal/rotation/notifications"
 	rotationstorage "github.com/systmms/dsops/internal/rotation/storage"
 	"github.com/systmms/dsops/internal/validation"
 )
 
 // DefaultRotationEngine implements the RotationEngine interface
 type DefaultRotationEngine struct {
-	strategies map[string]SecretValueRotator
-	storage    RotationStorage
+	strategies        map[string]SecretValueRotator
+	storage           RotationStorage
 	persistentStorage rotationstorage.Storage
-	repository *dsopsdata.Repository
-	logger     *logging.Logger
-	mu         sync.RWMutex
+	repository        *dsopsdata.Repository
+	notifier          *notifications.Manager
+	logger            *logging.Logger
+	mu                sync.RWMutex
 }
 
 // NewRotationEngine creates a new rotation engine with in-memory storage
@@ -28,14 +30,24 @@ func NewRotationEngine(logger *logging.Logger) *DefaultRotationEngine {
 	// Initialize persistent storage
 	storageDir := rotationstorage.DefaultStorageDir()
 	persistentStorage := rotationstorage.NewFileStorage(storageDir)
-	
+
 	return &DefaultRotationEngine{
-		strategies: make(map[string]SecretValueRotator),
-		storage:    NewMemoryRotationStorage(),
+		strategies:        make(map[string]SecretValueRotator),
+		storage:           NewMemoryRotationStorage(),
 		persistentStorage: persistentStorage,
-		repository: nil,
-		logger:     logger,
+		repository:        nil,
+		notifier:          nil,
+		logger:            logger,
 	}
+}
+
+// SetNotifier sets the notification manager for rotation events.
+// The notification manager must be started before it will send notifications.
+func (e *DefaultRotationEngine) SetNotifier(notifier *notifications.Manager) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.notifier = notifier
+	e.logger.Debug("Notification manager configured for rotation engine")
 }
 
 // NewRotationEngineWithStorage creates a new rotation engine with custom storage
@@ -217,8 +229,15 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 		},
 	}
 
-	e.logger.Info("Starting rotation for secret %s using strategy %s", 
+	e.logger.Info("Starting rotation for secret %s using strategy %s",
 		logging.Secret(request.Secret.Key), request.Strategy)
+
+	// Send "started" notification
+	startResult := &RotationResult{
+		Secret: request.Secret,
+		Status: StatusPending,
+	}
+	e.sendNotification(request, startResult, notifications.EventTypeStarted)
 
 	// Create validator if repository is available
 	var validator *validation.CredentialValidator
@@ -470,8 +489,15 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 		e.logger.Warn("Failed to update rotation status: %v", err)
 	}
 
-	e.logger.Info("Completed rotation for secret %s with status %s", 
+	e.logger.Info("Completed rotation for secret %s with status %s",
 		logging.Secret(request.Secret.Key), result.Status)
+
+	// Send completion notification
+	if result.Status == StatusCompleted {
+		e.sendNotification(request, result, notifications.EventTypeCompleted)
+	} else if result.Status == StatusFailed {
+		e.sendNotification(request, result, notifications.EventTypeFailed)
+	}
 
 	return result, nil
 }
@@ -545,4 +571,73 @@ func createAuditEntry(action, component, status, message string, details map[str
 		Message:   message,
 		Details:   details,
 	}
+}
+
+// sendNotification sends a rotation event notification if a notifier is configured.
+func (e *DefaultRotationEngine) sendNotification(request RotationRequest, result *RotationResult, eventType notifications.EventType) {
+	e.mu.RLock()
+	notifier := e.notifier
+	e.mu.RUnlock()
+
+	if notifier == nil {
+		return
+	}
+
+	// Map rotation status to notification status
+	var status notifications.RotationStatus
+	switch result.Status {
+	case StatusCompleted:
+		status = notifications.StatusSuccess
+	case StatusFailed:
+		status = notifications.StatusFailure
+	default:
+		status = notifications.StatusFailure
+	}
+
+	// Get environment from config or metadata
+	environment := ""
+	if request.Config != nil {
+		if env, ok := request.Config["environment"].(string); ok {
+			environment = env
+		}
+	}
+
+	// Calculate duration
+	var duration time.Duration
+	if result.RotatedAt != nil {
+		duration = time.Since(*result.RotatedAt)
+	}
+
+	// Get version info
+	var previousVersion, newVersion string
+	if result.OldSecretRef != nil {
+		previousVersion = result.OldSecretRef.Version
+	}
+	if result.NewSecretRef != nil {
+		newVersion = result.NewSecretRef.Version
+	}
+
+	// Create the notification event
+	event := notifications.RotationEvent{
+		Type:            eventType,
+		Service:         string(request.Secret.SecretType),
+		Environment:     environment,
+		Strategy:        request.Strategy,
+		Status:          status,
+		Duration:        duration,
+		Timestamp:       time.Now(),
+		PreviousVersion: previousVersion,
+		NewVersion:      newVersion,
+		InitiatedBy:     os.Getenv("USER"),
+		Metadata: map[string]string{
+			"secret_key": request.Secret.Key,
+		},
+	}
+
+	// Add error if present
+	if result.Error != "" {
+		event.Error = fmt.Errorf("%s", result.Error)
+	}
+
+	notifier.Send(event)
 }

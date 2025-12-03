@@ -15,15 +15,15 @@
 
 **Purpose**: Project initialization and notification framework foundation
 
-- [ ] T001 Create notification package structure in internal/rotation/notifications/
-- [ ] T002 [P] Create NotificationProvider interface in internal/rotation/notifications/provider.go
-- [ ] T003 [P] Create RotationEvent type in internal/rotation/notifications/event.go
-- [ ] T004 [P] Create NotificationManager with async bounded queue (100 events) in internal/rotation/notifications/manager.go
-- [ ] T005 [P] Add notification config types to internal/config/notifications.go
-- [ ] T006 Add Prometheus client dependency to go.mod (github.com/prometheus/client_golang)
-- [ ] T007 Create rollback package structure in internal/rotation/rollback/
-- [ ] T008 Create health package structure in internal/rotation/health/
-- [ ] T009 Create gradual package structure in internal/rotation/gradual/
+- [X] T001 Create notification package structure in internal/rotation/notifications/
+- [X] T002 [P] Create NotificationProvider interface in internal/rotation/notifications/provider.go
+- [X] T003 [P] Create RotationEvent type in internal/rotation/notifications/event.go
+- [X] T004 [P] Create NotificationManager with async bounded queue (100 events) in internal/rotation/notifications/manager.go
+- [X] T005 [P] Add notification config types to internal/config/notifications.go
+- [X] T006 Add Prometheus client dependency to go.mod (github.com/prometheus/client_golang)
+- [X] T007 Create rollback package structure in internal/rotation/rollback/
+- [X] T008 Create health package structure in internal/rotation/health/
+- [X] T009 Create gradual package structure in internal/rotation/gradual/
 
 ---
 
@@ -33,13 +33,13 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T010 Implement NotificationManager.Start() background goroutine in internal/rotation/notifications/manager.go
-- [ ] T011 Implement NotificationManager.Send() with queue logic in internal/rotation/notifications/manager.go
-- [ ] T012 [P] Add dsops_notifications_dropped_total Prometheus counter in internal/rotation/notifications/metrics.go
-- [ ] T013 [P] Create EventType enum (started, completed, failed, rollback) in internal/rotation/notifications/event.go
-- [ ] T014 Integrate NotificationManager into pkg/rotation/engine.go
-- [ ] T015 [P] Parse notification config in internal/config/config.go
-- [ ] T016 Add --on-conflict flag to rotation commands in cmd/dsops/commands/secrets_rotate.go
+- [X] T010 Implement NotificationManager.Start() background goroutine in internal/rotation/notifications/manager.go
+- [X] T011 Implement NotificationManager.Send() with queue logic in internal/rotation/notifications/manager.go
+- [X] T012 [P] Add dsops_notifications_dropped_total Prometheus counter in internal/rotation/notifications/metrics.go
+- [X] T013 [P] Create EventType enum (started, completed, failed, rollback) in internal/rotation/notifications/event.go
+- [X] T014 Integrate NotificationManager into pkg/rotation/engine.go
+- [X] T015 [P] Parse notification config in internal/config/config.go
+- [X] T016 Add --on-conflict flag to rotation commands in cmd/dsops/commands/secrets_rotate.go
 
 **Checkpoint**: Foundation ready - user story implementation can begin
 
@@ -53,17 +53,17 @@
 
 ### Tests for US1.1
 
-- [ ] T017 [P] [US1.1] Unit test SlackProvider in internal/rotation/notifications/slack_test.go
-- [ ] T018 [P] [US1.1] Integration test Slack webhook (mock server) in tests/integration/notifications_slack_test.go
+- [X] T017 [P] [US1.1] Unit test SlackProvider in internal/rotation/notifications/slack_test.go
+- [X] T018 [P] [US1.1] Integration test Slack webhook (mock server) in tests/integration/notifications_slack_test.go
 
 ### Implementation for US1.1
 
-- [ ] T019 [P] [US1.1] Create SlackConfig struct in internal/rotation/notifications/slack.go
-- [ ] T020 [US1.1] Implement SlackProvider.Send() with Block Kit formatting in internal/rotation/notifications/slack.go
-- [ ] T021 [US1.1] Implement SlackProvider.SupportsEvent() for event filtering in internal/rotation/notifications/slack.go
-- [ ] T022 [US1.1] Add Slack message templates (started, completed, failed, rollback) in internal/rotation/notifications/slack.go
-- [ ] T023 [US1.1] Implement mentions on failure (@oncall) in internal/rotation/notifications/slack.go
-- [ ] T024 [US1.1] Register SlackProvider in NotificationManager in internal/rotation/notifications/manager.go
+- [X] T019 [P] [US1.1] Create SlackConfig struct in internal/rotation/notifications/slack.go
+- [X] T020 [US1.1] Implement SlackProvider.Send() with Block Kit formatting in internal/rotation/notifications/slack.go
+- [X] T021 [US1.1] Implement SlackProvider.SupportsEvent() for event filtering in internal/rotation/notifications/slack.go
+- [X] T022 [US1.1] Add Slack message templates (started, completed, failed, rollback) in internal/rotation/notifications/slack.go
+- [X] T023 [US1.1] Implement mentions on failure (@oncall) in internal/rotation/notifications/slack.go
+- [X] T024 [US1.1] Register SlackProvider in NotificationManager in internal/rotation/notifications/manager.go
 
 **Checkpoint**: Slack notifications working end-to-end
 
@@ -147,18 +147,18 @@
 
 ### Tests for US2.1
 
-- [ ] T047 [P] [US2.1] Unit test RollbackManager in internal/rotation/rollback/manager_test.go
-- [ ] T048 [P] [US2.1] Integration test rollback with PostgreSQL in tests/integration/rollback_test.go
+- [X] T047 [P] [US2.1] Unit test RollbackManager in internal/rotation/rollback/manager_test.go
+- [X] T048 [P] [US2.1] Integration test rollback with PostgreSQL in tests/integration/rollback_test.go
 
 ### Implementation for US2.1
 
-- [ ] T049 [P] [US2.1] Create RollbackConfig struct in internal/rotation/rollback/config.go
-- [ ] T050 [US2.1] Implement RollbackManager.TriggerRollback() in internal/rotation/rollback/manager.go
-- [ ] T051 [US2.1] Implement state machine (rotating->verifying->rollback_in_progress->rolled_back) in internal/rotation/rollback/state.go
-- [ ] T052 [US2.1] Add timeout enforcement (30s default) in internal/rotation/rollback/manager.go
-- [ ] T053 [US2.1] Integrate with verification framework in pkg/rotation/engine.go
-- [ ] T054 [US2.1] Add rollback audit trail entries in internal/rotation/rollback/manager.go
-- [ ] T055 [US2.1] Integrate with notification system for rollback events in internal/rotation/rollback/manager.go
+- [X] T049 [P] [US2.1] Create RollbackConfig struct in internal/rotation/rollback/config.go
+- [X] T050 [US2.1] Implement RollbackManager.TriggerRollback() in internal/rotation/rollback/manager.go
+- [X] T051 [US2.1] Implement state machine (rotating->verifying->rollback_in_progress->rolled_back) in internal/rotation/rollback/state.go
+- [X] T052 [US2.1] Add timeout enforcement (30s default) in internal/rotation/rollback/manager.go
+- [X] T053 [US2.1] Integrate with verification framework in pkg/rotation/engine.go
+- [X] T054 [US2.1] Add rollback audit trail entries in internal/rotation/rollback/manager.go
+- [X] T055 [US2.1] Integrate with notification system for rollback events in internal/rotation/rollback/manager.go
 
 **Checkpoint**: Automatic rollback on verification failure working
 
