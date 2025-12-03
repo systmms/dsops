@@ -23,14 +23,15 @@ type Config struct {
 
 // Definition represents the dsops.yaml structure with separated secret stores and services
 type Definition struct {
-	Version      int                      `yaml:"version"`
-	SecretStores map[string]SecretStoreConfig `yaml:"secretStores,omitempty"`
-	Services     map[string]ServiceConfig     `yaml:"services,omitempty"`
-	Providers    map[string]ProviderConfig    `yaml:"providers,omitempty"` // Legacy compatibility
-	Transforms   map[string][]string          `yaml:"transforms"`
-	Envs         map[string]Environment       `yaml:"envs"`
-	Templates    []Template                   `yaml:"templates"`
-	Policies     *policy.PolicyConfig         `yaml:"policies,omitempty"`
+	Version       int                          `yaml:"version"`
+	SecretStores  map[string]SecretStoreConfig `yaml:"secretStores,omitempty"`
+	Services      map[string]ServiceConfig     `yaml:"services,omitempty"`
+	Providers     map[string]ProviderConfig    `yaml:"providers,omitempty"` // Legacy compatibility
+	Transforms    map[string][]string          `yaml:"transforms"`
+	Envs          map[string]Environment       `yaml:"envs"`
+	Templates     []Template                   `yaml:"templates"`
+	Policies      *policy.PolicyConfig         `yaml:"policies,omitempty"`
+	Notifications *NotificationConfig          `yaml:"notifications,omitempty"` // Rotation notifications
 }
 
 // SecretStoreConfig holds secret store-specific configuration

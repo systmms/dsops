@@ -17,13 +17,14 @@ import (
 
 func NewSecretsRotateCommand(cfg *config.Config) *cobra.Command {
 	var (
-		envName   string
-		keys      []string
-		strategy  string
-		newValue  string
-		dryRun    bool
-		force     bool
-		notify    []string
+		envName    string
+		keys       []string
+		strategy   string
+		newValue   string
+		dryRun     bool
+		force      bool
+		notify     []string
+		onConflict string
 	)
 
 	cmd := &cobra.Command{
@@ -84,7 +85,7 @@ Examples:
 				}
 			}
 
-			return runSecretsRotate(cfg, envName, keys, strategy, newValue, dryRun, force, notify)
+			return runSecretsRotate(cfg, envName, keys, strategy, newValue, dryRun, force, notify, onConflict)
 		},
 	}
 
@@ -95,6 +96,7 @@ Examples:
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be rotated without making changes")
 	cmd.Flags().BoolVar(&force, "force", false, "Force rotation even if recently rotated")
 	cmd.Flags().StringSliceVar(&notify, "notify", nil, "Notification channels: slack,github,webhook")
+	cmd.Flags().StringVar(&onConflict, "on-conflict", "fail", "Behavior on conflict: fail (default), skip, rollback")
 
 	_ = cmd.MarkFlagRequired("env")
 	_ = cmd.MarkFlagRequired("key")
@@ -103,7 +105,18 @@ Examples:
 	return cmd
 }
 
-func runSecretsRotate(cfg *config.Config, envName string, keys []string, strategy, newValueSpec string, dryRun, force bool, notifyChannels []string) error {
+func runSecretsRotate(cfg *config.Config, envName string, keys []string, strategy, newValueSpec string, dryRun, force bool, notifyChannels []string, onConflict string) error {
+	// Validate onConflict value
+	switch onConflict {
+	case "fail", "skip", "rollback":
+		// Valid values
+	default:
+		return dserrors.UserError{
+			Message:    fmt.Sprintf("Invalid --on-conflict value: %s", onConflict),
+			Suggestion: "Valid values are: fail, skip, rollback",
+			Details:    "fail: stop on any error (default), skip: skip conflicting secrets, rollback: attempt rollback on failure",
+		}
+	}
 	if err := cfg.Load(); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
