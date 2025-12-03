@@ -416,3 +416,201 @@ func TestEngineWithRepository(t *testing.T) {
 		t.Errorf("Expected database-rotator from schema, got %s", selected)
 	}
 }
+
+func TestEngine_GetRotationHistory(t *testing.T) {
+	logger := logging.New(false, true)
+	engine := NewRotationEngine(logger)
+	ctx := context.Background()
+
+	secret := SecretInfo{
+		Key:      "TEST_SECRET",
+		Provider: "aws",
+	}
+
+	// Register and perform a rotation
+	strategy := &MockRotator{
+		name:           "test-strategy",
+		supportsSecret: true,
+	}
+	_ = engine.RegisterStrategy(strategy)
+
+	request := RotationRequest{
+		Secret:   secret,
+		Strategy: "test-strategy",
+	}
+	_, _ = engine.Rotate(ctx, request)
+
+	// Get rotation history
+	history, err := engine.GetRotationHistory(ctx, secret, 10)
+	if err != nil {
+		t.Fatalf("Failed to get rotation history: %v", err)
+	}
+
+	if len(history) < 1 {
+		t.Error("Expected at least 1 history entry after rotation")
+	}
+}
+
+func TestEngine_GetRotationStatus(t *testing.T) {
+	logger := logging.New(false, true)
+	engine := NewRotationEngine(logger)
+	ctx := context.Background()
+
+	secret := SecretInfo{
+		Key:      "TEST_SECRET",
+		Provider: "aws",
+	}
+
+	// Get status for secret (should return default)
+	status, err := engine.GetRotationStatus(ctx, secret)
+	if err != nil {
+		t.Fatalf("Failed to get rotation status: %v", err)
+	}
+
+	if status == nil {
+		t.Fatal("Expected non-nil status")
+	}
+
+	// Default status should allow rotation
+	if !status.CanRotate {
+		t.Error("Expected CanRotate to be true for new secret")
+	}
+}
+
+func TestEngine_ListSecrets(t *testing.T) {
+	logger := logging.New(false, true)
+	engine := NewRotationEngine(logger)
+	ctx := context.Background()
+
+	// Initially, no secrets
+	secrets, err := engine.ListSecrets(ctx)
+	if err != nil {
+		t.Fatalf("Failed to list secrets: %v", err)
+	}
+
+	initialCount := len(secrets)
+
+	// Rotate a secret
+	strategy := &MockRotator{
+		name:           "test-strategy",
+		supportsSecret: true,
+	}
+	_ = engine.RegisterStrategy(strategy)
+
+	request := RotationRequest{
+		Secret: SecretInfo{
+			Key:      "NEW_SECRET",
+			Provider: "aws",
+		},
+		Strategy: "test-strategy",
+	}
+	_, _ = engine.Rotate(ctx, request)
+
+	// List secrets again
+	secrets, err = engine.ListSecrets(ctx)
+	if err != nil {
+		t.Fatalf("Failed to list secrets after rotation: %v", err)
+	}
+
+	if len(secrets) <= initialCount {
+		t.Error("Expected more secrets after rotation")
+	}
+}
+
+func TestEngine_ScheduleRotation(t *testing.T) {
+	logger := logging.New(false, true)
+	engine := NewRotationEngine(logger)
+	ctx := context.Background()
+
+	request := RotationRequest{
+		Secret: SecretInfo{
+			Key:      "TEST_SECRET",
+			Provider: "aws",
+		},
+	}
+
+	// ScheduleRotation should return "not implemented" error
+	err := engine.ScheduleRotation(ctx, request, time.Now().Add(time.Hour))
+	if err == nil {
+		t.Error("Expected error for unimplemented ScheduleRotation")
+	}
+
+	if !strings.Contains(err.Error(), "not yet implemented") {
+		t.Errorf("Expected 'not yet implemented' error, got: %v", err)
+	}
+}
+
+func TestEngine_Close(t *testing.T) {
+	logger := logging.New(false, true)
+	engine := NewRotationEngine(logger)
+
+	// Close should not error
+	err := engine.Close()
+	if err != nil {
+		t.Errorf("Unexpected error on Close: %v", err)
+	}
+}
+
+func TestEngine_GetServiceInstanceMetadata(t *testing.T) {
+	logger := logging.New(false, true)
+	engine := NewRotationEngine(logger)
+
+	// Without repository, should return nil
+	metadata := engine.GetServiceInstanceMetadata("postgresql", "prod-db")
+	if metadata != nil {
+		t.Error("Expected nil metadata when no repository is set")
+	}
+
+	// Set up repository with service instance
+	repo := &dsopsdata.Repository{
+		ServiceTypes:     make(map[string]*dsopsdata.ServiceType),
+		ServiceInstances: make(map[string]*dsopsdata.ServiceInstance),
+	}
+
+	// Create service instance with proper structure
+	instance := &dsopsdata.ServiceInstance{}
+	instance.Metadata.Type = "postgresql"
+	instance.Metadata.ID = "prod-db"
+	instance.Spec.Endpoint = "db.example.com:5432"
+	instance.Spec.Auth = "postgres-creds"
+	instance.Spec.Config = map[string]interface{}{
+		"host": "db.example.com",
+		"port": 5432,
+	}
+
+	// Key is "type/id"
+	repo.ServiceInstances["postgresql/prod-db"] = instance
+	engine.SetRepository(repo)
+
+	// Now should return metadata
+	metadata = engine.GetServiceInstanceMetadata("postgresql", "prod-db")
+	if metadata == nil {
+		t.Fatal("Expected non-nil metadata after setting repository")
+	}
+
+	if metadata["host"] != "db.example.com" {
+		t.Errorf("Expected host 'db.example.com', got %v", metadata["host"])
+	}
+
+	if metadata["endpoint"] != "db.example.com:5432" {
+		t.Errorf("Expected endpoint 'db.example.com:5432', got %v", metadata["endpoint"])
+	}
+}
+
+func TestEngine_GetServiceInstanceMetadata_NotFound(t *testing.T) {
+	logger := logging.New(false, true)
+	engine := NewRotationEngine(logger)
+
+	// Set up repository without the requested service instance
+	repo := &dsopsdata.Repository{
+		ServiceTypes:     make(map[string]*dsopsdata.ServiceType),
+		ServiceInstances: make(map[string]*dsopsdata.ServiceInstance),
+	}
+	engine.SetRepository(repo)
+
+	// Should return nil for non-existent service instance
+	metadata := engine.GetServiceInstanceMetadata("nonexistent", "instance")
+	if metadata != nil {
+		t.Error("Expected nil metadata for non-existent service instance")
+	}
+}
