@@ -77,16 +77,16 @@
 
 ### Tests for US1.2
 
-- [ ] T025 [P] [US1.2] Unit test EmailProvider in internal/rotation/notifications/email_test.go
+- [X] T025 [P] [US1.2] Unit test EmailProvider in internal/rotation/notifications/email_test.go
 - [ ] T026 [P] [US1.2] Integration test SMTP (mock server) in tests/integration/notifications_email_test.go
 
 ### Implementation for US1.2
 
-- [ ] T027 [P] [US1.2] Create EmailConfig struct with SMTP settings in internal/rotation/notifications/email.go
-- [ ] T028 [US1.2] Implement EmailProvider.Send() with STARTTLS/TLS in internal/rotation/notifications/email.go
-- [ ] T029 [US1.2] Create HTML and plain-text email templates in internal/rotation/notifications/email.go
-- [ ] T030 [US1.2] Implement batch_mode (immediate, hourly, daily) in internal/rotation/notifications/email.go
-- [ ] T031 [US1.2] Register EmailProvider in NotificationManager in internal/rotation/notifications/manager.go
+- [X] T027 [P] [US1.2] Create EmailConfig struct with SMTP settings in internal/rotation/notifications/email.go
+- [X] T028 [US1.2] Implement EmailProvider.Send() with STARTTLS/TLS in internal/rotation/notifications/email.go
+- [X] T029 [US1.2] Create HTML and plain-text email templates in internal/rotation/notifications/email.go
+- [X] T030 [US1.2] Implement batch_mode (immediate, hourly, daily) in internal/rotation/notifications/email.go
+- [X] T031 [US1.2] Register EmailProvider in NotificationManager in internal/rotation/notifications/manager.go
 
 **Checkpoint**: Email notifications working
 
@@ -100,17 +100,17 @@
 
 ### Tests for US1.3
 
-- [ ] T032 [P] [US1.3] Unit test PagerDutyProvider in internal/rotation/notifications/pagerduty_test.go
+- [X] T032 [P] [US1.3] Unit test PagerDutyProvider in internal/rotation/notifications/pagerduty_test.go
 - [ ] T033 [P] [US1.3] Integration test PagerDuty Events API (mock) in tests/integration/notifications_pagerduty_test.go
 
 ### Implementation for US1.3
 
-- [ ] T034 [P] [US1.3] Create PagerDutyConfig struct in internal/rotation/notifications/pagerduty.go
-- [ ] T035 [US1.3] Implement PagerDutyProvider.Send() with Events API v2 in internal/rotation/notifications/pagerduty.go
-- [ ] T036 [US1.3] Implement trigger/acknowledge/resolve actions in internal/rotation/notifications/pagerduty.go
-- [ ] T037 [US1.3] Add deduplication using rotation ID in internal/rotation/notifications/pagerduty.go
-- [ ] T038 [US1.3] Implement auto_resolve on successful retry in internal/rotation/notifications/pagerduty.go
-- [ ] T039 [US1.3] Register PagerDutyProvider in NotificationManager in internal/rotation/notifications/manager.go
+- [X] T034 [P] [US1.3] Create PagerDutyConfig struct in internal/rotation/notifications/pagerduty.go
+- [X] T035 [US1.3] Implement PagerDutyProvider.Send() with Events API v2 in internal/rotation/notifications/pagerduty.go
+- [X] T036 [US1.3] Implement trigger/acknowledge/resolve actions in internal/rotation/notifications/pagerduty.go
+- [X] T037 [US1.3] Add deduplication using rotation ID in internal/rotation/notifications/pagerduty.go
+- [X] T038 [US1.3] Implement auto_resolve on successful retry in internal/rotation/notifications/pagerduty.go
+- [X] T039 [US1.3] Register PagerDutyProvider in NotificationManager in internal/rotation/notifications/manager.go
 
 **Checkpoint**: PagerDuty incidents working
 
@@ -124,16 +124,16 @@
 
 ### Tests for US1.4
 
-- [ ] T040 [P] [US1.4] Unit test WebhookProvider in internal/rotation/notifications/webhook_test.go
+- [X] T040 [P] [US1.4] Unit test WebhookProvider in internal/rotation/notifications/webhook_test.go
 - [ ] T041 [P] [US1.4] Integration test webhook with retry logic in tests/integration/notifications_webhook_test.go
 
 ### Implementation for US1.4
 
-- [ ] T042 [P] [US1.4] Create WebhookConfig struct with templates in internal/rotation/notifications/webhook.go
-- [ ] T043 [US1.4] Implement WebhookProvider.Send() with Go templates in internal/rotation/notifications/webhook.go
-- [ ] T044 [US1.4] Add configurable headers and auth in internal/rotation/notifications/webhook.go
-- [ ] T045 [US1.4] Implement retry with exponential backoff (3 attempts) in internal/rotation/notifications/webhook.go
-- [ ] T046 [US1.4] Register WebhookProvider in NotificationManager in internal/rotation/notifications/manager.go
+- [X] T042 [P] [US1.4] Create WebhookConfig struct with templates in internal/rotation/notifications/webhook.go
+- [X] T043 [US1.4] Implement WebhookProvider.Send() with Go templates in internal/rotation/notifications/webhook.go
+- [X] T044 [US1.4] Add configurable headers and auth in internal/rotation/notifications/webhook.go
+- [X] T045 [US1.4] Implement retry with exponential backoff (3 attempts) in internal/rotation/notifications/webhook.go
+- [X] T046 [US1.4] Register WebhookProvider in NotificationManager in internal/rotation/notifications/manager.go
 
 **Checkpoint**: All notification providers complete
 
