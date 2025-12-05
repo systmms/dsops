@@ -32,6 +32,7 @@ Examples:
 	cmd.AddCommand(
 		NewRotationStatusCmd(cfg),
 		NewRotationHistoryCmd(cfg),
+		NewRotationRollbackCmd(cfg),
 	)
 
 	return cmd
