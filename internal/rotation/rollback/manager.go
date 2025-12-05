@@ -231,6 +231,33 @@ func (m *Manager) sendRollbackNotification(req RollbackRequest, result *Rollback
 		status = notifications.StatusFailure
 	}
 
+	// Determine trigger type
+	trigger := "automatic"
+	if req.InitiatedBy != "" && req.InitiatedBy != "rotation-engine" && req.InitiatedBy != "verification-failure" {
+		trigger = "manual"
+	}
+
+	// Build enhanced metadata
+	metadata := map[string]string{
+		"reason":          req.Reason,
+		"attempts":        fmt.Sprintf("%d", result.Attempts),
+		"trigger":         trigger,
+		"target_version":  req.PreviousVersion,
+		"failed_version":  req.FailedVersion,
+		"final_state":     string(result.State),
+		"duration_ms":     fmt.Sprintf("%d", result.Duration.Milliseconds()),
+	}
+
+	// Add user info for manual rollbacks
+	if trigger == "manual" && req.InitiatedBy != "" {
+		metadata["user"] = req.InitiatedBy
+	}
+
+	// Add error message to metadata if present
+	if err != nil {
+		metadata["error_message"] = err.Error()
+	}
+
 	event := notifications.RotationEvent{
 		Type:            notifications.EventTypeRollback,
 		Service:         req.Service,
@@ -242,10 +269,7 @@ func (m *Manager) sendRollbackNotification(req RollbackRequest, result *Rollback
 		PreviousVersion: req.PreviousVersion,
 		NewVersion:      req.FailedVersion,
 		InitiatedBy:     req.InitiatedBy,
-		Metadata: map[string]string{
-			"reason":   req.Reason,
-			"attempts": fmt.Sprintf("%d", result.Attempts),
-		},
+		Metadata:        metadata,
 	}
 
 	m.notifier.Send(event)

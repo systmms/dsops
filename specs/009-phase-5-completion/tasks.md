@@ -172,18 +172,18 @@
 
 ### Tests for US2.2
 
-- [ ] T056 [P] [US2.2] Unit test rollback command in cmd/dsops/commands/rotation_rollback_test.go
-- [ ] T057 [P] [US2.2] Integration test manual rollback flow in tests/integration/rollback_manual_test.go
+- [X] T056 [P] [US2.2] Unit test rollback command in cmd/dsops/commands/rotation_rollback_test.go
+- [X] T057 [P] [US2.2] Integration test manual rollback flow in tests/integration/rollback/manual_test.go
 
 ### Implementation for US2.2
 
-- [ ] T058 [US2.2] Create rotation_rollback.go command in cmd/dsops/commands/rotation_rollback.go
-- [ ] T059 [US2.2] Implement --service, --env, --version flags in cmd/dsops/commands/rotation_rollback.go
-- [ ] T060 [US2.2] Implement --force flag to skip confirmation in cmd/dsops/commands/rotation_rollback.go
-- [ ] T061 [US2.2] Implement --reason flag for audit trail in cmd/dsops/commands/rotation_rollback.go
-- [ ] T062 [US2.2] Implement --dry-run flag in cmd/dsops/commands/rotation_rollback.go
-- [ ] T063 [US2.2] Add interactive confirmation prompt in cmd/dsops/commands/rotation_rollback.go
-- [ ] T064 [US2.2] Register rollback subcommand under rotation in cmd/dsops/commands/rotation.go
+- [X] T058 [US2.2] Create rotation_rollback.go command in cmd/dsops/commands/rotation_rollback.go
+- [X] T059 [US2.2] Implement --service, --env, --version flags in cmd/dsops/commands/rotation_rollback.go
+- [X] T060 [US2.2] Implement --force flag to skip confirmation in cmd/dsops/commands/rotation_rollback.go
+- [X] T061 [US2.2] Implement --reason flag for audit trail in cmd/dsops/commands/rotation_rollback.go
+- [X] T062 [US2.2] Implement --dry-run flag in cmd/dsops/commands/rotation_rollback.go
+- [X] T063 [US2.2] Add interactive confirmation prompt in cmd/dsops/commands/rotation_rollback.go
+- [X] T064 [US2.2] Register rollback subcommand under rotation in cmd/dsops/commands/rotation.go
 
 **Checkpoint**: Manual rollback command working
 
@@ -197,9 +197,9 @@
 
 ### Implementation for US2.3
 
-- [ ] T065 [US2.3] Create rollback-specific message templates in internal/rotation/notifications/templates.go
-- [ ] T066 [US2.3] Include rollback metadata (reason, versions, user) in notifications in internal/rotation/rollback/manager.go
-- [ ] T067 [US2.3] Add next steps recommendations to rollback notifications in internal/rotation/notifications/templates.go
+- [X] T065 [US2.3] Create rollback-specific message templates in internal/rotation/notifications/templates.go
+- [X] T066 [US2.3] Include rollback metadata (reason, versions, user) in notifications in internal/rotation/rollback/manager.go
+- [X] T067 [US2.3] Add next steps recommendations to rollback notifications in internal/rotation/notifications/templates.go
 
 **Checkpoint**: Rollback notifications working
 
