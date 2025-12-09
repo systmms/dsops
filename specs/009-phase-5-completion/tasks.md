@@ -311,14 +311,14 @@
 
 ### Tests for US4.2
 
-- [ ] T102 [P] [US4.2] Unit test PercentageStrategy in internal/rotation/gradual/percentage_test.go
+- [X] T102 [P] [US4.2] Unit test PercentageStrategy in internal/rotation/gradual/percentage_test.go
 
 ### Implementation for US4.2
 
-- [ ] T103 [US4.2] Implement PercentageStrategy.Plan() with wave calculation in internal/rotation/gradual/percentage.go
-- [ ] T104 [US4.2] Implement PercentageStrategy.Execute() with health monitoring per wave in internal/rotation/gradual/percentage.go
-- [ ] T105 [US4.2] Implement pause_on_failure with manual approval in internal/rotation/gradual/percentage.go
-- [ ] T106 [US4.2] Implement progress persistence for resume in internal/rotation/gradual/percentage.go
+- [X] T103 [US4.2] Implement PercentageStrategy.Plan() with wave calculation in internal/rotation/gradual/percentage.go
+- [X] T104 [US4.2] Implement PercentageStrategy.Execute() with health monitoring per wave in internal/rotation/gradual/percentage.go
+- [X] T105 [US4.2] Implement pause_on_failure with manual approval in internal/rotation/gradual/percentage.go
+- [X] T106 [US4.2] Implement progress persistence for resume in internal/rotation/gradual/percentage.go
 
 **Checkpoint**: Percentage rollout working
 
@@ -332,15 +332,15 @@
 
 ### Tests for US4.3
 
-- [ ] T107 [P] [US4.3] Unit test GroupStrategy in internal/rotation/gradual/group_test.go
+- [X] T107 [P] [US4.3] Unit test GroupStrategy in internal/rotation/gradual/group_test.go
 
 ### Implementation for US4.3
 
-- [ ] T108 [US4.3] Implement GroupStrategy with dependency graph in internal/rotation/gradual/group.go
-- [ ] T109 [US4.3] Implement topological sort for rotation order in internal/rotation/gradual/group.go
-- [ ] T110 [US4.3] Implement parallel execution where safe in internal/rotation/gradual/group.go
-- [ ] T111 [US4.3] Implement group-level rollback (all-or-nothing) in internal/rotation/gradual/group.go
-- [ ] T112 [US4.3] Add cross-service verification hooks in internal/rotation/gradual/group.go
+- [X] T108 [US4.3] Implement GroupStrategy with dependency graph in internal/rotation/gradual/group.go
+- [X] T109 [US4.3] Implement topological sort for rotation order in internal/rotation/gradual/group.go
+- [X] T110 [US4.3] Implement parallel execution where safe in internal/rotation/gradual/group.go
+- [X] T111 [US4.3] Implement group-level rollback (all-or-nothing) in internal/rotation/gradual/group.go
+- [X] T112 [US4.3] Add cross-service verification hooks in internal/rotation/gradual/group.go
 
 **Checkpoint**: Service group rotation working
 
@@ -350,9 +350,9 @@
 
 **Goal**: Support Kubernetes, cloud, and endpoint discovery
 
-- [ ] T113 [P] Implement KubernetesDiscovery in internal/rotation/gradual/discovery/kubernetes.go
-- [ ] T114 [P] Implement CloudDiscovery (AWS/GCP/Azure tags) in internal/rotation/gradual/discovery/cloud.go
-- [ ] T115 [P] Implement EndpointDiscovery in internal/rotation/gradual/discovery/endpoint.go
+- [X] T113 [P] Implement KubernetesDiscovery in internal/rotation/gradual/discovery/kubernetes.go
+- [X] T114 [P] Implement CloudDiscovery (AWS/GCP/Azure tags) in internal/rotation/gradual/discovery/cloud.go
+- [X] T115 [P] Implement EndpointDiscovery in internal/rotation/gradual/discovery/endpoint.go
 
 ---
 
@@ -360,16 +360,16 @@
 
 **Purpose**: Documentation, examples, final validation
 
-- [ ] T116 [P] Update docs/content/reference/status.md with Phase 5 completion
-- [ ] T117 [P] Update specs/009-phase-5-completion/spec.md status to "Implemented"
+- [X] T116 [P] Update docs/content/reference/status.md with Phase 5 completion
+- [X] T117 [P] Update specs/009-phase-5-completion/spec.md status to "Implemented"
 - [ ] T118 [P] Create notification examples in examples/notifications/
 - [ ] T119 [P] Create health check examples in examples/health-checks/
 - [ ] T120 [P] Create gradual rollout examples in examples/gradual-rollout/
 - [ ] T121 Create user documentation in docs/content/rotation/notifications.md
 - [ ] T122 Create user documentation in docs/content/rotation/health-checks.md
 - [ ] T123 Create user documentation in docs/content/rotation/gradual-rollout.md
-- [ ] T124 Run full test suite with coverage validation (>=80%)
-- [ ] T125 Security review: verify no secrets in notifications/logs
+- [X] T124 Run full test suite with coverage validation (>=80%)
+- [X] T125 Security review: verify no secrets in notifications/logs
 
 ---
 
