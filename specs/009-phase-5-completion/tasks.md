@@ -287,17 +287,17 @@
 
 ### Tests for US4.1
 
-- [ ] T094 [P] [US4.1] Unit test CanaryStrategy in internal/rotation/gradual/canary_test.go
+- [X] T094 [P] [US4.1] Unit test CanaryStrategy in internal/rotation/gradual/canary_test.go
 
 ### Implementation for US4.1
 
-- [ ] T095 [P] [US4.1] Create RolloutStrategy interface in internal/rotation/gradual/strategy.go
-- [ ] T096 [P] [US4.1] Create DiscoveryProvider interface in internal/rotation/gradual/discovery/provider.go
-- [ ] T097 [US4.1] Implement ExplicitDiscovery (config-based) in internal/rotation/gradual/discovery/explicit.go
-- [ ] T098 [US4.1] Implement CanaryStrategy.Plan() in internal/rotation/gradual/canary.go
-- [ ] T099 [US4.1] Implement CanaryStrategy.Execute() with wave logic in internal/rotation/gradual/canary.go
-- [ ] T100 [US4.1] Integrate canary health monitoring in internal/rotation/gradual/canary.go
-- [ ] T101 [US4.1] Integrate canary abort/rollback on failure in internal/rotation/gradual/canary.go
+- [X] T095 [P] [US4.1] Create RolloutStrategy interface in internal/rotation/gradual/strategy.go
+- [X] T096 [P] [US4.1] Create DiscoveryProvider interface in internal/rotation/gradual/discovery/provider.go
+- [X] T097 [US4.1] Implement ExplicitDiscovery (config-based) in internal/rotation/gradual/discovery/explicit.go
+- [X] T098 [US4.1] Implement CanaryStrategy.Plan() in internal/rotation/gradual/canary.go
+- [X] T099 [US4.1] Implement CanaryStrategy.Execute() with wave logic in internal/rotation/gradual/canary.go
+- [X] T100 [US4.1] Integrate canary health monitoring in internal/rotation/gradual/canary.go
+- [X] T101 [US4.1] Integrate canary abort/rollback on failure in internal/rotation/gradual/canary.go
 
 **Checkpoint**: Canary rotation working
 
