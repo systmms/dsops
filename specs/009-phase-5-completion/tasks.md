@@ -78,7 +78,7 @@
 ### Tests for US1.2
 
 - [X] T025 [P] [US1.2] Unit test EmailProvider in internal/rotation/notifications/email_test.go
-- [ ] T026 [P] [US1.2] Integration test SMTP (mock server) in tests/integration/notifications_email_test.go
+- [X] T026 [P] [US1.2] Integration test SMTP (mock server) in tests/integration/notifications_email_test.go
 
 ### Implementation for US1.2
 
@@ -101,7 +101,7 @@
 ### Tests for US1.3
 
 - [X] T032 [P] [US1.3] Unit test PagerDutyProvider in internal/rotation/notifications/pagerduty_test.go
-- [ ] T033 [P] [US1.3] Integration test PagerDuty Events API (mock) in tests/integration/notifications_pagerduty_test.go
+- [X] T033 [P] [US1.3] Integration test PagerDuty Events API (mock) in tests/integration/notifications_pagerduty_test.go
 
 ### Implementation for US1.3
 
@@ -125,7 +125,7 @@
 ### Tests for US1.4
 
 - [X] T040 [P] [US1.4] Unit test WebhookProvider in internal/rotation/notifications/webhook_test.go
-- [ ] T041 [P] [US1.4] Integration test webhook with retry logic in tests/integration/notifications_webhook_test.go
+- [X] T041 [P] [US1.4] Integration test webhook with retry logic in tests/integration/notifications_webhook_test.go
 
 ### Implementation for US1.4
 

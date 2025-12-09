@@ -66,6 +66,11 @@ func (p *PagerDutyProvider) Name() string {
 	return "pagerduty"
 }
 
+// SetAPIURL sets the PagerDuty API URL (for testing).
+func (p *PagerDutyProvider) SetAPIURL(url string) {
+	p.apiURL = url
+}
+
 // SupportsEvent returns true if this provider handles the given event type.
 func (p *PagerDutyProvider) SupportsEvent(eventType EventType) bool {
 	// If no events are configured, support all
