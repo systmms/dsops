@@ -213,20 +213,20 @@
 
 ### Tests for US3.1
 
-- [ ] T068 [P] [US3.1] Unit test HealthMonitor in internal/rotation/health/monitor_test.go
-- [ ] T069 [P] [US3.1] Unit test SQL health checker in internal/rotation/health/sql_test.go
-- [ ] T070 [P] [US3.1] Integration test health monitoring in tests/integration/health_test.go
+- [X] T068 [P] [US3.1] Unit test HealthMonitor in internal/rotation/health/monitor_test.go
+- [X] T069 [P] [US3.1] Unit test SQL health checker in internal/rotation/health/sql_test.go
+- [X] T070 [P] [US3.1] Integration test health monitoring in tests/integration/health_test.go
 
 ### Implementation for US3.1
 
-- [ ] T071 [P] [US3.1] Create HealthChecker interface in internal/rotation/health/checker.go
-- [ ] T072 [P] [US3.1] Create HealthResult struct in internal/rotation/health/checker.go
-- [ ] T073 [US3.1] Implement HealthMonitor with background goroutine in internal/rotation/health/monitor.go
-- [ ] T074 [US3.1] Implement configurable interval (default 30s) and period (default 10m) in internal/rotation/health/monitor.go
-- [ ] T075 [US3.1] Implement failure_threshold (default 3) triggering rollback in internal/rotation/health/monitor.go
-- [ ] T076 [US3.1] Implement SQLHealthChecker (ping, query_latency, connection_pool) in internal/rotation/health/sql.go
-- [ ] T077 [US3.1] Implement HTTPHealthChecker (response_time, error_rate) in internal/rotation/health/http.go
-- [ ] T078 [US3.1] Integrate HealthMonitor with RollbackManager in internal/rotation/health/monitor.go
+- [X] T071 [P] [US3.1] Create HealthChecker interface in internal/rotation/health/checker.go
+- [X] T072 [P] [US3.1] Create HealthResult struct in internal/rotation/health/checker.go
+- [X] T073 [US3.1] Implement HealthMonitor with background goroutine in internal/rotation/health/monitor.go
+- [X] T074 [US3.1] Implement configurable interval (default 30s) and period (default 10m) in internal/rotation/health/monitor.go
+- [X] T075 [US3.1] Implement failure_threshold (default 3) triggering rollback in internal/rotation/health/monitor.go
+- [X] T076 [US3.1] Implement SQLHealthChecker (ping, query_latency, connection_pool) in internal/rotation/health/sql.go
+- [X] T077 [US3.1] Implement HTTPHealthChecker (response_time, error_rate) in internal/rotation/health/http.go
+- [X] T078 [US3.1] Integrate HealthMonitor with RollbackManager in internal/rotation/health/monitor.go
 
 **Checkpoint**: Health monitoring with rollback integration working
 
@@ -240,15 +240,15 @@
 
 ### Tests for US3.2
 
-- [ ] T079 [P] [US3.2] Unit test ScriptHealthChecker in internal/rotation/health/script_test.go
+- [X] T079 [P] [US3.2] Unit test ScriptHealthChecker in internal/rotation/health/script_test.go
 
 ### Implementation for US3.2
 
-- [ ] T080 [US3.2] Implement ScriptHealthChecker with os/exec in internal/rotation/health/script.go
-- [ ] T081 [US3.2] Inject DSOPS_* environment variables in internal/rotation/health/script.go
-- [ ] T082 [US3.2] Implement timeout enforcement in internal/rotation/health/script.go
-- [ ] T083 [US3.2] Capture stdout/stderr for logging in internal/rotation/health/script.go
-- [ ] T084 [US3.2] Implement retry with backoff in internal/rotation/health/script.go
+- [X] T080 [US3.2] Implement ScriptHealthChecker with os/exec in internal/rotation/health/script.go
+- [X] T081 [US3.2] Inject DSOPS_* environment variables in internal/rotation/health/script.go
+- [X] T082 [US3.2] Implement timeout enforcement in internal/rotation/health/script.go
+- [X] T083 [US3.2] Capture stdout/stderr for logging in internal/rotation/health/script.go
+- [X] T084 [US3.2] Implement retry with backoff in internal/rotation/health/script.go
 
 **Checkpoint**: Custom health scripts working
 
@@ -262,18 +262,18 @@
 
 ### Tests for US3.3
 
-- [ ] T085 [P] [US3.3] Unit test metrics registration in internal/rotation/health/metrics_test.go
+- [X] T085 [P] [US3.3] Unit test metrics registration in internal/rotation/health/metrics_test.go
 
 ### Implementation for US3.3
 
-- [ ] T086 [US3.3] Register dsops_rotation_started_total counter in internal/rotation/health/metrics.go
-- [ ] T087 [US3.3] Register dsops_rotation_completed_total counter (with status label) in internal/rotation/health/metrics.go
-- [ ] T088 [US3.3] Register dsops_rotation_duration_seconds histogram in internal/rotation/health/metrics.go
-- [ ] T089 [US3.3] Register dsops_health_check_status gauge in internal/rotation/health/metrics.go
-- [ ] T090 [US3.3] Register dsops_rollback_total counter in internal/rotation/health/metrics.go
-- [ ] T091 [US3.3] Create HTTP server for /metrics endpoint in internal/rotation/health/server.go
-- [ ] T092 [US3.3] Add metrics config parsing in internal/config/config.go
-- [ ] T093 [US3.3] Integrate metrics collection in rotation engine in pkg/rotation/engine.go
+- [X] T086 [US3.3] Register dsops_rotation_started_total counter in internal/rotation/health/metrics.go
+- [X] T087 [US3.3] Register dsops_rotation_completed_total counter (with status label) in internal/rotation/health/metrics.go
+- [X] T088 [US3.3] Register dsops_rotation_duration_seconds histogram in internal/rotation/health/metrics.go
+- [X] T089 [US3.3] Register dsops_health_check_status gauge in internal/rotation/health/metrics.go
+- [X] T090 [US3.3] Register dsops_rollback_total counter in internal/rotation/health/metrics.go
+- [X] T091 [US3.3] Create HTTP server for /metrics endpoint in internal/rotation/health/server.go
+- [X] T092 [US3.3] Add metrics config parsing in internal/config/config.go
+- [X] T093 [US3.3] Integrate metrics collection in rotation engine in pkg/rotation/engine.go
 
 **Checkpoint**: Prometheus metrics exposed
 
