@@ -1,0 +1,108 @@
+version: 1
+
+# Example: SQL database health monitoring after rotation
+# This config demonstrates health checks for PostgreSQL/MySQL services
+
+secretStores:
+  vault:
+    type: hashicorp.vault
+    url: https://vault.example.com
+
+services:
+  postgres-prod:
+    type: postgresql
+    host: prod-db.example.com
+    port: 5432
+    database: production
+    ssl_mode: require
+
+    admin_credentials:
+      username: postgres
+      password:
+        from:
+          store: vault
+          key: admin/postgres/password
+
+    rotation:
+      strategy: two-key
+
+      # Health monitoring configuration
+      health_checks:
+        enabled: true
+
+        # Monitor for 10 minutes after rotation
+        monitoring_period: 10m
+
+        # Check every 30 seconds
+        interval: 30s
+
+        # Trigger rollback after 3 consecutive failures
+        failure_threshold: 3
+
+        # Built-in SQL health checks
+        checks:
+          # Basic connection test
+          - type: connection
+            name: "connection-test"
+
+          # Query latency monitoring
+          - type: query_latency
+            name: "query-performance"
+            # Alert if queries take longer than 500ms
+            threshold_ms: 500
+            # Custom test query (optional)
+            query: "SELECT COUNT(*) FROM users"
+
+          # Connection pool monitoring
+          - type: connection_pool
+            name: "pool-exhaustion-check"
+            # Warn if using >80% of max connections
+            max_connections: 100
+            warning_threshold_pct: 80
+
+          # Active transaction monitoring (optional)
+          - type: active_transactions
+            name: "transaction-count"
+            # Warn if more than 50 active transactions
+            max_transactions: 50
+
+          # Replication lag check (for replicas)
+          # - type: replication_lag
+          #   name: "replica-lag-check"
+          #   max_lag_seconds: 10
+
+      # Automatic rollback on health check failure
+      rollback:
+        automatic: true
+        on_health_check_failure: true
+        timeout: 30s
+
+      # Notifications for health check failures
+      notifications:
+        slack:
+          webhook_url:
+            from:
+              store: vault
+              key: notifications/slack/webhook
+          channel: "#database-ops"
+          events: [failed, rollback]
+          mentions:
+            on_failure: ["@dba-oncall"]
+
+envs:
+  production:
+    DATABASE_PASSWORD:
+      from:
+        store: vault
+        key: prod/database/password
+      service: postgres-prod
+      rotation:
+        ttl: 30d
+
+    DATABASE_URL:
+      from:
+        store: vault
+        key: prod/database/connection-string
+      service: postgres-prod
+      rotation:
+        ttl: 30d

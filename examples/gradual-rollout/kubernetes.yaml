@@ -1,0 +1,182 @@
+version: 1
+
+# Example: Kubernetes instance discovery for gradual rollout
+# This config demonstrates discovering instances from Kubernetes
+
+secretStores:
+  vault:
+    type: hashicorp.vault
+    url: https://vault.example.com
+
+services:
+  api-deployment:
+    type: postgresql
+    host: api-db.example.com
+    port: 5432
+    database: api_production
+
+    admin_credentials:
+      username: postgres
+      password:
+        from:
+          store: vault
+          key: admin/postgres/password
+
+    rotation:
+      strategy: canary
+
+      canary:
+        # Kubernetes-based instance discovery
+        discovery:
+          type: kubernetes
+          namespace: production
+          # Label selector to find pods
+          label_selector: "app=api,tier=backend"
+          # Optional: Use kubeconfig file
+          kubeconfig: "/home/user/.kube/config"
+          # Optional: Specific context
+          # context: "production-cluster"
+
+        # Canary selection from discovered pods
+        instance_selector: "role=canary"  # Matches pod label
+
+        health_monitoring_period: 5m
+        failure_threshold: 2
+
+        # Gradual rollout waves
+        rollout_waves:
+          - percentage: 10
+            wait: 2m
+          - percentage: 50
+            wait: 5m
+          - percentage: 100
+
+      health_checks:
+        enabled: true
+        interval: 30s
+        failure_threshold: 3
+
+        checks:
+          - type: connection
+          - type: query_latency
+            threshold_ms: 500
+
+          # Kubernetes-specific: Check pod readiness
+          - type: kubernetes_pod_ready
+            namespace: production
+            label_selector: "app=api,tier=backend"
+
+      # Rollback configuration
+      rollback:
+        automatic: true
+        on_health_check_failure: true
+        timeout: 30s
+
+      # Notifications
+      notifications:
+        slack:
+          webhook_url:
+            from:
+              store: vault
+              key: notifications/slack/webhook
+          channel: "#k8s-deployments"
+          events: [started, completed, failed, rollback]
+          notify_on_wave_completion: true
+
+  # Alternative: Endpoint-based discovery
+  microservice:
+    type: http_api
+    base_url: https://api.example.com
+
+    rotation:
+      strategy: percentage_rollout
+
+      rollout:
+        # Endpoint-based instance discovery
+        discovery:
+          type: endpoint
+          # HTTP endpoint that returns list of instances
+          url: "https://api.example.com/admin/instances"
+          # Authentication
+          auth:
+            type: bearer
+            token:
+              from:
+                store: vault
+                key: admin/api-token
+          # Expected response format:
+          # {
+          #   "instances": [
+          #     {"id": "instance-1", "status": "healthy", "role": "canary"},
+          #     {"id": "instance-2", "status": "healthy", "role": "production"},
+          #     ...
+          #   ]
+          # }
+          # JSONPath to extract instance list
+          instance_path: "$.instances[*]"
+
+        waves:
+          - percentage: 5
+            health_monitoring: 2m
+          - percentage: 25
+            health_monitoring: 5m
+          - percentage: 100
+            health_monitoring: 10m
+
+      health_checks:
+        enabled: true
+        interval: 30s
+        failure_threshold: 3
+
+        checks:
+          - type: response_time
+            p95_threshold_ms: 1000
+          - type: error_rate
+            max_error_rate_pct: 5
+
+envs:
+  production:
+    DATABASE_PASSWORD:
+      from:
+        store: vault
+        key: prod/api-database/password
+      service: api-deployment
+      rotation:
+        ttl: 30d
+
+    API_KEY:
+      from:
+        store: vault
+        key: prod/microservice/api-key
+      service: microservice
+      rotation:
+        ttl: 60d
+
+# Additional discovery types:
+#
+# 1. Explicit (config-based):
+#    discovery:
+#      type: explicit
+#      instances:
+#        - id: "instance-1"
+#        - id: "instance-2"
+#
+# 2. Cloud provider (AWS/GCP/Azure):
+#    discovery:
+#      type: cloud
+#      provider: aws
+#      region: us-east-1
+#      filters:
+#        - key: "tag:Environment"
+#          value: "production"
+#
+# 3. Kubernetes (as shown above):
+#    discovery:
+#      type: kubernetes
+#      namespace: production
+#      label_selector: "app=myapp"
+#
+# 4. Endpoint (as shown above):
+#    discovery:
+#      type: endpoint
+#      url: "https://api.example.com/instances"

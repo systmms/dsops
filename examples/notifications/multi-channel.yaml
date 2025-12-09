@@ -1,0 +1,132 @@
+version: 1
+
+# Example: Multi-channel notifications
+# This config demonstrates using multiple notification channels together
+
+secretStores:
+  vault:
+    type: hashicorp.vault
+    url: https://vault.example.com
+
+services:
+  critical-database:
+    type: postgresql
+    host: prod-db.example.com
+    port: 5432
+    database: production
+
+    admin_credentials:
+      username: postgres
+      password:
+        from:
+          store: vault
+          key: admin/postgres/password
+
+    rotation:
+      strategy: two-key
+
+      # Combine multiple notification channels
+      notifications:
+        # Slack for immediate team visibility
+        slack:
+          webhook_url:
+            from:
+              store: vault
+              key: notifications/slack/webhook
+          channel: "#database-ops"
+          events: [started, completed, failed, rollback]
+          mentions:
+            on_failure: ["@dba-oncall", "@sre-oncall"]
+
+        # Email for audit trail and stakeholders
+        email:
+          smtp:
+            host: smtp.example.com
+            port: 587
+            username:
+              from:
+                store: vault
+                key: smtp/username
+            password:
+              from:
+                store: vault
+                key: smtp/password
+            tls: true
+          from: "database-rotation@example.com"
+          to:
+            - "dba-team@example.com"
+            - "security@example.com"
+            - "compliance@example.com"
+          events: [completed, failed, rollback]
+          batch_mode: immediate
+
+        # PagerDuty for critical failures
+        pagerduty:
+          integration_key:
+            from:
+              store: vault
+              key: notifications/pagerduty/integration-key
+          service_id: PXXXXXX
+          severity: critical
+          # Only page for failures and rollbacks
+          events: [failed, rollback]
+          auto_resolve: true
+
+        # Webhook for monitoring system
+        webhooks:
+          - name: "monitoring-integration"
+            url: "https://monitoring.example.com/api/events"
+            method: POST
+            headers:
+              Authorization:
+                from:
+                  store: vault
+                  key: monitoring/api-token
+            events: [started, completed, failed, rollback]
+            payload_template: |
+              {
+                "event": "database_rotation",
+                "service": "{{.ServiceName}}",
+                "status": "{{.Status}}",
+                "timestamp": "{{.Timestamp}}"
+              }
+            timeout: 10s
+
+      # Automatic rollback configuration
+      rollback:
+        automatic: true
+        on_verification_failure: true
+        timeout: 30s
+        max_retries: 2
+        # Rollback also triggers notifications
+
+      # Health monitoring after rotation
+      health_checks:
+        enabled: true
+        monitoring_period: 10m
+        interval: 30s
+        failure_threshold: 3
+        checks:
+          - type: connection
+          - type: query_latency
+            threshold_ms: 500
+          - type: connection_pool
+            max_connections: 100
+
+envs:
+  production:
+    DATABASE_PASSWORD:
+      from:
+        store: vault
+        key: prod/database/password
+      service: critical-database
+      rotation:
+        ttl: 30d
+
+    DATABASE_URL:
+      from:
+        store: vault
+        key: prod/database/connection-string
+      service: critical-database
+      rotation:
+        ttl: 30d

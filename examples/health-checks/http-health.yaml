@@ -1,0 +1,121 @@
+version: 1
+
+# Example: HTTP API health monitoring after rotation
+# This config demonstrates health checks for API services
+
+secretStores:
+  aws:
+    type: aws.secretsmanager
+    region: us-east-1
+
+services:
+  stripe-api:
+    type: stripe
+    environment: production
+
+    rotation:
+      strategy: two-key
+
+      # Health monitoring for API services
+      health_checks:
+        enabled: true
+        monitoring_period: 15m  # Monitor APIs longer
+        interval: 60s  # Check every minute
+        failure_threshold: 5  # Higher threshold for APIs
+
+        # HTTP API health checks
+        checks:
+          # Response time monitoring
+          - type: response_time
+            name: "api-latency"
+            # P50 threshold (median response time)
+            p50_threshold_ms: 200
+            # P95 threshold
+            p95_threshold_ms: 500
+            # P99 threshold
+            p99_threshold_ms: 1000
+            # Test endpoint (optional)
+            endpoint: "/v1/ping"
+
+          # Error rate monitoring
+          - type: error_rate
+            name: "api-errors"
+            # Alert if >5% error rate
+            max_error_rate_pct: 5
+            # Window for calculating rate
+            window: 5m
+            # Which status codes count as errors
+            error_codes: [400, 401, 403, 404, 500, 502, 503, 504]
+
+          # Rate limit monitoring
+          - type: rate_limit
+            name: "rate-limit-check"
+            # Check for rate limit headers
+            check_headers: true
+            # Warn if <20% of quota remaining
+            warning_threshold_pct: 20
+
+          # API quota monitoring (for services with quotas)
+          - type: api_quota
+            name: "quota-remaining"
+            # Warn if <30% quota remaining
+            warning_threshold_pct: 30
+
+      # Rollback configuration
+      rollback:
+        automatic: true
+        on_health_check_failure: true
+        timeout: 45s  # Longer timeout for API rollbacks
+
+      # Notifications
+      notifications:
+        pagerduty:
+          integration_key:
+            from:
+              store: aws
+              key: notifications/pagerduty/integration-key
+          service_id: PXXXXXX
+          severity: error
+          events: [failed, rollback]
+          auto_resolve: true
+
+  github-api:
+    type: github
+    organization: example-org
+
+    rotation:
+      strategy: two-key
+
+      health_checks:
+        enabled: true
+        monitoring_period: 10m
+        interval: 30s
+        failure_threshold: 3
+
+        checks:
+          - type: response_time
+            name: "github-api-latency"
+            p95_threshold_ms: 1000
+
+          - type: error_rate
+            name: "github-api-errors"
+            max_error_rate_pct: 3
+            window: 5m
+
+envs:
+  production:
+    STRIPE_API_KEY:
+      from:
+        store: aws
+        key: prod/stripe/api-key
+      service: stripe-api
+      rotation:
+        ttl: 90d
+
+    GITHUB_TOKEN:
+      from:
+        store: aws
+        key: prod/github/token
+      service: github-api
+      rotation:
+        ttl: 180d

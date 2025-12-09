@@ -1,0 +1,138 @@
+version: 1
+
+# Example: Percentage rollout strategy
+# This config demonstrates rotating secrets in percentage-based waves
+
+secretStores:
+  aws:
+    type: aws.secretsmanager
+    region: us-east-1
+
+services:
+  microservice-cluster:
+    type: postgresql
+    host: microservice-db.example.com
+    port: 5432
+    database: microservices
+
+    admin_credentials:
+      username: postgres
+      password:
+        from:
+          store: aws
+          key: admin/postgres/password
+
+    rotation:
+      # Percentage rollout strategy
+      strategy: percentage_rollout
+
+      rollout:
+        # Instance discovery
+        discovery:
+          type: cloud  # Use cloud provider tags/labels
+          provider: aws
+          region: us-east-1
+          # Filter instances by tags
+          filters:
+            - key: "Environment"
+              value: "production"
+            - key: "Service"
+              value: "microservice-cluster"
+
+        # Progressive rollout waves
+        waves:
+          # Wave 1: Start with 5% of instances
+          - percentage: 5
+            health_monitoring: 2m
+            # Optional: Require manual approval
+            # require_approval: true
+
+          # Wave 2: 25% of total instances
+          - percentage: 25
+            health_monitoring: 5m
+
+          # Wave 3: 50% of total instances
+          - percentage: 50
+            health_monitoring: 10m
+
+          # Wave 4: 100% (all remaining instances)
+          - percentage: 100
+            health_monitoring: 15m
+
+        # Pause on failure instead of auto-rollback
+        # Allows manual investigation before deciding to rollback
+        pause_on_failure: true
+
+        # Manual approval required to continue after pause
+        manual_approval_required: true
+
+        # Progress persistence for resumption
+        # If dsops crashes, can resume from last successful wave
+        persist_progress: true
+        progress_file: "/var/lib/dsops/rotation-progress/microservice-cluster.json"
+
+      # Health checks per wave
+      health_checks:
+        enabled: true
+        interval: 30s
+        failure_threshold: 3
+
+        checks:
+          - type: connection
+          - type: query_latency
+            threshold_ms: 500
+          - type: connection_pool
+            max_connections: 100
+
+      # Rollback configuration
+      rollback:
+        automatic: false  # Manual decision due to pause_on_failure
+        timeout: 45s
+
+      # Notifications
+      notifications:
+        slack:
+          webhook_url:
+            from:
+              store: aws
+              key: notifications/slack/webhook
+          channel: "#microservices"
+          events: [started, completed, failed, rollback]
+          notify_on_wave_completion: true
+
+        email:
+          smtp:
+            host: smtp.example.com
+            port: 587
+            username:
+              from:
+                store: aws
+                key: smtp/username
+            password:
+              from:
+                store: aws
+                key: smtp/password
+            tls: true
+          from: "microservice-rotation@example.com"
+          to: ["platform-team@example.com"]
+          events: [completed, failed]
+          # Batch wave completions into hourly digest
+          batch_mode: hourly
+
+      # Prometheus metrics
+      metrics:
+        enabled: true
+        port: 9090
+        labels:
+          service: "microservice-cluster"
+          environment: "production"
+
+envs:
+  production:
+    DATABASE_PASSWORD:
+      from:
+        store: aws
+        key: prod/microservice-database/password
+      service: microservice-cluster
+      rotation:
+        ttl: 30d

@@ -1,0 +1,183 @@
+version: 1
+
+# Example: Service group rotation
+# This config demonstrates rotating multiple related services together
+
+secretStores:
+  vault:
+    type: hashicorp.vault
+    url: https://vault.example.com
+
+# Define service group
+service_groups:
+  - name: postgres-cluster
+    description: "PostgreSQL primary and replicas"
+
+    # Services in this group
+    services:
+      - postgres-primary
+      - postgres-replica-1
+      - postgres-replica-2
+
+    rotation:
+      # Rotation strategy for the group
+      strategy: sequential  # or "parallel" for independent services
+
+      # Dependency order (topological)
+      # Rotate primary first, then replicas in parallel
+      dependency_order:
+        - postgres-primary  # Must complete first
+        - [postgres-replica-1, postgres-replica-2]  # Can run in parallel
+
+      # Failure policy
+      failure_policy: rollback_all  # Rollback entire group on any failure
+      # Other options: "rollback_failed_only", "continue"
+
+      # Cross-service verification
+      cross_service_verification:
+        enabled: true
+        checks:
+          # Verify replication lag after rotation
+          - type: replication_lag
+            max_lag_seconds: 10
+            # Check that replicas are synced with primary
+
+          # Verify connection from replica to primary
+          - type: replication_connection
+            timeout: 30s
+
+      # Notifications for group rotation
+      notifications:
+        slack:
+          webhook_url:
+            from:
+              store: vault
+              key: notifications/slack/webhook
+          channel: "#database-ops"
+          events: [started, completed, failed, rollback]
+          mentions:
+            on_failure: ["@dba-oncall"]
+
+services:
+  postgres-primary:
+    type: postgresql
+    host: primary-db.example.com
+    port: 5432
+    database: production
+    role: primary
+
+    admin_credentials:
+      username: postgres
+      password:
+        from:
+          store: vault
+          key: admin/postgres/password
+
+    rotation:
+      strategy: two-key
+
+      health_checks:
+        enabled: true
+        monitoring_period: 5m
+        interval: 30s
+        failure_threshold: 3
+
+        checks:
+          - type: connection
+          - type: query_latency
+            threshold_ms: 500
+
+  postgres-replica-1:
+    type: postgresql
+    host: replica-1-db.example.com
+    port: 5432
+    database: production
+    role: replica
+    primary_host: primary-db.example.com
+
+    admin_credentials:
+      username: postgres
+      password:
+        from:
+          store: vault
+          key: admin/postgres/password
+
+    rotation:
+      strategy: two-key
+
+      health_checks:
+        enabled: true
+        monitoring_period: 5m
+        interval: 30s
+        failure_threshold: 3
+
+        checks:
+          - type: connection
+          - type: replication_lag
+            max_lag_seconds: 10
+
+  postgres-replica-2:
+    type: postgresql
+    host: replica-2-db.example.com
+    port: 5432
+    database: production
+    role: replica
+    primary_host: primary-db.example.com
+
+    admin_credentials:
+      username: postgres
+      password:
+        from:
+          store: vault
+          key: admin/postgres/password
+
+    rotation:
+      strategy: two-key
+
+      health_checks:
+        enabled: true
+        monitoring_period: 5m
+        interval: 30s
+        failure_threshold: 3
+
+        checks:
+          - type: connection
+          - type: replication_lag
+            max_lag_seconds: 10
+
+envs:
+  production:
+    # Primary database password
+    PRIMARY_DB_PASSWORD:
+      from:
+        store: vault
+        key: prod/postgres/primary/password
+      service: postgres-primary
+      rotation:
+        ttl: 30d
+
+    # Replica 1 password (same credentials, different service)
+    REPLICA_1_DB_PASSWORD:
+      from:
+        store: vault
+        key: prod/postgres/replica-1/password
+      service: postgres-replica-1
+      rotation:
+        ttl: 30d
+
+    # Replica 2 password
+    REPLICA_2_DB_PASSWORD:
+      from:
+        store: vault
+        key: prod/postgres/replica-2/password
+      service: postgres-replica-2
+      rotation:
+        ttl: 30d
+
+# Example rotation workflow:
+# 1. dsops rotation rotate --group postgres-cluster
+# 2. Rotates postgres-primary first
+# 3. Verifies primary health checks pass
+# 4. Rotates postgres-replica-1 and postgres-replica-2 in parallel
+# 5. Runs cross-service verification (replication lag check)
+# 6. If any service fails, rolls back entire group

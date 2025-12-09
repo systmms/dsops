@@ -1,0 +1,160 @@
+version: 1
+
+# Example: Combined health monitoring (SQL + HTTP + Custom Scripts)
+# This config demonstrates using multiple health check types together
+
+secretStores:
+  vault:
+    type: hashicorp.vault
+    url: https://vault.example.com
+
+services:
+  api-backend:
+    type: postgresql
+    host: api-db.example.com
+    port: 5432
+    database: api_production
+
+    admin_credentials:
+      username: postgres
+      password:
+        from:
+          store: vault
+          key: admin/postgres/password
+
+    rotation:
+      strategy: two-key
+
+      # Comprehensive health monitoring
+      health_checks:
+        enabled: true
+        monitoring_period: 15m  # Extended monitoring
+        interval: 30s
+        failure_threshold: 3
+
+        # Combine built-in and custom checks
+        checks:
+          # Built-in SQL checks
+          - type: connection
+            name: "db-connection"
+
+          - type: query_latency
+            name: "db-performance"
+            threshold_ms: 500
+            query: "SELECT COUNT(*) FROM api_requests WHERE created_at > NOW() - INTERVAL '1 minute'"
+
+          - type: connection_pool
+            name: "db-pool"
+            max_connections: 100
+            warning_threshold_pct: 80
+
+          # HTTP API endpoint checks (if database backs an API)
+          - type: http_endpoint
+            name: "api-health-endpoint"
+            url: "https://api.example.com/health"
+            expected_status: 200
+            timeout: 5s
+
+          - type: response_time
+            name: "api-latency"
+            endpoint: "https://api.example.com/v1/status"
+            p95_threshold_ms: 1000
+
+        # Custom validation scripts
+        custom_scripts:
+          - name: "end-to-end-test"
+            script: "/scripts/health/e2e-api-test.sh"
+            timeout: 120s
+            environment:
+              DATABASE_URL: "{{.NewConnectionString}}"
+              API_URL: "https://api.example.com"
+              API_KEY:
+                from:
+                  store: vault
+                  key: health-checks/api-key
+            retry:
+              max_attempts: 2
+              backoff: 10s
+
+          - name: "data-consistency-check"
+            script: "/scripts/health/check-data-consistency.sh"
+            timeout: 60s
+            environment:
+              DATABASE_URL: "{{.NewConnectionString}}"
+            retry:
+              max_attempts: 1
+
+      # Automatic rollback configuration
+      rollback:
+        automatic: true
+        on_verification_failure: true
+        on_health_check_failure: true
+        timeout: 45s
+        max_retries: 2
+
+      # Multi-channel notifications
+      notifications:
+        slack:
+          webhook_url:
+            from:
+              store: vault
+              key: notifications/slack/webhook
+          channel: "#api-ops"
+          events: [started, completed, failed, rollback]
+          mentions:
+            on_failure: ["@sre-oncall", "@api-team"]
+
+        email:
+          smtp:
+            host: smtp.example.com
+            port: 587
+            username:
+              from:
+                store: vault
+                key: smtp/username
+            password:
+              from:
+                store: vault
+                key: smtp/password
+            tls: true
+          from: "api-rotation@example.com"
+          to: ["api-team@example.com"]
+          events: [failed, rollback]
+          batch_mode: immediate
+
+        pagerduty:
+          integration_key:
+            from:
+              store: vault
+              key: notifications/pagerduty/integration-key
+          service_id: PXXXXXX
+          severity: error
+          events: [failed, rollback]
+          auto_resolve: true
+
+      # Prometheus metrics (optional)
+      metrics:
+        enabled: true
+        port: 9090
+        path: /metrics
+        labels:
+          environment: "production"
+          team: "api"
+
+envs:
+  production:
+    DATABASE_PASSWORD:
+      from:
+        store: vault
+        key: prod/api-database/password
+      service: api-backend
+      rotation:
+        ttl: 30d
+
+    DATABASE_URL:
+      from:
+        store: vault
+        key: prod/api-database/connection-string
+      service: api-backend
+      rotation:
+        ttl: 30d
