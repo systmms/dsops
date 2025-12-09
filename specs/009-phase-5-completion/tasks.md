@@ -362,12 +362,12 @@
 
 - [X] T116 [P] Update docs/content/reference/status.md with Phase 5 completion
 - [X] T117 [P] Update specs/009-phase-5-completion/spec.md status to "Implemented"
-- [ ] T118 [P] Create notification examples in examples/notifications/
-- [ ] T119 [P] Create health check examples in examples/health-checks/
-- [ ] T120 [P] Create gradual rollout examples in examples/gradual-rollout/
-- [ ] T121 Create user documentation in docs/content/rotation/notifications.md
-- [ ] T122 Create user documentation in docs/content/rotation/health-checks.md
-- [ ] T123 Create user documentation in docs/content/rotation/gradual-rollout.md
+- [X] T118 [P] Create notification examples in examples/notifications/
+- [X] T119 [P] Create health check examples in examples/health-checks/
+- [X] T120 [P] Create gradual rollout examples in examples/gradual-rollout/
+- [X] T121 Create user documentation in docs/content/rotation/notifications.md
+- [X] T122 Create user documentation in docs/content/rotation/health-checks.md
+- [X] T123 Create user documentation in docs/content/rotation/gradual-rollout.md
 - [X] T124 Run full test suite with coverage validation (>=80%)
 - [X] T125 Security review: verify no secrets in notifications/logs
 
