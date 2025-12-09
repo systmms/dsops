@@ -32,6 +32,7 @@ type Definition struct {
 	Templates     []Template                   `yaml:"templates"`
 	Policies      *policy.PolicyConfig         `yaml:"policies,omitempty"`
 	Notifications *NotificationConfig          `yaml:"notifications,omitempty"` // Rotation notifications
+	Metrics       *MetricsConfig               `yaml:"metrics,omitempty"`       // Prometheus metrics
 }
 
 // SecretStoreConfig holds secret store-specific configuration
@@ -93,6 +94,28 @@ type Template struct {
 	Env          string `yaml:"env"`
 	Out          string `yaml:"out"`
 	TemplatePath string `yaml:"template_path,omitempty"`
+}
+
+// MetricsConfig holds Prometheus metrics configuration
+type MetricsConfig struct {
+	Prometheus *PrometheusConfig `yaml:"prometheus,omitempty"`
+}
+
+// PrometheusConfig holds Prometheus-specific configuration
+type PrometheusConfig struct {
+	Enabled bool              `yaml:"enabled"`
+	Port    int               `yaml:"port,omitempty"`
+	Path    string            `yaml:"path,omitempty"`
+	Labels  map[string]string `yaml:"labels,omitempty"`
+}
+
+// DefaultPrometheusConfig returns the default Prometheus configuration
+func DefaultPrometheusConfig() *PrometheusConfig {
+	return &PrometheusConfig{
+		Enabled: false,
+		Port:    9090,
+		Path:    "/metrics",
+	}
 }
 
 // Load reads and parses the dsops.yaml file

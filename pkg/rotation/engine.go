@@ -9,6 +9,7 @@ import (
 
 	"github.com/systmms/dsops/internal/dsopsdata"
 	"github.com/systmms/dsops/internal/logging"
+	"github.com/systmms/dsops/internal/rotation/health"
 	"github.com/systmms/dsops/internal/rotation/notifications"
 	rotationstorage "github.com/systmms/dsops/internal/rotation/storage"
 	"github.com/systmms/dsops/internal/validation"
@@ -21,6 +22,7 @@ type DefaultRotationEngine struct {
 	persistentStorage rotationstorage.Storage
 	repository        *dsopsdata.Repository
 	notifier          *notifications.Manager
+	metrics           *health.RotationMetrics
 	logger            *logging.Logger
 	mu                sync.RWMutex
 }
@@ -37,6 +39,7 @@ func NewRotationEngine(logger *logging.Logger) *DefaultRotationEngine {
 		persistentStorage: persistentStorage,
 		repository:        nil,
 		notifier:          nil,
+		metrics:           health.NewRotationMetrics(),
 		logger:            logger,
 	}
 }
@@ -55,13 +58,14 @@ func NewRotationEngineWithStorage(storage RotationStorage, logger *logging.Logge
 	// Initialize persistent storage
 	storageDir := rotationstorage.DefaultStorageDir()
 	persistentStorage := rotationstorage.NewFileStorage(storageDir)
-	
+
 	return &DefaultRotationEngine{
-		strategies: make(map[string]SecretValueRotator),
-		storage:    storage,
+		strategies:        make(map[string]SecretValueRotator),
+		storage:           storage,
 		persistentStorage: persistentStorage,
-		repository: nil,
-		logger:     logger,
+		repository:        nil,
+		metrics:           health.NewRotationMetrics(),
+		logger:            logger,
 	}
 }
 
@@ -231,6 +235,18 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 
 	e.logger.Info("Starting rotation for secret %s using strategy %s",
 		logging.Secret(request.Secret.Key), request.Strategy)
+
+	// Record metrics for rotation start
+	rotationStartTime := time.Now()
+	environment := ""
+	if request.Config != nil {
+		if env, ok := request.Config["environment"].(string); ok {
+			environment = env
+		}
+	}
+	if e.metrics != nil {
+		e.metrics.RecordRotationStarted(string(request.Secret.SecretType), environment, request.Strategy)
+	}
 
 	// Send "started" notification
 	startResult := &RotationResult{
@@ -491,6 +507,16 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 
 	e.logger.Info("Completed rotation for secret %s with status %s",
 		logging.Secret(request.Secret.Key), result.Status)
+
+	// Record metrics for rotation completion
+	if e.metrics != nil {
+		status := "success"
+		if result.Status == StatusFailed {
+			status = "failure"
+		}
+		durationSeconds := time.Since(rotationStartTime).Seconds()
+		e.metrics.RecordRotationCompleted(string(request.Secret.SecretType), environment, status, durationSeconds)
+	}
 
 	// Send completion notification
 	if result.Status == StatusCompleted {
