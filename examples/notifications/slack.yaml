@@ -1,0 +1,61 @@
+version: 1
+
+# Example: Slack notifications for rotation events
+# This config demonstrates sending rotation notifications to Slack channels
+
+secretStores:
+  vault:
+    type: hashicorp.vault
+    url: https://vault.example.com
+
+services:
+  postgres-prod:
+    type: postgresql
+    host: prod-db.example.com
+    port: 5432
+    database: production
+
+    # Admin credentials for rotation
+    admin_credentials:
+      username: postgres
+      password:
+        from:
+          store: vault
+          key: admin/postgres/password
+
+    # Rotation configuration with Slack notifications
+    rotation:
+      strategy: two-key
+
+      # Slack notification configuration
+      notifications:
+        slack:
+          # Webhook URL stored securely
+          webhook_url:
+            from:
+              store: vault
+              key: notifications/slack/webhook
+
+          # Target channel
+          channel: "#ops-alerts"
+
+          # Which events to notify about
+          # Options: started, completed, failed, rollback
+          events: [started, completed, failed, rollback]
+
+          # Mention @oncall on failures
+          mentions:
+            on_failure: ["@oncall", "@sre-team"]
+
+          # Custom message prefix (optional)
+          message_prefix: "[PROD]"
+
+envs:
+  production:
+    DATABASE_PASSWORD:
+      from:
+        store: vault
+        key: prod/database/password
+      service: postgres-prod
+      rotation:
+        ttl: 30d

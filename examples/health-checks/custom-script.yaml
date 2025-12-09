@@ -1,0 +1,159 @@
+version: 1
+
+# Example: Custom health check scripts
+# This config demonstrates running custom validation scripts after rotation
+
+secretStores:
+  vault:
+    type: hashicorp.vault
+    url: https://vault.example.com
+
+services:
+  app-database:
+    type: postgresql
+    host: app-db.example.com
+    port: 5432
+    database: application
+
+    admin_credentials:
+      username: postgres
+      password:
+        from:
+          store: vault
+          key: admin/postgres/password
+
+    rotation:
+      strategy: two-key
+
+      # Custom health check scripts
+      health_checks:
+        enabled: true
+        monitoring_period: 5m
+        interval: 30s
+        failure_threshold: 2
+
+        # Custom script execution
+        custom_scripts:
+          # Example 1: Cache warming validation
+          - name: "cache-validation"
+            script: "/scripts/health/check-cache-warm.sh"
+            timeout: 60s
+
+            # Environment variables passed to script
+            environment:
+              DATABASE_URL: "{{.NewConnectionString}}"
+              SERVICE_NAME: "{{.ServiceName}}"
+              MIN_CACHE_SIZE: "1000"
+
+            # Retry configuration
+            retry:
+              max_attempts: 3
+              backoff: 5s
+
+          # Example 2: Application-specific validation
+          - name: "app-health-check"
+            script: "/scripts/health/validate-app-queries.sh"
+            timeout: 120s
+
+            environment:
+              DATABASE_URL: "{{.NewConnectionString}}"
+              TEST_USER_ID: "12345"
+
+            retry:
+              max_attempts: 2
+              backoff: 10s
+
+          # Example 3: Replication status check
+          - name: "replication-check"
+            script: "/scripts/health/check-replication.sh"
+            timeout: 30s
+
+            environment:
+              DATABASE_URL: "{{.NewConnectionString}}"
+              MAX_LAG_SECONDS: "10"
+
+            retry:
+              max_attempts: 1
+
+      # Automatic rollback on script failure
+      rollback:
+        automatic: true
+        on_health_check_failure: true
+        timeout: 30s
+
+      # Notifications
+      notifications:
+        slack:
+          webhook_url:
+            from:
+              store: vault
+              key: notifications/slack/webhook
+          channel: "#app-ops"
+          events: [failed, rollback]
+
+envs:
+  production:
+    DATABASE_PASSWORD:
+      from:
+        store: vault
+        key: prod/app-database/password
+      service: app-database
+      rotation:
+        ttl: 30d
+
+# Example health check scripts (referenced above)
+# Save these to /scripts/health/
+
+# --- /scripts/health/check-cache-warm.sh ---
+# #!/bin/bash
+# # Validate that cache table is populated
+#
+# psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM cache_table" > /dev/null
+# if [ $? -ne 0 ]; then
+#     echo "ERROR: Cache table not accessible"
+#     exit 1
+# fi
+#
+# CACHE_SIZE=$(psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM cache_table")
+# if [ "$CACHE_SIZE" -lt "$MIN_CACHE_SIZE" ]; then
+#     echo "ERROR: Cache not warmed (size: $CACHE_SIZE, required: $MIN_CACHE_SIZE)"
+#     exit 1
+# fi
+#
+# echo "SUCCESS: Cache warmed with $CACHE_SIZE entries"
+# exit 0
+
+# --- /scripts/health/validate-app-queries.sh ---
+# #!/bin/bash
+# # Validate critical application queries work
+#
+# # Test user lookup
+# psql "$DATABASE_URL" -t -c "SELECT id FROM users WHERE id = $TEST_USER_ID" > /dev/null
+# if [ $? -ne 0 ]; then
+#     echo "ERROR: User lookup query failed"
+#     exit 1
+# fi
+#
+# # Test recent orders query
+# psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM orders WHERE created_at > NOW() - INTERVAL '1 day'" > /dev/null
+# if [ $? -ne 0 ]; then
+#     echo "ERROR: Orders query failed"
+#     exit 1
+# fi
+#
+# echo "SUCCESS: Application queries validated"
+# exit 0
+
+# --- /scripts/health/check-replication.sh ---
+# #!/bin/bash
+# # Check replication lag
+#
+# LAG=$(psql "$DATABASE_URL" -t -c "SELECT EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp()))::INT")
+#
+# if [ "$LAG" -gt "$MAX_LAG_SECONDS" ]; then
+#     echo "ERROR: Replication lag too high: ${LAG}s (max: ${MAX_LAG_SECONDS}s)"
+#     exit 1
+# fi
+#
+# echo "SUCCESS: Replication lag ${LAG}s (within threshold)"
+# exit 0

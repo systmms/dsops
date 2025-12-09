@@ -1,0 +1,112 @@
+version: 1
+
+# Example: Canary rotation strategy
+# This config demonstrates rotating secrets on a canary instance first
+
+secretStores:
+  vault:
+    type: hashicorp.vault
+    url: https://vault.example.com
+
+services:
+  web-application:
+    type: postgresql
+    host: app-db.example.com
+    port: 5432
+    database: production
+
+    admin_credentials:
+      username: postgres
+      password:
+        from:
+          store: vault
+          key: admin/postgres/password
+
+    rotation:
+      # Canary rotation strategy
+      strategy: canary
+
+      canary:
+        # Instance discovery method
+        discovery:
+          type: explicit  # Use config-defined instances
+          instances:
+            - id: "web-app-canary-1"
+              role: "canary"
+            - id: "web-app-prod-1"
+              role: "production"
+            - id: "web-app-prod-2"
+              role: "production"
+            - id: "web-app-prod-3"
+              role: "production"
+
+        # Canary instance selector
+        # Can use labels, tags, or explicit instance IDs
+        instance_selector: "role=canary"
+
+        # Health monitoring for canary instance
+        health_monitoring_period: 5m  # Monitor canary for 5 minutes
+
+        # Failure threshold for canary
+        failure_threshold: 2  # 2 failures abort entire rollout
+
+        # Rollout waves after successful canary
+        rollout_waves:
+          # Wave 1: 10% of remaining instances
+          - percentage: 10
+            wait: 2m  # Wait 2 minutes before next wave
+            health_monitoring: 3m
+
+          # Wave 2: 50% of remaining instances
+          - percentage: 50
+            wait: 5m  # Wait 5 minutes before next wave
+            health_monitoring: 5m
+
+          # Wave 3: 100% (all remaining instances)
+          - percentage: 100
+            wait: 0  # No wait after final wave
+            health_monitoring: 10m
+
+      # Health checks run for each wave
+      health_checks:
+        enabled: true
+        interval: 30s
+        failure_threshold: 3
+
+        checks:
+          - type: connection
+          - type: query_latency
+            threshold_ms: 500
+
+      # Rollback configuration
+      rollback:
+        automatic: true
+        on_verification_failure: true
+        on_health_check_failure: true
+        # If canary fails, rollback canary only
+        # If later wave fails, rollback all rotated instances
+        timeout: 30s
+
+      # Notifications
+      notifications:
+        slack:
+          webhook_url:
+            from:
+              store: vault
+              key: notifications/slack/webhook
+          channel: "#deployments"
+          events: [started, completed, failed, rollback]
+          # Notify on wave progress
+          notify_on_wave_completion: true
+          mentions:
+            on_failure: ["@sre-oncall"]
+
+envs:
+  production:
+    DATABASE_PASSWORD:
+      from:
+        store: vault
+        key: prod/app-database/password
+      service: web-application
+      rotation:
+        ttl: 30d

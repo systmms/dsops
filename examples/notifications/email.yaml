@@ -1,0 +1,73 @@
+version: 1
+
+# Example: Email notifications via SMTP
+# This config demonstrates sending rotation notifications via email
+
+secretStores:
+  vault:
+    type: hashicorp.vault
+    url: https://vault.example.com
+
+services:
+  stripe-api:
+    type: stripe
+    environment: production
+
+    rotation:
+      strategy: two-key
+
+      # Email notification configuration
+      notifications:
+        email:
+          # SMTP server configuration
+          smtp:
+            host: smtp.example.com
+            port: 587
+            username:
+              from:
+                store: vault
+                key: smtp/username
+            password:
+              from:
+                store: vault
+                key: smtp/password
+            # Enable TLS (recommended)
+            tls: true
+            # Or use STARTTLS
+            # starttls: true
+
+          # Email details
+          from: "dsops-rotation@example.com"
+          to:
+            - "ops-team@example.com"
+            - "security@example.com"
+
+          # Optional CC/BCC
+          cc: ["manager@example.com"]
+          # bcc: ["audit@example.com"]
+
+          # Which events to notify about
+          events: [completed, failed, rollback]
+
+          # Batching mode: immediate, hourly, daily
+          # immediate: Send email immediately for each event
+          # hourly: Batch events into hourly digest
+          # daily: Batch events into daily digest
+          batch_mode: immediate
+
+          # Priority level (optional)
+          # high: High priority for failures
+          # normal: Normal priority for success
+          priority:
+            on_failure: high
+            on_success: normal
+
+envs:
+  production:
+    STRIPE_API_KEY:
+      from:
+        store: vault
+        key: prod/stripe/api-key
+      service: stripe-api
+      rotation:
+        ttl: 90d

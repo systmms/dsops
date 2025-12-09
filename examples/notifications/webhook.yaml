@@ -1,0 +1,122 @@
+version: 1
+
+# Example: Generic webhook notifications
+# This config demonstrates sending rotation events to custom webhooks
+
+secretStores:
+  vault:
+    type: hashicorp.vault
+    url: https://vault.example.com
+
+services:
+  api-service:
+    type: http_api
+    base_url: https://api.example.com
+
+    rotation:
+      strategy: two-key
+
+      # Webhook notification configuration
+      notifications:
+        webhooks:
+          # Example 1: Monitoring system integration
+          - name: "datadog-monitoring"
+            url: "https://api.datadoghq.com/api/v1/events"
+            method: POST
+
+            # Authentication headers
+            headers:
+              Authorization: "Bearer {{.Token}}"
+              Content-Type: "application/json"
+              DD-API-KEY:
+                from:
+                  store: vault
+                  key: monitoring/datadog/api-key
+
+            # Which events to send
+            events: [started, completed, failed, rollback]
+
+            # Custom payload template using Go templates
+            payload_template: |
+              {
+                "title": "dsops rotation {{.EventType}}: {{.ServiceName}}",
+                "text": "Rotation {{.Status}} in {{.Environment}} environment",
+                "tags": ["dsops", "rotation", "{{.ServiceName}}"],
+                "alert_type": "{{if eq .Status \"success\"}}info{{else}}error{{end}}",
+                "timestamp": "{{.Timestamp}}"
+              }
+
+            # Retry configuration
+            retry:
+              max_attempts: 3
+              backoff: exponential
+
+            # Request timeout
+            timeout: 10s
+
+          # Example 2: Audit system integration
+          - name: "audit-log"
+            url: "https://audit.example.com/api/rotation-events"
+            method: POST
+
+            headers:
+              Authorization:
+                from:
+                  store: vault
+                  key: audit/api-token
+              X-Service-Name: "{{.ServiceName}}"
+
+            # Send all events for audit
+            events: [started, completed, failed, rollback]
+
+            # Simple JSON payload
+            payload_template: |
+              {
+                "event_type": "{{.EventType}}",
+                "service": "{{.ServiceName}}",
+                "environment": "{{.Environment}}",
+                "status": "{{.Status}}",
+                "duration_seconds": {{.Duration}},
+                "timestamp": "{{.Timestamp}}",
+                "rotation_id": "{{.RotationID}}"
+              }
+
+            retry:
+              max_attempts: 5
+              backoff: exponential
+
+            timeout: 15s
+
+          # Example 3: Custom dashboard integration
+          - name: "internal-dashboard"
+            url: "https://dashboard.internal.example.com/webhooks/rotation"
+            method: POST
+
+            headers:
+              X-API-Key:
+                from:
+                  store: vault
+                  key: dashboard/webhook-key
+
+            # Only notify on completion and failures
+            events: [completed, failed]
+
+            # Minimal payload
+            payload_template: |
+              {
+                "service": "{{.ServiceName}}",
+                "status": "{{.Status}}",
+                "timestamp": "{{.Timestamp}}"
+              }
+
+            timeout: 5s
+
+envs:
+  production:
+    API_KEY:
+      from:
+        store: vault
+        key: prod/api/key
+      service: api-service
+      rotation:
+        ttl: 60d

@@ -1,0 +1,94 @@
+version: 1
+
+# Example: PagerDuty incident creation for rotation failures
+# This config demonstrates creating PagerDuty incidents for critical rotation events
+
+secretStores:
+  aws:
+    type: aws.secretsmanager
+    region: us-east-1
+
+services:
+  payment-gateway:
+    type: stripe
+    environment: production
+
+    rotation:
+      strategy: two-key
+
+      # PagerDuty notification configuration
+      notifications:
+        pagerduty:
+          # PagerDuty integration key (stored securely)
+          integration_key:
+            from:
+              store: aws
+              key: notifications/pagerduty/integration-key
+
+          # PagerDuty service ID
+          service_id: PXXXXXX
+
+          # Incident severity
+          # Options: critical, error, warning, info
+          severity: error
+
+          # Only alert on failures and rollbacks
+          events: [failed, rollback]
+
+          # Automatically resolve incident on successful retry
+          auto_resolve: true
+
+          # Deduplication key (optional)
+          # Uses rotation ID by default
+          # dedup_key_prefix: "dsops-rotation"
+
+          # Custom details to include in incident (optional)
+          custom_details:
+            team: "platform-engineering"
+            environment: "production"
+            runbook: "https://wiki.example.com/runbooks/rotation-failure"
+
+  database-primary:
+    type: postgresql
+    host: db.example.com
+    port: 5432
+
+    admin_credentials:
+      username: postgres
+      password:
+        from:
+          store: aws
+          key: admin/postgres/password
+
+    rotation:
+      strategy: two-key
+
+      # PagerDuty with different severity
+      notifications:
+        pagerduty:
+          integration_key:
+            from:
+              store: aws
+              key: notifications/pagerduty/integration-key
+          service_id: PYYYYYY
+          severity: critical  # Critical for database failures
+          events: [failed, rollback]
+          auto_resolve: true
+
+envs:
+  production:
+    STRIPE_API_KEY:
+      from:
+        store: aws
+        key: prod/stripe/api-key
+      service: payment-gateway
+      rotation:
+        ttl: 90d
+
+    DB_PASSWORD:
+      from:
+        store: aws
+        key: prod/database/password
+      service: database-primary
+      rotation:
+        ttl: 30d
