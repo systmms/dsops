@@ -215,7 +215,8 @@ func (e *DockerTestEnv) WaitForHealthy(timeout time.Duration) error {
 // checkHealth checks if all requested services are healthy
 func (e *DockerTestEnv) checkHealth() bool {
 	for _, service := range e.services {
-		containerName := fmt.Sprintf("dsops-test-%s", service)
+		// Docker Compose generates container names as: {project_name}-{service}-{replica}
+		containerName := fmt.Sprintf("%s-%s-1", e.projectName, service)
 
 		cmd := exec.Command("docker", "inspect",
 			"--format", "{{.State.Health.Status}}",
