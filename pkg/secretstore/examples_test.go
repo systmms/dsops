@@ -379,11 +379,8 @@ func (m *MockSecretStore) Resolve(ctx context.Context, ref secretstore.SecretRef
 	}
 
 	// Handle field extraction (simplified - real implementation would parse JSON)
-	if ref.Field != "" {
-		// In a real implementation, this would extract the field from JSON/YAML
-		// For the mock, we'll just return the full value
-		// (No output for example test consistency)
-	}
+	// In a real implementation, this would extract the field from JSON/YAML if ref.Field != ""
+	// For the mock, we just return the full value regardless
 
 	return secret, nil
 }

@@ -136,7 +136,7 @@ func TestExecuteCreateWithSQLMock(t *testing.T) {
 			// Create mock database
 			db, mock, err := sqlmock.New()
 			require.NoError(t, err)
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			// Setup mock expectations
 			tt.setupMock(mock)
@@ -236,7 +236,7 @@ func TestExecuteVerifyWithSQLMock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db, mock, err := sqlmock.New()
 			require.NoError(t, err)
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			tt.setupMock(mock)
 
@@ -320,7 +320,7 @@ func TestExecuteRotateWithSQLMock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db, mock, err := sqlmock.New()
 			require.NoError(t, err)
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			tt.setupMock(mock)
 
@@ -403,7 +403,7 @@ func TestExecuteRevokeWithSQLMock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db, mock, err := sqlmock.New()
 			require.NoError(t, err)
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			tt.setupMock(mock)
 
@@ -525,7 +525,7 @@ func TestExecuteListWithSQLMock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db, mock, err := sqlmock.New()
 			require.NoError(t, err)
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			tt.setupMock(mock)
 

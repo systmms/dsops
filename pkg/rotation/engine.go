@@ -458,16 +458,18 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 			status.SuccessCount = existing.SuccessCount
 			status.FailureCount = existing.FailureCount
 			
-			if result.Status == StatusCompleted {
+			switch result.Status {
+			case StatusCompleted:
 				status.SuccessCount++
-			} else if result.Status == StatusFailed {
+			case StatusFailed:
 				status.FailureCount++
 			}
 		} else {
 			// First rotation
-			if result.Status == StatusCompleted {
+			switch result.Status {
+			case StatusCompleted:
 				status.SuccessCount = 1
-			} else if result.Status == StatusFailed {
+			case StatusFailed:
 				status.FailureCount = 1
 			}
 		}
@@ -519,9 +521,10 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 	}
 
 	// Send completion notification
-	if result.Status == StatusCompleted {
+	switch result.Status {
+	case StatusCompleted:
 		e.sendNotification(request, result, notifications.EventTypeCompleted)
-	} else if result.Status == StatusFailed {
+	case StatusFailed:
 		e.sendNotification(request, result, notifications.EventTypeFailed)
 	}
 

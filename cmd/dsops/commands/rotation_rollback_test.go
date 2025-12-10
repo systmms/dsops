@@ -191,7 +191,7 @@ func TestRollbackDryRun(t *testing.T) {
 		err := cmd.Execute()
 		require.NoError(t, err)
 
-		w.Close()
+		_ = w.Close()
 		os.Stdout = old
 
 		var buf bytes.Buffer
@@ -228,7 +228,7 @@ func TestRollbackDryRun(t *testing.T) {
 		err := cmd.Execute()
 		require.NoError(t, err)
 
-		w.Close()
+		_ = w.Close()
 		os.Stdout = old
 
 		var buf bytes.Buffer
@@ -320,7 +320,7 @@ func TestRollbackWithForce(t *testing.T) {
 		err := cmd.Execute()
 		require.NoError(t, err)
 
-		w.Close()
+		_ = w.Close()
 		os.Stdout = old
 
 		var buf bytes.Buffer
@@ -404,7 +404,7 @@ func TestRollbackReasonCaptured(t *testing.T) {
 		err := cmd.Execute()
 		require.NoError(t, err)
 
-		w.Close()
+		_ = w.Close()
 		os.Stdout = old
 
 		var buf bytes.Buffer
@@ -530,7 +530,7 @@ func TestRollbackVersionFlags(t *testing.T) {
 		err := cmd.Execute()
 		require.NoError(t, err)
 
-		w.Close()
+		_ = w.Close()
 		os.Stdout = old
 
 		var buf bytes.Buffer
@@ -551,15 +551,15 @@ func TestGetUsername(t *testing.T) {
 		originalUsername := os.Getenv("USERNAME")
 		defer func() {
 			if originalUser != "" {
-				os.Setenv("USER", originalUser)
+				_ = os.Setenv("USER", originalUser)
 			}
 			if originalUsername != "" {
-				os.Setenv("USERNAME", originalUsername)
+				_ = os.Setenv("USERNAME", originalUsername)
 			}
 		}()
 
-		os.Setenv("USER", "testuser")
-		os.Unsetenv("USERNAME")
+		_ = os.Setenv("USER", "testuser")
+		_ = os.Unsetenv("USERNAME")
 
 		result := getUsername()
 		assert.Equal(t, "testuser", result)
@@ -570,15 +570,15 @@ func TestGetUsername(t *testing.T) {
 		originalUsername := os.Getenv("USERNAME")
 		defer func() {
 			if originalUser != "" {
-				os.Setenv("USER", originalUser)
+				_ = os.Setenv("USER", originalUser)
 			}
 			if originalUsername != "" {
-				os.Setenv("USERNAME", originalUsername)
+				_ = os.Setenv("USERNAME", originalUsername)
 			}
 		}()
 
-		os.Unsetenv("USER")
-		os.Setenv("USERNAME", "windowsuser")
+		_ = os.Unsetenv("USER")
+		_ = os.Setenv("USERNAME", "windowsuser")
 
 		result := getUsername()
 		assert.Equal(t, "windowsuser", result)
@@ -589,15 +589,15 @@ func TestGetUsername(t *testing.T) {
 		originalUsername := os.Getenv("USERNAME")
 		defer func() {
 			if originalUser != "" {
-				os.Setenv("USER", originalUser)
+				_ = os.Setenv("USER", originalUser)
 			}
 			if originalUsername != "" {
-				os.Setenv("USERNAME", originalUsername)
+				_ = os.Setenv("USERNAME", originalUsername)
 			}
 		}()
 
-		os.Unsetenv("USER")
-		os.Unsetenv("USERNAME")
+		_ = os.Unsetenv("USER")
+		_ = os.Unsetenv("USERNAME")
 
 		result := getUsername()
 		assert.Equal(t, "unknown", result)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/smtp"
-	"strings"
 	"testing"
 	"time"
 
@@ -682,6 +681,7 @@ func TestEmailProvider_ContextCancellation(t *testing.T) {
 }
 
 // Helper to check string containment
-func stringContains(s, substr string) bool {
-	return strings.Contains(s, substr)
-}
+// Commented out as unused (redundant with strings.Contains)
+//func stringContains(s, substr string) bool {
+//	return strings.Contains(s, substr)
+//}

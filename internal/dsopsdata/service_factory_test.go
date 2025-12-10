@@ -880,7 +880,7 @@ func TestDataDrivenService_Execute(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	result, err := svc.Execute(ctx, plan)
+	result, _ := svc.Execute(ctx, plan)
 	// Execute may fail due to missing actual database, but should not panic
 	// We're testing that the code path works correctly
 	assert.NotNil(t, result)

@@ -51,7 +51,7 @@ func fetchMailHogMessages(t *testing.T) []mailhogMessage {
 
 	resp, err := http.Get("http://localhost:8025/api/v2/messages")
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result mailhogResponse
 	err = json.NewDecoder(resp.Body).Decode(&result)
@@ -70,7 +70,7 @@ func deleteMailHogMessages(t *testing.T) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 }
 
 // TestEmailSMTP_BasicDelivery tests basic email delivery via SMTP with MailHog.

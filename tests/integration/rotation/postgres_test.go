@@ -61,7 +61,7 @@ func TestPostgreSQLConnectionSetup(t *testing.T) {
 
 		err := pgClient.CreateTestUser(testUser, initialPassword)
 		require.NoError(t, err, "Failed to create test user")
-		defer pgClient.DropTestUser(testUser)
+		defer func() { _ = pgClient.DropTestUser(testUser) }()
 
 		// Update password
 		newPassword := "new_password_456"
@@ -93,7 +93,7 @@ func TestPostgreSQLConnectionSetup(t *testing.T) {
 
 				// Cleanup
 				if err == nil {
-					pgClient.DropTestUser(username)
+					_ = pgClient.DropTestUser(username)
 				}
 			}()
 		}
@@ -155,7 +155,7 @@ func TestPostgreSQLRotationScenario(t *testing.T) {
 
 		err := pgClient.CreateTestUser(appUser, initialPassword)
 		require.NoError(t, err, "Failed to create application user")
-		defer pgClient.DropTestUser(appUser)
+		defer func() { _ = pgClient.DropTestUser(appUser) }()
 
 		// Verify user exists
 		exists, err := pgClient.UserExists(appUser)
@@ -194,7 +194,7 @@ func TestPostgreSQLRotationScenario(t *testing.T) {
 
 		err := pgClient.CreateTestUser(testUser, testPassword)
 		require.NoError(t, err)
-		defer pgClient.DropTestUser(testUser)
+		defer func() { _ = pgClient.DropTestUser(testUser) }()
 
 		// Create test table
 		createTableQuery := `
@@ -205,7 +205,7 @@ func TestPostgreSQLRotationScenario(t *testing.T) {
 		`
 		err = pgClient.Exec(createTableQuery)
 		require.NoError(t, err)
-		defer pgClient.Exec("DROP TABLE IF EXISTS test_permissions_table")
+		defer func() { _ = pgClient.Exec("DROP TABLE IF EXISTS test_permissions_table") }()
 
 		// Grant SELECT permission
 		grantQuery := "GRANT SELECT ON test_permissions_table TO test_permissions_user"
@@ -277,7 +277,7 @@ func TestPostgreSQLErrorHandling(t *testing.T) {
 		// Create user first time
 		err := pgClient.CreateTestUser(testUser, testPassword)
 		require.NoError(t, err)
-		defer pgClient.DropTestUser(testUser)
+		defer func() { _ = pgClient.DropTestUser(testUser) }()
 
 		// Try to create same user again
 		err = pgClient.CreateTestUser(testUser, testPassword)

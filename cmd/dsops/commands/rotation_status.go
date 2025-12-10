@@ -131,17 +131,17 @@ func outputRotationStatusTable(store storage.Storage, services []string, verbose
 			resultStr = formatResult(status.LastResult)
 		}
 		
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 			serviceName,
 			statusStr,
 			lastRotationStr,
 			nextRotationStr,
 			resultStr,
 		)
-		
+
 		// Show additional details in verbose mode
 		if verbose && status.LastError != "" {
-			fmt.Fprintf(w, "  └─ Error: %s\n", status.LastError)
+			_, _ = fmt.Fprintf(w, "  └─ Error: %s\n", status.LastError)
 		}
 	}
 	

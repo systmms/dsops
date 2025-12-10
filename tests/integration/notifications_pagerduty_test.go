@@ -52,7 +52,7 @@ func TestPagerDutyEvents_TriggerIncident(t *testing.T) {
 
 		// Return success response (PagerDuty uses 202 Accepted)
 		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":   "success",
 			"message":  "Event processed",
 			"dedup_key": event.DedupKey,
@@ -134,14 +134,14 @@ func TestPagerDutyEvents_ResolveIncident(t *testing.T) {
 	// Mock PagerDuty Events API
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var event pagerdutyEvent
-		json.NewDecoder(r.Body).Decode(&event)
+		_ = json.NewDecoder(r.Body).Decode(&event)
 
 		mu.Lock()
 		receivedEvents = append(receivedEvents, event)
 		mu.Unlock()
 
 		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":   "success",
 			"dedup_key": event.DedupKey,
 		})
@@ -219,14 +219,14 @@ func TestPagerDutyEvents_AutoResolveDisabled(t *testing.T) {
 	// Mock PagerDuty Events API
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var event pagerdutyEvent
-		json.NewDecoder(r.Body).Decode(&event)
+		_ = json.NewDecoder(r.Body).Decode(&event)
 
 		mu.Lock()
 		receivedEvents = append(receivedEvents, event)
 		mu.Unlock()
 
 		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}))
 	defer server.Close()
 
@@ -273,7 +273,7 @@ func TestPagerDutyEvents_CustomSeverityLevels(t *testing.T) {
 			// Mock PagerDuty Events API
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				var event pagerdutyEvent
-				json.NewDecoder(r.Body).Decode(&event)
+				_ = json.NewDecoder(r.Body).Decode(&event)
 
 				mu.Lock()
 				if sev, ok := event.Payload["severity"].(string); ok {
@@ -282,7 +282,7 @@ func TestPagerDutyEvents_CustomSeverityLevels(t *testing.T) {
 				mu.Unlock()
 
 				w.WriteHeader(http.StatusAccepted)
-				json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+				_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 			}))
 			defer server.Close()
 
@@ -324,14 +324,14 @@ func TestPagerDutyEvents_DedupKeyConsistency(t *testing.T) {
 	// Mock PagerDuty Events API
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var event pagerdutyEvent
-		json.NewDecoder(r.Body).Decode(&event)
+		_ = json.NewDecoder(r.Body).Decode(&event)
 
 		mu.Lock()
 		dedupKeys = append(dedupKeys, event.DedupKey)
 		mu.Unlock()
 
 		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}))
 	defer server.Close()
 
@@ -387,14 +387,14 @@ func TestPagerDutyEvents_DifferentRotationIDs(t *testing.T) {
 	// Mock PagerDuty Events API
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var event pagerdutyEvent
-		json.NewDecoder(r.Body).Decode(&event)
+		_ = json.NewDecoder(r.Body).Decode(&event)
 
 		mu.Lock()
 		dedupKeys = append(dedupKeys, event.DedupKey)
 		mu.Unlock()
 
 		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}))
 	defer server.Close()
 
@@ -500,9 +500,9 @@ func TestPagerDutyEvents_ErrorHandling(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.statusCode)
 				if tt.statusCode >= 200 && tt.statusCode < 300 {
-					json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+					_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 				} else {
-					json.NewEncoder(w).Encode(map[string]string{
+					_ = json.NewEncoder(w).Encode(map[string]string{
 						"status":  "error",
 						"message": fmt.Sprintf("Error %d", tt.statusCode),
 					})
@@ -547,7 +547,7 @@ func TestPagerDutyEvents_MetadataInCustomDetails(t *testing.T) {
 	// Mock PagerDuty Events API
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var event pagerdutyEvent
-		json.NewDecoder(r.Body).Decode(&event)
+		_ = json.NewDecoder(r.Body).Decode(&event)
 
 		mu.Lock()
 		if details, ok := event.Payload["custom_details"].(map[string]interface{}); ok {
@@ -556,7 +556,7 @@ func TestPagerDutyEvents_MetadataInCustomDetails(t *testing.T) {
 		mu.Unlock()
 
 		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}))
 	defer server.Close()
 
@@ -629,7 +629,7 @@ func TestPagerDutyEvents_RequestFormat(t *testing.T) {
 		mu.Unlock()
 
 		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}))
 	defer server.Close()
 

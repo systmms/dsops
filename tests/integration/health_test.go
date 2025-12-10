@@ -40,7 +40,7 @@ func TestHealthMonitor_PostgreSQL(t *testing.T) {
 	connStr := "host=localhost port=5432 user=test password=test-password dbname=testdb sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	checker.SetDBConn(db)
 	monitor.RegisterChecker(checker)
@@ -90,7 +90,7 @@ func TestSQLHealthChecker_RealPostgres(t *testing.T) {
 	connStr := "host=localhost port=5432 user=test password=test-password dbname=testdb sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Configure connection pool
 	db.SetMaxOpenConns(10)
@@ -134,13 +134,14 @@ func TestSQLHealthChecker_RealPostgres(t *testing.T) {
 }
 
 // testRollbackTrigger is a test implementation of RollbackTrigger.
-type testRollbackTrigger struct {
-	onTrigger func(ctx context.Context, service, env, reason string) error
-}
-
-func (t *testRollbackTrigger) TriggerHealthCheckRollback(ctx context.Context, service, env, reason string) error {
-	if t.onTrigger != nil {
-		return t.onTrigger(ctx, service, env, reason)
-	}
-	return nil
-}
+// Commented out as unused, but kept for potential future use
+//type testRollbackTrigger struct {
+//	onTrigger func(ctx context.Context, service, env, reason string) error
+//}
+//
+//func (t *testRollbackTrigger) TriggerHealthCheckRollback(ctx context.Context, service, env, reason string) error {
+//	if t.onTrigger != nil {
+//		return t.onTrigger(ctx, service, env, reason)
+//	}
+//	return nil
+//}

@@ -294,7 +294,7 @@ func (e *DockerTestEnv) PostgresClient() *PostgresTestClient {
 
 	// Register cleanup
 	e.cleanupFuncs = append(e.cleanupFuncs, func() {
-		db.Close()
+		_ = db.Close()
 	})
 
 	return client
@@ -455,7 +455,7 @@ func (v *VaultTestClient) Write(path string, data map[string]interface{}) error 
 	if err != nil {
 		return fmt.Errorf("failed to write secret: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -479,7 +479,7 @@ func (v *VaultTestClient) Read(path string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read secret: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -514,7 +514,7 @@ func (v *VaultTestClient) Delete(path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete secret: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("vault delete failed: status=%d", resp.StatusCode)
@@ -537,7 +537,7 @@ func (v *VaultTestClient) ListSecrets(path string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list secrets: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("vault list failed: status=%d", resp.StatusCode)

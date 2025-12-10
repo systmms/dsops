@@ -237,7 +237,7 @@ func (a *SQLAdapter) executeCreate(ctx context.Context, db *sql.DB, operation Op
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	
 	// Execute create command
 	_, err = tx.ExecContext(ctx, createSQL)
@@ -322,7 +322,7 @@ func (a *SQLAdapter) executeRotate(ctx context.Context, db *sql.DB, operation Op
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	
 	// Execute rotate command
 	_, err = tx.ExecContext(ctx, rotateSQL)
@@ -369,7 +369,7 @@ func (a *SQLAdapter) executeRevoke(ctx context.Context, db *sql.DB, operation Op
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	
 	// Execute revoke command
 	_, err = tx.ExecContext(ctx, revokeSQL)
@@ -419,7 +419,7 @@ func (a *SQLAdapter) executeList(ctx context.Context, db *sql.DB, operation Oper
 			Error:   fmt.Sprintf("failed to execute list query: %v", err),
 		}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	
 	// Collect results
 	var items []map[string]interface{}

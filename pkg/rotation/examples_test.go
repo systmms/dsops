@@ -75,9 +75,9 @@ func ExampleRotationEngine() {
 	}
 
 	// Register multiple rotation strategies
-	engine.RegisterStrategy(&MockDatabaseRotator{name: "postgresql"})
-	engine.RegisterStrategy(&MockAPIKeyRotator{name: "stripe"})
-	engine.RegisterStrategy(&MockCertificateRotator{name: "tls-cert"})
+	_ = engine.RegisterStrategy(&MockDatabaseRotator{name: "postgresql"})
+	_ = engine.RegisterStrategy(&MockAPIKeyRotator{name: "stripe"})
+	_ = engine.RegisterStrategy(&MockCertificateRotator{name: "tls-cert"})
 
 	// List available strategies
 	strategies := engine.ListStrategies()
@@ -686,7 +686,8 @@ func (e *MockRotationEngine) ScheduleRotation(ctx context.Context, request rotat
 }
 
 type MockDatabase struct {
-	users map[string]string
+	// users field is commented out as unused, but kept for potential future use
+	// users map[string]string
 }
 
 // Additional mock implementations would go here...
