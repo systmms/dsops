@@ -397,11 +397,11 @@ func captureDoctorOutput(t *testing.T, cmd *cobra.Command, args []string) string
 	_ = err
 
 	// Restore stdout and read output
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 
 	return buf.String()
 }

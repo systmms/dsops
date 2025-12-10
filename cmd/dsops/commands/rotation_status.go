@@ -88,11 +88,11 @@ Shows information including:
 
 func outputRotationStatusTable(store storage.Storage, services []string, verbose bool) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	defer w.Flush()
+	defer func() { _ = w.Flush() }()
 	
 	// Print header
-	fmt.Fprintln(w, "SERVICE\tSTATUS\tLAST ROTATION\tNEXT ROTATION\tRESULT")
-	fmt.Fprintln(w, "-------\t------\t-------------\t-------------\t------")
+	_, _ = fmt.Fprintln(w, "SERVICE\tSTATUS\tLAST ROTATION\tNEXT ROTATION\tRESULT")
+	_, _ = fmt.Fprintln(w, "-------\t------\t-------------\t-------------\t------")
 	
 	now := time.Now()
 	

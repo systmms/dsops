@@ -356,10 +356,10 @@ func TestVaultProvider_Validate_MissingToken(t *testing.T) {
 
 	// Clear environment variable
 	oldToken := os.Getenv("VAULT_TOKEN")
-	os.Unsetenv("VAULT_TOKEN")
+	_ = os.Unsetenv("VAULT_TOKEN")
 	defer func() {
 		if oldToken != "" {
-			os.Setenv("VAULT_TOKEN", oldToken)
+			_ = os.Setenv("VAULT_TOKEN", oldToken)
 		}
 	}()
 
@@ -545,8 +545,8 @@ func TestHTTPVaultClient_AuthenticateToken(t *testing.T) {
 func TestHTTPVaultClient_AuthenticateToken_FromEnv(t *testing.T) {
 	t.Parallel()
 
-	os.Setenv("VAULT_TOKEN", "env-token")
-	defer os.Unsetenv("VAULT_TOKEN")
+	_ = os.Setenv("VAULT_TOKEN", "env-token")
+	defer func() { _ = os.Unsetenv("VAULT_TOKEN") }()
 
 	client := &HTTPVaultClient{
 		config: Config{Token: ""},
@@ -561,10 +561,10 @@ func TestHTTPVaultClient_AuthenticateToken_NoToken(t *testing.T) {
 	t.Parallel()
 
 	oldToken := os.Getenv("VAULT_TOKEN")
-	os.Unsetenv("VAULT_TOKEN")
+	_ = os.Unsetenv("VAULT_TOKEN")
 	defer func() {
 		if oldToken != "" {
-			os.Setenv("VAULT_TOKEN", oldToken)
+			_ = os.Setenv("VAULT_TOKEN", oldToken)
 		}
 	}()
 

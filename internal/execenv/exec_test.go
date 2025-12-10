@@ -200,11 +200,11 @@ func TestExecutor_printEnvironment(t *testing.T) {
 
 		executor.printEnvironment(map[string]string{})
 
-		w.Close()
+		_ = w.Close()
 		os.Stdout = oldStdout
 
 		var buf bytes.Buffer
-		buf.ReadFrom(r)
+		_, _ = buf.ReadFrom(r)
 		output := buf.String()
 
 		assert.Contains(t, output, "No environment variables resolved")
@@ -223,11 +223,11 @@ func TestExecutor_printEnvironment(t *testing.T) {
 
 		executor.printEnvironment(vars)
 
-		w.Close()
+		_ = w.Close()
 		os.Stdout = oldStdout
 
 		var buf bytes.Buffer
-		buf.ReadFrom(r)
+		_, _ = buf.ReadFrom(r)
 		output := buf.String()
 
 		// Should contain variable names
@@ -259,11 +259,11 @@ func TestExecutor_printEnvironment(t *testing.T) {
 
 		executor.printEnvironment(vars)
 
-		w.Close()
+		_ = w.Close()
 		os.Stdout = oldStdout
 
 		var buf bytes.Buffer
-		buf.ReadFrom(r)
+		_, _ = buf.ReadFrom(r)
 		output := buf.String()
 
 		// AAA should appear before MMM, which should appear before ZZZ

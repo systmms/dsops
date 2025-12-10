@@ -281,12 +281,12 @@ func displayRollbackPlan(service, environment, targetVersion, failedVersion, rea
 	fmt.Println()
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintf(w, "Service:\t%s\n", service)
-	fmt.Fprintf(w, "Environment:\t%s\n", environment)
-	fmt.Fprintf(w, "Current Version:\t%s\n", failedVersion)
-	fmt.Fprintf(w, "Target Version:\t%s\n", targetVersion)
-	fmt.Fprintf(w, "Reason:\t%s\n", reason)
-	w.Flush()
+	_, _ = fmt.Fprintf(w, "Service:\t%s\n", service)
+	_, _ = fmt.Fprintf(w, "Environment:\t%s\n", environment)
+	_, _ = fmt.Fprintf(w, "Current Version:\t%s\n", failedVersion)
+	_, _ = fmt.Fprintf(w, "Target Version:\t%s\n", targetVersion)
+	_, _ = fmt.Fprintf(w, "Reason:\t%s\n", reason)
+	_ = w.Flush()
 
 	if verbose && status != nil {
 		fmt.Println()

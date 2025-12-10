@@ -251,20 +251,20 @@ func captureOutputPlan(t *testing.T, cmd *cobra.Command, args []string) string {
 
 	err := cmd.Execute()
 	if err != nil {
-		w.Close()
+		_ = w.Close()
 		os.Stdout = old
 		var buf bytes.Buffer
-		io.Copy(&buf, r)
+		_, _ = io.Copy(&buf, r)
 		t.Logf("Command output before error: %s", buf.String())
 		require.NoError(t, err)
 	}
 
 	// Restore stdout and read output
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 
 	return buf.String()
 }

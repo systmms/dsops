@@ -195,7 +195,7 @@ func NewTemplateDataFromEvent(event RotationEvent) TemplateData {
 			data.Trigger = "automatic"
 		}
 		if attempts, ok := event.Metadata["attempts"]; ok {
-			fmt.Sscanf(attempts, "%d", &data.Attempts)
+			_, _ = fmt.Sscanf(attempts, "%d", &data.Attempts)
 		}
 	}
 

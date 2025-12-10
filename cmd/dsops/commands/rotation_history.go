@@ -173,11 +173,11 @@ func outputRotationHistoryTable(entries []storage.HistoryEntry) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	defer w.Flush()
+	defer func() { _ = w.Flush() }()
 
 	// Print header
-	fmt.Fprintln(w, "TIMESTAMP\tSERVICE\tTYPE\tSTATUS\tDURATION\tERROR")
-	fmt.Fprintln(w, "---------\t-------\t----\t------\t--------\t-----")
+	_, _ = fmt.Fprintln(w, "TIMESTAMP\tSERVICE\tTYPE\tSTATUS\tDURATION\tERROR")
+	_, _ = fmt.Fprintln(w, "---------\t-------\t----\t------\t--------\t-----")
 
 	for _, entry := range entries {
 		timestamp := entry.Timestamp.Format("2006-01-02 15:04:05")
@@ -203,7 +203,7 @@ func outputRotationHistoryTable(entries []storage.HistoryEntry) error {
 			}
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
 			timestamp,
 			entry.ServiceName,
 			credType,

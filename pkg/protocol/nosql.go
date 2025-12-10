@@ -67,7 +67,7 @@ func (a *NoSQLAdapter) Execute(ctx context.Context, operation Operation, config 
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect: %w", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	
 	// Execute the operation
 	switch operation.Action {
