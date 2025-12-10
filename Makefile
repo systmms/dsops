@@ -76,16 +76,8 @@ test-integration: ## Run integration tests (requires Docker)
 		echo "Error: Docker not found. Please install Docker to run integration tests."; \
 		exit 1; \
 	fi
-	@echo "Starting Docker Compose services..."
-	cd tests/integration && docker compose up -d --wait
-	@echo "Running integration tests..."
-	@go test -race -v -timeout=300s ./tests/integration/... || { \
-		echo "Tests failed, stopping Docker services..."; \
-		cd tests/integration && docker compose down -v; \
-		exit 1; \
-	}
-	@echo "Stopping Docker Compose services..."
-	@cd tests/integration && docker compose down -v
+	@echo "Running integration tests (tests manage their own Docker containers)..."
+	@go test -race -v -timeout=300s -p=1 ./tests/integration/...
 	@echo "Integration tests complete!"
 
 .PHONY: test-all

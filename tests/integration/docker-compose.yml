@@ -4,7 +4,6 @@ services:
   # HashiCorp Vault - Secret store for integration tests
   vault:
     image: hashicorp/vault:1.15
-    container_name: dsops-test-vault
     ports:
       - "8200:8200"
     environment:
@@ -13,7 +12,7 @@ services:
     cap_add:
       - IPC_LOCK
     healthcheck:
-      test: ["CMD", "vault", "status"]
+      test: ["CMD", "sh", "-c", "VAULT_ADDR=http://localhost:8200 vault status"]
       interval: 2s
       timeout: 1s
       retries: 10
@@ -22,7 +21,6 @@ services:
   # PostgreSQL - Database for rotation testing
   postgres:
     image: postgres:15-alpine
-    container_name: dsops-test-postgres
     ports:
       - "5432:5432"
     environment:
@@ -39,7 +37,6 @@ services:
   # LocalStack - AWS services emulation (Secrets Manager, SSM)
   localstack:
     image: localstack/localstack:latest
-    container_name: dsops-test-localstack
     ports:
       - "4566:4566"
     environment:
@@ -58,7 +55,6 @@ services:
   # MongoDB - NoSQL database for rotation testing
   mongodb:
     image: mongo:7
-    container_name: dsops-test-mongodb
     ports:
       - "27017:27017"
     environment:
@@ -74,7 +70,6 @@ services:
   # MailHog - SMTP server for email notification testing
   mailhog:
     image: mailhog/mailhog:latest
-    container_name: dsops-test-mailhog
     ports:
       - "1025:1025"  # SMTP
       - "8025:8025"  # HTTP API
