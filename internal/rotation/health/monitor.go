@@ -301,7 +301,7 @@ func (m *HealthMonitor) Close() {
 	for _, key := range keys {
 		// Parse service and environment from key
 		var service, env string
-		fmt.Sscanf(key, "%s/%s", &service, &env)
+		_, _ = fmt.Sscanf(key, "%s/%s", &service, &env)
 		m.StopMonitoring(service, env)
 	}
 }

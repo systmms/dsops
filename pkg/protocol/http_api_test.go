@@ -30,7 +30,7 @@ func TestHTTPAPIAdapterExecute(t *testing.T) {
 
 			// Send response
 			w.WriteHeader(http.StatusCreated)
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"id":      "key-123",
 				"api_key": "generated-key",
 				"status":  "active",
@@ -93,7 +93,7 @@ func TestHTTPAPIAdapterExecute(t *testing.T) {
 			}
 
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"valid":      true,
 				"expires_at": "2025-12-31T23:59:59Z",
 			})
@@ -143,7 +143,7 @@ func TestHTTPAPIAdapterExecute(t *testing.T) {
 				t.Errorf("Expected API key in X-Custom-Key header, got %s", apiKey)
 			}
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]interface{}{"ok": true})
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true})
 		}))
 		defer server.Close()
 
@@ -188,7 +188,7 @@ func TestHTTPAPIAdapterExecute(t *testing.T) {
 				t.Errorf("Expected API key in query param 'key', got %s", apiKey)
 			}
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]interface{}{"ok": true})
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true})
 		}))
 		defer server.Close()
 
@@ -237,7 +237,7 @@ func TestHTTPAPIAdapterExecute(t *testing.T) {
 				t.Errorf("Expected admin:secret123, got %s:%s", username, password)
 			}
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]interface{}{"ok": true})
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true})
 		}))
 		defer server.Close()
 
@@ -281,11 +281,11 @@ func TestHTTPAPIAdapterExecute(t *testing.T) {
 			attempts++
 			if attempts < 3 {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("Server error"))
+				_, _ = w.Write([]byte("Server error"))
 				return
 			}
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]interface{}{"ok": true})
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true})
 		}))
 		defer server.Close()
 
@@ -331,7 +331,7 @@ func TestHTTPAPIAdapterExecute(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			attempts++
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Bad request"))
+			_, _ = w.Write([]byte("Bad request"))
 		}))
 		defer server.Close()
 
@@ -376,7 +376,7 @@ func TestHTTPAPIAdapterExecute(t *testing.T) {
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("plain text response"))
+			_, _ = w.Write([]byte("plain text response"))
 		}))
 		defer server.Close()
 

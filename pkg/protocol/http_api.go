@@ -62,7 +62,7 @@ func (a *HTTPAPIAdapter) Execute(ctx context.Context, operation Operation, confi
 			Error:   err.Error(),
 		}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	
 	// Parse response
 	result, err := a.parseResponse(resp, operation)
@@ -360,7 +360,7 @@ func (a *HTTPAPIAdapter) executeWithRetries(req *http.Request, config AdapterCon
 		
 		// Read error body for better error message
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		
 		lastErr = fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(bodyBytes))
 		

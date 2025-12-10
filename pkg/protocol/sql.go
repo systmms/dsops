@@ -68,7 +68,7 @@ func (a *SQLAdapter) Execute(ctx context.Context, operation Operation, config Ad
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	
 	// Set connection timeout
 	timeout := 30 * time.Second

@@ -92,6 +92,17 @@ jobs:
           --health-timeout 1s
           --health-retries 10
 
+      mailhog:
+        image: mailhog/mailhog:latest
+        ports:
+          - 1025:1025  # SMTP
+          - 8025:8025  # HTTP API
+        options: >-
+          --health-cmd "wget --quiet --tries=1 --spider http://localhost:8025 || exit 1"
+          --health-interval 2s
+          --health-timeout 1s
+          --health-retries 10
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -111,6 +122,7 @@ jobs:
           timeout 30 bash -c 'until curl -f http://localhost:8200/v1/sys/health > /dev/null 2>&1; do sleep 1; done' || echo "Vault health check timed out"
           timeout 30 bash -c 'until pg_isready -h localhost -p 5432 -U test > /dev/null 2>&1; do sleep 1; done' || echo "PostgreSQL health check timed out"
           timeout 30 bash -c 'until curl -f http://localhost:4566/_localstack/health > /dev/null 2>&1; do sleep 1; done' || echo "LocalStack health check timed out"
+          timeout 30 bash -c 'until curl -f http://localhost:8025 > /dev/null 2>&1; do sleep 1; done' || echo "MailHog health check timed out"
           echo "All services are ready"
 
       - name: Run integration tests
