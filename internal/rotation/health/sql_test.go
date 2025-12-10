@@ -13,14 +13,15 @@ import (
 
 // mockDB implements a minimal database interface for testing.
 type mockDB struct {
-	pingErr       error
-	pingLatency   time.Duration
-	queryErr      error
-	queryLatency  time.Duration
-	maxOpenConns  int
-	openConns     int
-	inUseConns    int
-	statsFunc     func() sql.DBStats
+	pingErr      error
+	pingLatency  time.Duration
+	// queryErr and queryLatency are commented out as unused, but kept for potential future use
+	// queryErr      error
+	// queryLatency  time.Duration
+	maxOpenConns int
+	openConns    int
+	inUseConns   int
+	statsFunc    func() sql.DBStats
 }
 
 func (m *mockDB) PingContext(ctx context.Context) error {

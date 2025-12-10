@@ -119,7 +119,7 @@ func (c *HTTPHealthChecker) Check(ctx context.Context, service ServiceConfig) (H
 		result.Metadata["error"] = err.Error()
 		return result, nil // Return result without error to let caller decide
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Discard body to allow connection reuse
 	_, _ = io.Copy(io.Discard, resp.Body)

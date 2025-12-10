@@ -54,10 +54,10 @@ func TestRotationStatusCommand(t *testing.T) {
 
 	// Create test storage with some data
 	storageDir := filepath.Join(tempDir, ".dsops", "rotation")
-	os.MkdirAll(storageDir, 0755)
+	_ = os.MkdirAll(storageDir, 0755)
 	// Set environment variable to use test storage dir
-	os.Setenv("DSOPS_ROTATION_DIR", storageDir)
-	defer os.Unsetenv("DSOPS_ROTATION_DIR")
+	_ = os.Setenv("DSOPS_ROTATION_DIR", storageDir)
+	defer func() { _ = os.Unsetenv("DSOPS_ROTATION_DIR") }()
 	store := storage.NewFileStorage(storageDir)
 	
 	// Add test status for postgres-prod to show active state
@@ -140,10 +140,10 @@ func TestRotationHistoryCommand(t *testing.T) {
 
 	// Create test storage with history
 	storageDir := filepath.Join(tempDir, ".dsops", "rotation")
-	os.MkdirAll(storageDir, 0755)
+	_ = os.MkdirAll(storageDir, 0755)
 	// Set environment variable to use test storage dir
-	os.Setenv("DSOPS_ROTATION_DIR", storageDir)
-	defer os.Unsetenv("DSOPS_ROTATION_DIR")
+	_ = os.Setenv("DSOPS_ROTATION_DIR", storageDir)
+	defer func() { _ = os.Unsetenv("DSOPS_ROTATION_DIR") }()
 	store := storage.NewFileStorage(storageDir)
 	
 	// Add test history entries
@@ -233,11 +233,11 @@ func captureOutput(t *testing.T, cmd *cobra.Command, args []string) string {
 	require.NoError(t, err)
 	
 	// Restore stdout and read output
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
-	
+
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	
+	_, _ = io.Copy(&buf, r)
+
 	return buf.String()
 }

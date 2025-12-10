@@ -77,7 +77,7 @@ func (p *EndpointProvider) Discover(ctx context.Context, configIface interface{}
 	if err != nil {
 		return nil, fmt.Errorf("failed to query endpoint: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check status code
 	if resp.StatusCode != http.StatusOK {

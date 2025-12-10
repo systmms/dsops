@@ -139,7 +139,7 @@ func TestMetricsServer_StartEnabled(t *testing.T) {
 		// Port might be in use, skip test
 		t.Skipf("skipping test: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -182,7 +182,7 @@ func TestMetricsServer_HealthEndpoint(t *testing.T) {
 	if err != nil {
 		t.Skipf("skipping test: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 

@@ -285,7 +285,7 @@ func (a *HTTPAPIAdapter) addAuthentication(req *http.Request, config AdapterConf
 		return nil // No authentication required
 	}
 	
-	authType, _ := config.Auth["type"]
+	authType := config.Auth["type"]
 	authValue, hasValue := config.Auth["value"]
 	
 	if !hasValue {

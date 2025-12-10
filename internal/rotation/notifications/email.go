@@ -147,10 +147,8 @@ func (p *EmailProvider) GetBatchMode() BatchMode {
 func (p *EmailProvider) Send(ctx context.Context, event RotationEvent) error {
 	// For batch modes, we would queue the event and return
 	// For now, we only implement immediate mode
-	if p.GetBatchMode() != BatchModeImmediate {
-		// TODO: Implement batching logic with background timer
-		// For now, send immediately anyway
-	}
+	// TODO: Implement batching logic with background timer
+	// Currently only immediate mode is supported, batching falls through
 
 	msg := p.buildMIMEMessage(event)
 

@@ -853,15 +853,15 @@ func TestHTTPVaultClient_GetHTTPClient_WithCACert(t *testing.T) {
 
 func TestNewVaultProvider_EnvironmentOverrides(t *testing.T) {
 	// Set environment variables
-	os.Setenv("VAULT_ADDR", "http://env-vault:8200")
-	os.Setenv("VAULT_TOKEN", "env-token")
-	os.Setenv("VAULT_NAMESPACE", "env-namespace")
-	os.Setenv("VAULT_SKIP_VERIFY", "true")
+	_ = os.Setenv("VAULT_ADDR", "http://env-vault:8200")
+	_ = os.Setenv("VAULT_TOKEN", "env-token")
+	_ = os.Setenv("VAULT_NAMESPACE", "env-namespace")
+	_ = os.Setenv("VAULT_SKIP_VERIFY", "true")
 	defer func() {
-		os.Unsetenv("VAULT_ADDR")
-		os.Unsetenv("VAULT_TOKEN")
-		os.Unsetenv("VAULT_NAMESPACE")
-		os.Unsetenv("VAULT_SKIP_VERIFY")
+		_ = os.Unsetenv("VAULT_ADDR")
+		_ = os.Unsetenv("VAULT_TOKEN")
+		_ = os.Unsetenv("VAULT_NAMESPACE")
+		_ = os.Unsetenv("VAULT_SKIP_VERIFY")
 	}()
 
 	config := map[string]interface{}{
