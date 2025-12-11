@@ -137,8 +137,16 @@ func (m *HealthMonitor) StopMonitoring(service, environment string) {
 	// Cancel the monitoring goroutine
 	state.cancel()
 
-	// Wait for goroutine to finish
-	<-state.done
+	// Wait for goroutine to finish with timeout
+	select {
+	case <-state.done:
+		// Goroutine finished successfully
+	case <-time.After(5 * time.Second):
+		// Goroutine didn't finish in time
+		// This should never happen in normal operation, but prevents hanging
+		// The goroutine will eventually finish when periodTimer fires
+		// Log the issue but don't block forever
+	}
 
 	// Remove from monitors
 	m.mu.Lock()

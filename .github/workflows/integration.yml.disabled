@@ -1,4 +1,8 @@
-name: Integration Tests
+# DEPRECATED: This workflow has been replaced by ci.yml
+# This file is disabled (.disabled extension) and kept for reference only.
+# The new ci.yml workflow provides unified test execution with merged coverage reporting.
+
+name: Integration Tests (DEPRECATED)
 
 on:
   push:
