@@ -659,10 +659,7 @@ func (p *PostgresTestClient) Query(query string, args ...interface{}) (*sql.Rows
 
 // QueryRow executes a SQL query that returns a single row
 func (p *PostgresTestClient) QueryRow(query string, args ...interface{}) *sql.Row {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	return p.db.QueryRowContext(ctx, query, args...)
+	return p.db.QueryRowContext(context.Background(), query, args...)
 }
 
 // CreateTestUser creates a test PostgreSQL user
