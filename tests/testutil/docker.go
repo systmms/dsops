@@ -290,6 +290,17 @@ func (e *DockerTestEnv) PostgresClient() *PostgresTestClient {
 		e.t.Fatalf("Failed to ping PostgreSQL: %v", err)
 	}
 
+	// Configure connection pool for concurrent operations
+	// These settings prevent protocol corruption during concurrent DDL operations:
+	// - MaxOpenConns: Allow enough connections for concurrent tests
+	// - MaxIdleConns: Reduce connection churn by keeping connections warm
+	// - ConnMaxLifetime: Rotate connections to prevent stale state accumulation
+	// - ConnMaxIdleTime: Close idle connections that might be corrupted
+	db.SetMaxOpenConns(20)                     // Allow up to 20 concurrent connections
+	db.SetMaxIdleConns(10)                     // Keep up to 10 idle connections
+	db.SetConnMaxLifetime(5 * time.Minute)     // Rotate connections every 5 minutes
+	db.SetConnMaxIdleTime(1 * time.Minute)     // Close idle connections after 1 minute
+
 	client := &PostgresTestClient{db: db}
 	e.clients["postgres"] = client
 

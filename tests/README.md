@@ -372,6 +372,16 @@ go test -short ./...
 - Docker services started via docker-compose
 - Tests skip if Docker unavailable
 
+### PostgreSQL Test Limitations
+
+The PostgreSQL integration tests use the lib/pq driver, which has known limitations with concurrent DDL operations on system catalogs. Specifically:
+
+- ❌ **Avoid**: Concurrent CREATE/DROP/ALTER USER operations
+- ✅ **OK**: Concurrent SELECT/INSERT/UPDATE queries
+- ✅ **OK**: Sequential user management operations
+
+If you encounter "pq: invalid message format" errors in tests involving concurrent user creation, this is a driver limitation. Use sequential tests or the `connection_pool_compatibility` test as a reference for concurrent query patterns.
+
 ## Best Practices
 
 ### Use Fakes for Unit Tests
