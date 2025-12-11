@@ -93,7 +93,7 @@ func TestVaultProviderIntegration(t *testing.T) {
 
 		_, err = vaultProvider.Resolve(ctx, ref)
 		assert.Error(t, err, "Expected error for nonexistent secret")
-		assert.Contains(t, err.Error(), "404", "Error should indicate 404 not found")
+		assert.Contains(t, err.Error(), "not found", "Error should indicate not found")
 	})
 
 	t.Run("provider_validate", func(t *testing.T) {
@@ -208,9 +208,11 @@ func TestVaultProviderInvalidAuth(t *testing.T) {
 		vaultProvider, err := vault.NewVaultProvider("vault-test", invalidConfig)
 		require.NoError(t, err, "Provider creation should succeed")
 
-		// Validate should fail with invalid token
-		err = vaultProvider.Validate(ctx)
-		assert.Error(t, err, "Validate should fail with invalid token")
+		// Validate only checks config presence, not token validity
+		// So we test that Resolve fails with invalid token instead
+		ref := provider.Reference{Key: "secret/data/test"}
+		_, err = vaultProvider.Resolve(ctx, ref)
+		require.Error(t, err, "Resolve should fail with invalid token")
 		assert.Contains(t, err.Error(), "permission denied", "Error should indicate permission denied")
 	})
 

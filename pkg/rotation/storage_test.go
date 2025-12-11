@@ -287,7 +287,7 @@ func TestFileStorage_CreateDirectories(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
-	defer storage.Close()
+	defer func() { _ = storage.Close() }()
 
 	// Verify directories were created
 	historyDir := filepath.Join(dataDir, "history")
@@ -310,7 +310,7 @@ func TestFileStorage_StoreAndRetrieveHistory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
-	defer storage.Close()
+	defer func() { _ = storage.Close() }()
 
 	ctx := context.Background()
 	secret := SecretInfo{
@@ -389,13 +389,13 @@ func TestFileStorage_StatusPersistence(t *testing.T) {
 	}
 
 	// Close and recreate storage to test persistence
-	storage.Close()
+	_ = storage.Close()
 
 	storage2, err := NewFileRotationStorage(tmpDir, logger)
 	if err != nil {
 		t.Fatalf("Failed to recreate file storage: %v", err)
 	}
-	defer storage2.Close()
+	defer func() { _ = storage2.Close() }()
 
 	// Retrieve status from new storage instance
 	retrieved, err := storage2.GetRotationStatus(ctx, secret)
@@ -420,7 +420,7 @@ func TestFileStorage_MissingStatusReturnsDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
-	defer storage.Close()
+	defer func() { _ = storage.Close() }()
 
 	ctx := context.Background()
 	secret := SecretInfo{Key: "NONEXISTENT", Provider: "aws"}
@@ -447,7 +447,7 @@ func TestFileStorage_ListSecrets(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
-	defer storage.Close()
+	defer func() { _ = storage.Close() }()
 
 	ctx := context.Background()
 
@@ -479,7 +479,7 @@ func TestFileStorage_HistoryFiltersBySecret(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
-	defer storage.Close()
+	defer func() { _ = storage.Close() }()
 
 	ctx := context.Background()
 

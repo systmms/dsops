@@ -49,8 +49,11 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Run linter
-        run: make lint
+      - name: Install and run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: v1.55.2
+          args: --timeout=5m
 
       - name: Run unit tests
         run: go test -short -race -coverprofile=coverage-unit.txt -covermode=atomic ./...
