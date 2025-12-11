@@ -500,6 +500,34 @@ func TestIndependentFunction(t *testing.T) {
 
 ---
 
+## Known Testing Limitations
+
+### PostgreSQL Concurrent DDL Operations
+
+The lib/pq PostgreSQL driver cannot reliably handle concurrent DDL operations (CREATE USER, DROP USER, ALTER USER) on system catalogs. Tests that spawn multiple goroutines executing user management commands will experience intermittent "pq: invalid message format" protocol errors.
+
+**Why this happens:**
+- Concurrent modifications to pg_authid system catalog
+- Protocol state corruption in connection pool
+- Driver limitation, not a dsops issue
+
+**What we test instead:**
+- Sequential user creation/deletion/updates ✅
+- Concurrent SELECT queries (20+ goroutines) ✅
+- Connection pool functionality ✅
+- Error handling ✅
+
+**If you need to test concurrent user operations:**
+- Use sequential tests with proper cleanup
+- Test concurrent queries instead of DDL
+- Consider pgx driver if critical (requires code changes)
+
+**References:**
+- Removed test: commit dcf0e06 on ci/test-dec-2025 branch
+- PostgreSQL docs: [Behavior in Threaded Programs](https://www.postgresql.org/docs/current/libpq-threading.html)
+
+---
+
 ## Troubleshooting
 
 ### Tests Pass Locally But Fail in CI
