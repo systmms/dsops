@@ -21,7 +21,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             # Go toolchain
-            go_1_23
+            go_1_25
             gopls
             gotools
             go-tools

@@ -28,7 +28,7 @@ setup: ## Set up development environment
 		echo "Installing development tools..."; \
 		command -v golangci-lint >/dev/null 2>&1 || { \
 			echo "Installing golangci-lint..."; \
-			curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.55.2; \
+			curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v2.7.2; \
 		}; \
 	fi
 	@echo "Setup complete!"
