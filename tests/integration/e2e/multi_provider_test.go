@@ -37,7 +37,7 @@ secretStores:
   vault:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
       token: "test-token"
 envs:
   production:
@@ -252,7 +252,7 @@ secretStores:
   vault:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     LITERAL_VALUE:
@@ -314,7 +314,7 @@ secretStores:
   slow-vault:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
   slow-bitwarden:
     type: bitwarden
     config:
@@ -389,7 +389,7 @@ secretStores:
   working:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
   failing:
     type: aws.secretsmanager
     config:
@@ -448,7 +448,7 @@ secretStores:
   json-store:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
   base64-store:
     type: aws.secretsmanager
     config:
@@ -528,7 +528,7 @@ secretStores:
   vault:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
   aws:
     type: aws.secretsmanager
     config:

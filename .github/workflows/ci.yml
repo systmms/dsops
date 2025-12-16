@@ -84,18 +84,18 @@ jobs:
       - name: Run integration tests
         run: go test -v -race -coverprofile=coverage-integration.txt -covermode=atomic ./tests/integration/...
         env:
-          VAULT_ADDR: http://localhost:8200
+          VAULT_ADDR: http://127.0.0.1:8200
           VAULT_TOKEN: test-root-token
-          POSTGRES_HOST: localhost
+          POSTGRES_HOST: 127.0.0.1
           POSTGRES_PORT: 5432
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test-password
           POSTGRES_DB: testdb
-          AWS_ENDPOINT: http://localhost:4566
+          AWS_ENDPOINT: http://127.0.0.1:4566
           AWS_REGION: us-east-1
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
-          MONGODB_URI: mongodb://test:test-password@localhost:27017
+          MONGODB_URI: mongodb://test:test-password@127.0.0.1:27017
 
       - name: Upload integration coverage
         uses: actions/upload-artifact@v4

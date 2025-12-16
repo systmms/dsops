@@ -78,7 +78,7 @@ func TestProviderErrorHandling_AuthError(t *testing.T) {
 	t.Run("vault_invalid_token_returns_autherror", func(t *testing.T) {
 		// Create Vault provider with invalid token
 		invalidConfig := map[string]interface{}{
-			"address": "http://localhost:8200",
+			"address": "http://127.0.0.1:8200",
 			"token":   "invalid-token-that-does-not-exist",
 		}
 
@@ -104,7 +104,7 @@ func TestProviderErrorHandling_AuthError(t *testing.T) {
 
 	t.Run("vault_resolve_with_invalid_token", func(t *testing.T) {
 		invalidConfig := map[string]interface{}{
-			"address": "http://localhost:8200",
+			"address": "http://127.0.0.1:8200",
 			"token":   "bad-token-12345",
 		}
 
@@ -133,7 +133,7 @@ func TestProviderErrorHandling_AuthError(t *testing.T) {
 
 	t.Run("vault_describe_with_invalid_token", func(t *testing.T) {
 		invalidConfig := map[string]interface{}{
-			"address": "http://localhost:8200",
+			"address": "http://127.0.0.1:8200",
 			"token":   "invalid-describe-token",
 		}
 
@@ -253,7 +253,7 @@ func TestProviderErrorHandling_ConnectionErrors(t *testing.T) {
 	t.Run("vault_connection_refused", func(t *testing.T) {
 		// Point to wrong port (nothing listening)
 		invalidConfig := map[string]interface{}{
-			"address": "http://localhost:19999", // Port that doesn't exist
+			"address": "http://127.0.0.1:19999", // Port that doesn't exist
 			"token":   "test-token",
 		}
 

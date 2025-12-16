@@ -201,7 +201,7 @@ func TestVaultProviderInvalidAuth(t *testing.T) {
 
 	t.Run("invalid_token", func(t *testing.T) {
 		invalidConfig := map[string]interface{}{
-			"address": "http://localhost:8200",
+			"address": "http://127.0.0.1:8200",
 			"token":   "invalid-token-12345",
 		}
 
@@ -218,7 +218,7 @@ func TestVaultProviderInvalidAuth(t *testing.T) {
 
 	t.Run("invalid_address", func(t *testing.T) {
 		invalidConfig := map[string]interface{}{
-			"address": "http://localhost:9999", // Wrong port
+			"address": "http://127.0.0.1:9999", // Wrong port
 			"token":   "test-root-token",
 		}
 

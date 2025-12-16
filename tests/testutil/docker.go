@@ -282,7 +282,7 @@ func (e *DockerTestEnv) VaultClient() *VaultTestClient {
 	}
 
 	client := &VaultTestClient{
-		address: "http://localhost:8200",
+		address: "http://127.0.0.1:8200",
 		token:   "test-root-token",
 		client: &http.Client{
 			Timeout: 10 * time.Second,
@@ -301,7 +301,7 @@ func (e *DockerTestEnv) PostgresClient() *PostgresTestClient {
 		return client
 	}
 
-	connStr := "host=localhost port=5432 user=test password=test-password dbname=testdb sslmode=disable"
+	connStr := "host=127.0.0.1 port=5432 user=test password=test-password dbname=testdb sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		e.t.Fatalf("Failed to connect to PostgreSQL: %v", err)
@@ -359,7 +359,7 @@ func (e *DockerTestEnv) LocalStackClient() *LocalStackTestClient {
 	}
 
 	// Override endpoint for LocalStack
-	endpoint := "http://localhost:4566"
+	endpoint := "http://127.0.0.1:4566"
 
 	smClient := secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
 		o.BaseEndpoint = &endpoint
@@ -388,7 +388,7 @@ func (e *DockerTestEnv) MongoClient() *MongoTestClient {
 
 	// TODO: Implement MongoDB client when needed
 	client := &MongoTestClient{
-		connectionString: "mongodb://test:test-password@localhost:27017/",
+		connectionString: "mongodb://test:test-password@127.0.0.1:27017/",
 	}
 
 	e.clients["mongodb"] = client
@@ -398,7 +398,7 @@ func (e *DockerTestEnv) MongoClient() *MongoTestClient {
 // VaultConfig returns Vault configuration for provider testing
 func (e *DockerTestEnv) VaultConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"address": "http://localhost:8200",
+		"address": "http://127.0.0.1:8200",
 		"token":   "test-root-token",
 	}
 }
@@ -406,7 +406,7 @@ func (e *DockerTestEnv) VaultConfig() map[string]interface{} {
 // PostgresConfig returns PostgreSQL configuration
 func (e *DockerTestEnv) PostgresConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"host":     "localhost",
+		"host":     "127.0.0.1",
 		"port":     5432,
 		"user":     "test",
 		"password": "test-password",
@@ -419,7 +419,7 @@ func (e *DockerTestEnv) PostgresConfig() map[string]interface{} {
 func (e *DockerTestEnv) LocalStackConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"region":   "us-east-1",
-		"endpoint": "http://localhost:4566",
+		"endpoint": "http://127.0.0.1:4566",
 	}
 }
 

@@ -49,7 +49,7 @@ type mailhogResponse struct {
 func fetchMailHogMessages(t *testing.T) []mailhogMessage {
 	t.Helper()
 
-	resp, err := http.Get("http://localhost:8025/api/v2/messages")
+	resp, err := http.Get("http://127.0.0.1:8025/api/v2/messages")
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -64,7 +64,7 @@ func fetchMailHogMessages(t *testing.T) []mailhogMessage {
 func deleteMailHogMessages(t *testing.T) {
 	t.Helper()
 
-	req, err := http.NewRequest("DELETE", "http://localhost:8025/api/v1/messages", nil)
+	req, err := http.NewRequest("DELETE", "http://127.0.0.1:8025/api/v1/messages", nil)
 	require.NoError(t, err)
 
 	client := &http.Client{}
@@ -92,7 +92,7 @@ func TestEmailSMTP_BasicDelivery(t *testing.T) {
 	// Create email provider with MailHog config
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "localhost",
+			Host: "127.0.0.1",
 			Port: 1025, // MailHog SMTP port
 		},
 		From: "dsops@example.com",
@@ -174,7 +174,7 @@ func TestEmailSMTP_MultipleRecipients(t *testing.T) {
 	// Create email provider with multiple recipients
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "localhost",
+			Host: "127.0.0.1",
 			Port: 1025,
 		},
 		From: "dsops@example.com",
@@ -245,7 +245,7 @@ func TestEmailSMTP_EventFiltering(t *testing.T) {
 	// Create email provider that only sends for "failed" events
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "localhost",
+			Host: "127.0.0.1",
 			Port: 1025,
 		},
 		From:   "dsops@example.com",
@@ -304,7 +304,7 @@ func TestEmailSMTP_HTMLAndTextParts(t *testing.T) {
 	// Create email provider
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "localhost",
+			Host: "127.0.0.1",
 			Port: 1025,
 		},
 		From: "dsops@example.com",
@@ -375,7 +375,7 @@ func TestEmailSMTP_MetadataInBody(t *testing.T) {
 	// Create email provider
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "localhost",
+			Host: "127.0.0.1",
 			Port: 1025,
 		},
 		From: "dsops@example.com",
@@ -444,7 +444,7 @@ func TestEmailSMTP_HeaderInjectionPrevention(t *testing.T) {
 	// Create email provider
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "localhost",
+			Host: "127.0.0.1",
 			Port: 1025,
 		},
 		From: "dsops@example.com",
@@ -548,7 +548,7 @@ func TestEmailSMTP_DifferentEventTypes(t *testing.T) {
 			// Create provider
 			provider := notifications.NewEmailProvider(notifications.EmailConfig{
 				SMTP: notifications.SMTPConfig{
-					Host: "localhost",
+					Host: "127.0.0.1",
 					Port: 1025,
 				},
 				From: "dsops@example.com",
@@ -596,7 +596,7 @@ func TestEmailSMTP_ConnectionError(t *testing.T) {
 	// Create email provider with invalid SMTP server
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "localhost",
+			Host: "127.0.0.1",
 			Port: 9999, // Invalid port
 		},
 		From: "dsops@example.com",
@@ -637,7 +637,7 @@ func TestEmailSMTP_TimeoutHandling(t *testing.T) {
 
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "localhost",
+			Host: "127.0.0.1",
 			Port: 1025,
 		},
 		From: "dsops@example.com",
@@ -682,7 +682,7 @@ func TestEmailSMTP_RealWorldScenario(t *testing.T) {
 	// Create provider with realistic config
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "localhost",
+			Host: "127.0.0.1",
 			Port: 1025,
 		},
 		From: "dsops-prod@company.com",
