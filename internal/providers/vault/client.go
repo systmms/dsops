@@ -14,9 +14,12 @@ import (
 
 // Authenticate performs authentication with Vault based on the configured method
 func (c *HTTPVaultClient) Authenticate(ctx context.Context) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	// If we already have a token, validate it
 	if c.token != "" {
-		if err := c.validateToken(ctx); err == nil {
+		if err := c.validateTokenLocked(ctx); err == nil {
 			return nil // Token is still valid
 		}
 		// Token is invalid, clear it and re-authenticate
@@ -25,15 +28,15 @@ func (c *HTTPVaultClient) Authenticate(ctx context.Context) error {
 
 	switch c.config.AuthMethod {
 	case "token":
-		return c.authenticateToken()
+		return c.authenticateTokenLocked()
 	case "userpass":
-		return c.authenticateUserpass(ctx)
+		return c.authenticateUserpassLocked(ctx)
 	case "ldap":
-		return c.authenticateLDAP(ctx)
+		return c.authenticateLDAPLocked(ctx)
 	case "aws":
-		return c.authenticateAWS(ctx)
+		return c.authenticateAWSLocked(ctx)
 	case "k8s", "kubernetes":
-		return c.authenticateKubernetes(ctx)
+		return c.authenticateKubernetesLocked(ctx)
 	default:
 		return fmt.Errorf("unsupported auth method: %s", c.config.AuthMethod)
 	}
@@ -41,18 +44,22 @@ func (c *HTTPVaultClient) Authenticate(ctx context.Context) error {
 
 // Read fetches a secret from Vault
 func (c *HTTPVaultClient) Read(ctx context.Context, path string) (*VaultSecret, error) {
-	if c.token == "" {
+	c.mu.RLock()
+	token := c.token
+	c.mu.RUnlock()
+
+	if token == "" {
 		return nil, fmt.Errorf("not authenticated")
 	}
 
 	url := strings.TrimSuffix(c.config.Address, "/") + "/v1/" + strings.TrimPrefix(path, "/")
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("X-Vault-Token", c.token)
+	req.Header.Set("X-Vault-Token", token)
 	if c.config.Namespace != "" {
 		req.Header.Set("X-Vault-Namespace", c.config.Namespace)
 	}
@@ -86,12 +93,15 @@ func (c *HTTPVaultClient) Read(ctx context.Context, path string) (*VaultSecret, 
 
 // Close cleans up the client
 func (c *HTTPVaultClient) Close() error {
+	c.mu.Lock()
 	c.token = ""
+	c.mu.Unlock()
 	return nil
 }
 
-// authenticateToken validates or sets the token
-func (c *HTTPVaultClient) authenticateToken() error {
+// authenticateTokenLocked validates or sets the token
+// Must be called with c.mu held
+func (c *HTTPVaultClient) authenticateTokenLocked() error {
 	if c.config.Token != "" {
 		c.token = c.config.Token
 		return nil
@@ -105,8 +115,9 @@ func (c *HTTPVaultClient) authenticateToken() error {
 	return fmt.Errorf("no vault token found in config or VAULT_TOKEN environment variable")
 }
 
-// authenticateUserpass authenticates using username/password
-func (c *HTTPVaultClient) authenticateUserpass(ctx context.Context) error {
+// authenticateUserpassLocked authenticates using username/password
+// Must be called with c.mu held
+func (c *HTTPVaultClient) authenticateUserpassLocked(ctx context.Context) error {
 	password := c.config.UserpassPassword
 	if password == "" {
 		// Try environment variable
@@ -120,11 +131,12 @@ func (c *HTTPVaultClient) authenticateUserpass(ctx context.Context) error {
 		"password": password,
 	}
 
-	return c.performLogin(ctx, fmt.Sprintf("auth/userpass/login/%s", c.config.UserpassUsername), authData)
+	return c.performLoginLocked(ctx, fmt.Sprintf("auth/userpass/login/%s", c.config.UserpassUsername), authData)
 }
 
-// authenticateLDAP authenticates using LDAP
-func (c *HTTPVaultClient) authenticateLDAP(ctx context.Context) error {
+// authenticateLDAPLocked authenticates using LDAP
+// Must be called with c.mu held
+func (c *HTTPVaultClient) authenticateLDAPLocked(ctx context.Context) error {
 	password := c.config.LDAPPassword
 	if password == "" {
 		// Try environment variable
@@ -138,11 +150,12 @@ func (c *HTTPVaultClient) authenticateLDAP(ctx context.Context) error {
 		"password": password,
 	}
 
-	return c.performLogin(ctx, fmt.Sprintf("auth/ldap/login/%s", c.config.LDAPUsername), authData)
+	return c.performLoginLocked(ctx, fmt.Sprintf("auth/ldap/login/%s", c.config.LDAPUsername), authData)
 }
 
-// authenticateAWS authenticates using AWS IAM
-func (c *HTTPVaultClient) authenticateAWS(ctx context.Context) error {
+// authenticateAWSLocked authenticates using AWS IAM
+// Must be called with c.mu held
+func (c *HTTPVaultClient) authenticateAWSLocked(ctx context.Context) error {
 	// This is a simplified implementation
 	// In practice, you'd need to generate AWS SigV4 signatures
 	authData := map[string]interface{}{
@@ -151,11 +164,12 @@ func (c *HTTPVaultClient) authenticateAWS(ctx context.Context) error {
 		// This would need proper AWS SigV4 implementation
 	}
 
-	return c.performLogin(ctx, "auth/aws/login", authData)
+	return c.performLoginLocked(ctx, "auth/aws/login", authData)
 }
 
-// authenticateKubernetes authenticates using Kubernetes service account
-func (c *HTTPVaultClient) authenticateKubernetes(ctx context.Context) error {
+// authenticateKubernetesLocked authenticates using Kubernetes service account
+// Must be called with c.mu held
+func (c *HTTPVaultClient) authenticateKubernetesLocked(ctx context.Context) error {
 	// Read the service account token
 	tokenPath := "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	if customPath := os.Getenv("VAULT_K8S_TOKEN_PATH"); customPath != "" {
@@ -172,11 +186,12 @@ func (c *HTTPVaultClient) authenticateKubernetes(ctx context.Context) error {
 		"jwt":  string(tokenBytes),
 	}
 
-	return c.performLogin(ctx, "auth/kubernetes/login", authData)
+	return c.performLoginLocked(ctx, "auth/kubernetes/login", authData)
 }
 
-// performLogin handles the common login workflow
-func (c *HTTPVaultClient) performLogin(ctx context.Context, authPath string, authData map[string]interface{}) error {
+// performLoginLocked handles the common login workflow
+// Must be called with c.mu held
+func (c *HTTPVaultClient) performLoginLocked(ctx context.Context, authPath string, authData map[string]interface{}) error {
 	url := strings.TrimSuffix(c.config.Address, "/") + "/v1/" + strings.TrimPrefix(authPath, "/")
 
 	jsonData, err := json.Marshal(authData)
@@ -224,8 +239,9 @@ func (c *HTTPVaultClient) performLogin(ctx context.Context, authPath string, aut
 	return nil
 }
 
-// validateToken checks if the current token is valid
-func (c *HTTPVaultClient) validateToken(ctx context.Context) error {
+// validateTokenLocked checks if the current token is valid
+// Must be called with c.mu held
+func (c *HTTPVaultClient) validateTokenLocked(ctx context.Context) error {
 	url := strings.TrimSuffix(c.config.Address, "/") + "/v1/auth/token/lookup-self"
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)

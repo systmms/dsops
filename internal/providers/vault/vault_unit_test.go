@@ -529,7 +529,7 @@ func TestHTTPVaultClient_AuthenticateToken(t *testing.T) {
 		config: Config{Token: "test-token"},
 	}
 
-	err := client.authenticateToken()
+	err := client.authenticateTokenLocked()
 	require.NoError(t, err)
 	assert.Equal(t, "test-token", client.token)
 }
@@ -542,7 +542,7 @@ func TestHTTPVaultClient_AuthenticateToken_FromEnv(t *testing.T) {
 		config: Config{Token: ""},
 	}
 
-	err := client.authenticateToken()
+	err := client.authenticateTokenLocked()
 	require.NoError(t, err)
 	assert.Equal(t, "env-token", client.token)
 }
@@ -556,7 +556,7 @@ func TestHTTPVaultClient_AuthenticateToken_NoToken(t *testing.T) {
 		config: Config{Token: ""},
 	}
 
-	err := client.authenticateToken()
+	err := client.authenticateTokenLocked()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no vault token")
 }
@@ -708,7 +708,7 @@ func TestHTTPVaultClient_PerformLogin(t *testing.T) {
 
 	ctx := context.Background()
 	authData := map[string]interface{}{"password": "secret"}
-	err := client.performLogin(ctx, "auth/userpass/login/admin", authData)
+	err := client.performLoginLocked(ctx, "auth/userpass/login/admin", authData)
 	require.NoError(t, err)
 	assert.Equal(t, "new-token", client.token)
 }
@@ -727,7 +727,7 @@ func TestHTTPVaultClient_PerformLogin_Failure(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err := client.performLogin(ctx, "auth/userpass/login/admin", nil)
+	err := client.performLoginLocked(ctx, "auth/userpass/login/admin", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "401")
 }
@@ -750,7 +750,7 @@ func TestHTTPVaultClient_ValidateToken(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err := client.validateToken(ctx)
+	err := client.validateTokenLocked(ctx)
 	require.NoError(t, err)
 }
 
@@ -768,7 +768,7 @@ func TestHTTPVaultClient_ValidateToken_Invalid(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err := client.validateToken(ctx)
+	err := client.validateTokenLocked(ctx)
 	assert.Error(t, err)
 }
 

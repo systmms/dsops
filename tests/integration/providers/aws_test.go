@@ -217,9 +217,8 @@ func TestAWSSSMParameterStoreIntegration(t *testing.T) {
 		secret, err := awsProvider.Resolve(ctx, ref)
 		require.NoError(t, err, "Failed to resolve parameter from SSM")
 
-		// Verify parameter value
-		assert.Contains(t, secret.Value, "value", "Secret should contain 'value' key")
-		assert.Contains(t, secret.Value, "localhost")
+		// Verify parameter value (SSM returns the raw value, not JSON)
+		assert.Equal(t, "localhost", secret.Value, "Parameter value should match")
 	})
 
 	t.Run("hierarchical_parameters", func(t *testing.T) {
