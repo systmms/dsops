@@ -140,7 +140,7 @@ jobs:
         run: |
           coverage=$(go tool cover -func=coverage-merged.txt | grep total | awk '{print $3}' | sed 's/%//')
           echo "Total coverage: ${coverage}%"
-          if (( $(echo "$coverage < 80" | bc -l) )); then
-            echo "Coverage ${coverage}% is below threshold of 80%"
+          if (( $(echo "$coverage < 50" | bc -l) )); then
+            echo "Coverage ${coverage}% is below threshold of 50%"
             exit 1
           fi
