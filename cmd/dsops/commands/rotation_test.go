@@ -54,10 +54,9 @@ func TestRotationStatusCommand(t *testing.T) {
 
 	// Create test storage with some data
 	storageDir := filepath.Join(tempDir, ".dsops", "rotation")
-	_ = os.MkdirAll(storageDir, 0755)
+	require.NoError(t, os.MkdirAll(storageDir, 0755))
 	// Set environment variable to use test storage dir
-	_ = os.Setenv("DSOPS_ROTATION_DIR", storageDir)
-	defer func() { _ = os.Unsetenv("DSOPS_ROTATION_DIR") }()
+	t.Setenv("DSOPS_ROTATION_DIR", storageDir)
 	store := storage.NewFileStorage(storageDir)
 	
 	// Add test status for postgres-prod to show active state
@@ -140,10 +139,9 @@ func TestRotationHistoryCommand(t *testing.T) {
 
 	// Create test storage with history
 	storageDir := filepath.Join(tempDir, ".dsops", "rotation")
-	_ = os.MkdirAll(storageDir, 0755)
+	require.NoError(t, os.MkdirAll(storageDir, 0755))
 	// Set environment variable to use test storage dir
-	_ = os.Setenv("DSOPS_ROTATION_DIR", storageDir)
-	defer func() { _ = os.Unsetenv("DSOPS_ROTATION_DIR") }()
+	t.Setenv("DSOPS_ROTATION_DIR", storageDir)
 	store := storage.NewFileStorage(storageDir)
 	
 	// Add test history entries
@@ -231,7 +229,7 @@ func captureOutput(t *testing.T, cmd *cobra.Command, args []string) string {
 	
 	err := cmd.Execute()
 	require.NoError(t, err)
-	
+
 	// Restore stdout and read output
 	_ = w.Close()
 	os.Stdout = old

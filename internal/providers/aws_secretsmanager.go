@@ -26,9 +26,10 @@ type SecretsManagerClientAPI interface {
 
 // AWSSecretsManagerProvider implements the provider interface for AWS Secrets Manager
 type AWSSecretsManagerProvider struct {
-	name   string
-	client SecretsManagerClientAPI
-	region string
+	name     string
+	client   SecretsManagerClientAPI
+	region   string
+	endpoint string // Optional custom endpoint for LocalStack or testing
 }
 
 // ProviderOption is a functional option for configuring providers
@@ -49,9 +50,16 @@ func NewAWSSecretsManagerProvider(name string, providerConfig map[string]interfa
 		region = r
 	}
 
+	// Get optional endpoint for LocalStack/testing
+	var endpoint string
+	if e, ok := providerConfig["endpoint"].(string); ok && e != "" {
+		endpoint = e
+	}
+
 	p := &AWSSecretsManagerProvider{
-		name:   name,
-		region: region,
+		name:     name,
+		region:   region,
+		endpoint: endpoint,
 	}
 
 	// Apply options (allows mock client injection)
@@ -69,8 +77,14 @@ func NewAWSSecretsManagerProvider(name string, providerConfig map[string]interfa
 			return nil, fmt.Errorf("failed to load AWS config: %w", err)
 		}
 
-		// Create Secrets Manager client
-		p.client = secretsmanager.NewFromConfig(cfg)
+		// Create Secrets Manager client with optional custom endpoint
+		var clientOpts []func(*secretsmanager.Options)
+		if endpoint != "" {
+			clientOpts = append(clientOpts, func(o *secretsmanager.Options) {
+				o.BaseEndpoint = &endpoint
+			})
+		}
+		p.client = secretsmanager.NewFromConfig(cfg, clientOpts...)
 	}
 
 	return p, nil

@@ -51,6 +51,31 @@ type PostgresTestClient struct {
 	db *sql.DB
 }
 
+// QueryRowResult wraps sql.Row with context cancellation
+// This ensures the context is not cancelled until Scan() is called
+type QueryRowResult struct {
+	row    *sql.Row
+	cancel context.CancelFunc
+}
+
+// Scan scans the row and cancels the context
+func (r *QueryRowResult) Scan(dest ...interface{}) error {
+	defer r.cancel()
+	return r.row.Scan(dest...)
+}
+
+// QueryResult wraps sql.Rows with context cancellation
+type QueryResult struct {
+	*sql.Rows
+	cancel context.CancelFunc
+}
+
+// Close closes the rows and cancels the context
+func (r *QueryResult) Close() error {
+	defer r.cancel()
+	return r.Rows.Close()
+}
+
 // MongoTestClient wraps MongoDB connection
 type MongoTestClient struct {
 	// TODO: Add MongoDB client when needed
@@ -257,7 +282,7 @@ func (e *DockerTestEnv) VaultClient() *VaultTestClient {
 	}
 
 	client := &VaultTestClient{
-		address: "http://localhost:8200",
+		address: "http://127.0.0.1:8200",
 		token:   "test-root-token",
 		client: &http.Client{
 			Timeout: 10 * time.Second,
@@ -276,7 +301,7 @@ func (e *DockerTestEnv) PostgresClient() *PostgresTestClient {
 		return client
 	}
 
-	connStr := "host=localhost port=5432 user=test password=test-password dbname=testdb sslmode=disable"
+	connStr := "host=127.0.0.1 port=5432 user=test password=test-password dbname=testdb sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		e.t.Fatalf("Failed to connect to PostgreSQL: %v", err)
@@ -334,7 +359,7 @@ func (e *DockerTestEnv) LocalStackClient() *LocalStackTestClient {
 	}
 
 	// Override endpoint for LocalStack
-	endpoint := "http://localhost:4566"
+	endpoint := "http://127.0.0.1:4566"
 
 	smClient := secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
 		o.BaseEndpoint = &endpoint
@@ -363,7 +388,7 @@ func (e *DockerTestEnv) MongoClient() *MongoTestClient {
 
 	// TODO: Implement MongoDB client when needed
 	client := &MongoTestClient{
-		connectionString: "mongodb://test:test-password@localhost:27017/",
+		connectionString: "mongodb://test:test-password@127.0.0.1:27017/",
 	}
 
 	e.clients["mongodb"] = client
@@ -373,7 +398,7 @@ func (e *DockerTestEnv) MongoClient() *MongoTestClient {
 // VaultConfig returns Vault configuration for provider testing
 func (e *DockerTestEnv) VaultConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"address": "http://localhost:8200",
+		"address": "http://127.0.0.1:8200",
 		"token":   "test-root-token",
 	}
 }
@@ -381,7 +406,7 @@ func (e *DockerTestEnv) VaultConfig() map[string]interface{} {
 // PostgresConfig returns PostgreSQL configuration
 func (e *DockerTestEnv) PostgresConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"host":     "localhost",
+		"host":     "127.0.0.1",
 		"port":     5432,
 		"user":     "test",
 		"password": "test-password",
@@ -394,7 +419,7 @@ func (e *DockerTestEnv) PostgresConfig() map[string]interface{} {
 func (e *DockerTestEnv) LocalStackConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"region":   "us-east-1",
-		"endpoint": "http://localhost:4566",
+		"endpoint": "http://127.0.0.1:4566",
 	}
 }
 
@@ -661,16 +686,22 @@ func (p *PostgresTestClient) Exec(query string, args ...interface{}) error {
 }
 
 // Query executes a SQL query
-func (p *PostgresTestClient) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (p *PostgresTestClient) Query(query string, args ...interface{}) (*QueryResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 
-	return p.db.QueryContext(ctx, query, args...)
+	rows, err := p.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	return &QueryResult{Rows: rows, cancel: cancel}, nil
 }
 
 // QueryRow executes a SQL query that returns a single row
-func (p *PostgresTestClient) QueryRow(query string, args ...interface{}) *sql.Row {
-	return p.db.QueryRowContext(context.Background(), query, args...)
+func (p *PostgresTestClient) QueryRow(query string, args ...interface{}) *QueryRowResult {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	row := p.db.QueryRowContext(ctx, query, args...)
+	return &QueryRowResult{row: row, cancel: cancel}
 }
 
 // CreateTestUser creates a test PostgreSQL user

@@ -194,7 +194,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     KEY:
@@ -240,7 +240,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     KEY:
@@ -285,7 +285,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     KEY:
@@ -331,7 +331,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     KEY:
@@ -376,7 +376,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     KEY:
@@ -421,7 +421,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     KEY:
@@ -471,7 +471,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     LARGE_SECRET:
@@ -509,7 +509,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     EMPTY:
@@ -549,7 +549,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     SPECIAL:
@@ -589,7 +589,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     UNICODE:
@@ -628,7 +628,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     VAR_000: { from: { store: "store://test/var000" } }
@@ -687,7 +687,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     ` + longVarName + `:
@@ -731,7 +731,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     SUCCESS_VAR:
@@ -785,7 +785,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     SUCCESS_VAR:
@@ -827,7 +827,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     GOOD_VAR:
@@ -872,7 +872,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     FAIL1:
@@ -921,7 +921,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     KEY:

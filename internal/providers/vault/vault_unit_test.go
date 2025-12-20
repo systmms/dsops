@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -352,16 +351,9 @@ func TestVaultProvider_Validate_MissingAddress(t *testing.T) {
 }
 
 func TestVaultProvider_Validate_MissingToken(t *testing.T) {
-	t.Parallel()
-
-	// Clear environment variable
-	oldToken := os.Getenv("VAULT_TOKEN")
-	_ = os.Unsetenv("VAULT_TOKEN")
-	defer func() {
-		if oldToken != "" {
-			_ = os.Setenv("VAULT_TOKEN", oldToken)
-		}
-	}()
+	// Cannot use t.Parallel() with t.Setenv
+	// Clear environment variable - use t.Setenv with empty string to unset
+	t.Setenv("VAULT_TOKEN", "")
 
 	p := &VaultProvider{
 		name: "test",
@@ -537,42 +529,34 @@ func TestHTTPVaultClient_AuthenticateToken(t *testing.T) {
 		config: Config{Token: "test-token"},
 	}
 
-	err := client.authenticateToken()
+	err := client.authenticateTokenLocked()
 	require.NoError(t, err)
 	assert.Equal(t, "test-token", client.token)
 }
 
 func TestHTTPVaultClient_AuthenticateToken_FromEnv(t *testing.T) {
-	t.Parallel()
-
-	_ = os.Setenv("VAULT_TOKEN", "env-token")
-	defer func() { _ = os.Unsetenv("VAULT_TOKEN") }()
+	// Cannot use t.Parallel() with t.Setenv
+	t.Setenv("VAULT_TOKEN", "env-token")
 
 	client := &HTTPVaultClient{
 		config: Config{Token: ""},
 	}
 
-	err := client.authenticateToken()
+	err := client.authenticateTokenLocked()
 	require.NoError(t, err)
 	assert.Equal(t, "env-token", client.token)
 }
 
 func TestHTTPVaultClient_AuthenticateToken_NoToken(t *testing.T) {
-	t.Parallel()
-
-	oldToken := os.Getenv("VAULT_TOKEN")
-	_ = os.Unsetenv("VAULT_TOKEN")
-	defer func() {
-		if oldToken != "" {
-			_ = os.Setenv("VAULT_TOKEN", oldToken)
-		}
-	}()
+	// Cannot use t.Parallel() with t.Setenv
+	// Clear environment variable - use t.Setenv with empty string to unset
+	t.Setenv("VAULT_TOKEN", "")
 
 	client := &HTTPVaultClient{
 		config: Config{Token: ""},
 	}
 
-	err := client.authenticateToken()
+	err := client.authenticateTokenLocked()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no vault token")
 }
@@ -724,7 +708,7 @@ func TestHTTPVaultClient_PerformLogin(t *testing.T) {
 
 	ctx := context.Background()
 	authData := map[string]interface{}{"password": "secret"}
-	err := client.performLogin(ctx, "auth/userpass/login/admin", authData)
+	err := client.performLoginLocked(ctx, "auth/userpass/login/admin", authData)
 	require.NoError(t, err)
 	assert.Equal(t, "new-token", client.token)
 }
@@ -743,7 +727,7 @@ func TestHTTPVaultClient_PerformLogin_Failure(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err := client.performLogin(ctx, "auth/userpass/login/admin", nil)
+	err := client.performLoginLocked(ctx, "auth/userpass/login/admin", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "401")
 }
@@ -766,7 +750,7 @@ func TestHTTPVaultClient_ValidateToken(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err := client.validateToken(ctx)
+	err := client.validateTokenLocked(ctx)
 	require.NoError(t, err)
 }
 
@@ -784,7 +768,7 @@ func TestHTTPVaultClient_ValidateToken_Invalid(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err := client.validateToken(ctx)
+	err := client.validateTokenLocked(ctx)
 	assert.Error(t, err)
 }
 
@@ -852,17 +836,11 @@ func TestHTTPVaultClient_GetHTTPClient_WithCACert(t *testing.T) {
 }
 
 func TestNewVaultProvider_EnvironmentOverrides(t *testing.T) {
-	// Set environment variables
-	_ = os.Setenv("VAULT_ADDR", "http://env-vault:8200")
-	_ = os.Setenv("VAULT_TOKEN", "env-token")
-	_ = os.Setenv("VAULT_NAMESPACE", "env-namespace")
-	_ = os.Setenv("VAULT_SKIP_VERIFY", "true")
-	defer func() {
-		_ = os.Unsetenv("VAULT_ADDR")
-		_ = os.Unsetenv("VAULT_TOKEN")
-		_ = os.Unsetenv("VAULT_NAMESPACE")
-		_ = os.Unsetenv("VAULT_SKIP_VERIFY")
-	}()
+	// Set environment variables using t.Setenv for automatic cleanup
+	t.Setenv("VAULT_ADDR", "http://env-vault:8200")
+	t.Setenv("VAULT_TOKEN", "env-token")
+	t.Setenv("VAULT_NAMESPACE", "env-namespace")
+	t.Setenv("VAULT_SKIP_VERIFY", "true")
 
 	config := map[string]interface{}{
 		"address": "http://config-vault:8200", // Should be overridden

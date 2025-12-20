@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/systmms/dsops/internal/logging"
@@ -66,6 +67,7 @@ type VaultSecret struct {
 type HTTPVaultClient struct {
 	config Config
 	token  string
+	mu     sync.RWMutex // protects token field for concurrent access
 	logger *logging.Logger
 }
 

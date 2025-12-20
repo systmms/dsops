@@ -130,7 +130,7 @@ func TestBitwardenProviderSuggestions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			baseErr := fmt.Errorf(tt.errorMsg)
+			baseErr := fmt.Errorf("%s", tt.errorMsg)
 			providerErr := errors.ProviderError("bitwarden", "resolve", baseErr)
 
 			errMsg := providerErr.Error()
@@ -170,7 +170,7 @@ func Test1PasswordProviderSuggestions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			baseErr := fmt.Errorf(tt.errorMsg)
+			baseErr := fmt.Errorf("%s", tt.errorMsg)
 			providerErr := errors.ProviderError("1password", "resolve", baseErr)
 
 			errMsg := providerErr.Error()
@@ -215,7 +215,7 @@ func TestAWSProviderSuggestions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			baseErr := fmt.Errorf(tt.errorMsg)
+			baseErr := fmt.Errorf("%s", tt.errorMsg)
 			providerErr := errors.ProviderError("aws-secretsmanager", "resolve", baseErr)
 
 			errMsg := providerErr.Error()
@@ -281,7 +281,7 @@ func TestIsRetryable(t *testing.T) {
 
 			var err error
 			if tt.errorMsg != "" {
-				err = fmt.Errorf(tt.errorMsg)
+				err = fmt.Errorf("%s", tt.errorMsg)
 			}
 
 			result := errors.IsRetryable(err)

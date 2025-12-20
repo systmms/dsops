@@ -320,17 +320,17 @@ func GCPNotFoundError(resourceName string) error {
 
 // GCPPermissionDeniedError creates a mock GCP permission denied error
 func GCPPermissionDeniedError(message string) error {
-	return status.Errorf(codes.PermissionDenied, message)
+	return status.Error(codes.PermissionDenied, message)
 }
 
 // GCPUnauthenticatedError creates a mock GCP unauthenticated error
 func GCPUnauthenticatedError(message string) error {
-	return status.Errorf(codes.Unauthenticated, message)
+	return status.Error(codes.Unauthenticated, message)
 }
 
 // GCPInvalidArgumentError creates a mock GCP invalid argument error
 func GCPInvalidArgumentError(message string) error {
-	return status.Errorf(codes.InvalidArgument, message)
+	return status.Error(codes.InvalidArgument, message)
 }
 
 // GCPResourceExhaustedError creates a mock GCP resource exhausted (throttled) error

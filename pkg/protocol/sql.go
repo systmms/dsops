@@ -238,7 +238,7 @@ func (a *SQLAdapter) executeCreate(ctx context.Context, db *sql.DB, operation Op
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
-	
+
 	// Execute create command
 	_, err = tx.ExecContext(ctx, createSQL)
 	if err != nil {
@@ -323,7 +323,7 @@ func (a *SQLAdapter) executeRotate(ctx context.Context, db *sql.DB, operation Op
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
-	
+
 	// Execute rotate command
 	_, err = tx.ExecContext(ctx, rotateSQL)
 	if err != nil {
@@ -370,7 +370,7 @@ func (a *SQLAdapter) executeRevoke(ctx context.Context, db *sql.DB, operation Op
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
-	
+
 	// Execute revoke command
 	_, err = tx.ExecContext(ctx, revokeSQL)
 	if err != nil {

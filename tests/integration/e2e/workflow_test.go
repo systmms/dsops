@@ -117,7 +117,7 @@ secretStores:
   vault:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   production:
     DB_PASSWORD:
@@ -175,7 +175,7 @@ secretStores:
   secrets:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     REQUIRED_VAR:
@@ -411,7 +411,7 @@ secretStores:
   vault:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   production:
     DB_URL:
@@ -477,7 +477,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     MISSING_SECRET:
@@ -515,7 +515,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     BAD_JSON:
@@ -557,7 +557,7 @@ secretStores:
   unregistered:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     SECRET:
@@ -634,7 +634,7 @@ secretStores:
   test:
     type: vault
     config:
-      addr: "http://localhost:8200"
+      addr: "http://127.0.0.1:8200"
 envs:
   test:
     VAR1:

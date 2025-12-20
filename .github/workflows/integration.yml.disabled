@@ -1,0 +1,73 @@
+# DEPRECATED: This workflow has been replaced by ci.yml
+# This file is disabled (.disabled extension) and kept for reference only.
+# The new ci.yml workflow provides unified test execution with merged coverage reporting.
+
+name: Integration Tests (DEPRECATED)
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+      - '.github/workflows/**'
+      - '!**.md'
+      - '!docs/**'
+      - '!specs/**'
+      - '!.specify/**'
+      - '!examples/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+      - '.github/workflows/**'
+      - '!**.md'
+      - '!docs/**'
+      - '!specs/**'
+      - '!.specify/**'
+      - '!examples/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run integration tests
+        run: go test -v -race -coverprofile=coverage-integration.txt -covermode=atomic ./tests/integration/...
+        env:
+          # Tests manage their own Docker containers via docker-compose
+          # These env vars are available if tests need them
+          VAULT_ADDR: http://localhost:8200
+          VAULT_TOKEN: test-root-token
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test-password
+          POSTGRES_DB: testdb
+          AWS_ENDPOINT: http://localhost:4566
+          AWS_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          MONGODB_URI: mongodb://test:test-password@localhost:27017

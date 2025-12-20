@@ -6,9 +6,14 @@ import (
 	"fmt"
 	"html"
 	"net/smtp"
+	"regexp"
 	"strings"
 	"time"
 )
+
+// headerPattern matches common email header injection patterns.
+// This catches: Bcc:, Cc:, To:, From:, Subject:, Reply-To:, X-*: headers
+var headerPattern = regexp.MustCompile(`(?i)\b(bcc|cc|to|from|subject|reply-to|x-[a-z0-9-]+)\s*:`)
 
 // BatchMode represents the email batching mode.
 type BatchMode string
@@ -421,10 +426,20 @@ func (p *EmailProvider) buildTextBody(event RotationEvent) string {
 	return buf.String()
 }
 
-// sanitizeHeader removes newlines and carriage returns to prevent header injection.
+// sanitizeHeader removes newlines and header injection patterns to prevent
+// both SMTP header injection and confusing subject lines.
 func sanitizeHeader(s string) string {
-	s = strings.ReplaceAll(s, "\r", "")
-	s = strings.ReplaceAll(s, "\n", "")
+	// Replace newlines with spaces (preserve readability)
+	s = strings.ReplaceAll(s, "\r\n", " ")
+	s = strings.ReplaceAll(s, "\r", " ")
+	s = strings.ReplaceAll(s, "\n", " ")
+
+	// Remove header-like patterns (e.g., "Bcc:", "X-Custom:")
+	s = headerPattern.ReplaceAllString(s, "")
+
+	// Collapse multiple spaces into single space
+	s = strings.Join(strings.Fields(s), " ")
+
 	return s
 }
 

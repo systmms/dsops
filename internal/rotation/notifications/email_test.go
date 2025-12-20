@@ -631,20 +631,61 @@ func TestEmailProvider_SubjectSanitization(t *testing.T) {
 		To:   []string{"team@example.com"},
 	})
 
-	// Test with newlines in service name (should be sanitized)
-	event := RotationEvent{
-		Type:        EventTypeCompleted,
-		Service:     "postgresql\nInjected-Header: value",
-		Environment: "production",
-		Status:      StatusSuccess,
-		Timestamp:   time.Now(),
-	}
+	t.Run("removes_newlines", func(t *testing.T) {
+		event := RotationEvent{
+			Type:        EventTypeCompleted,
+			Service:     "postgresql\nInjected-Header: value",
+			Environment: "production",
+			Status:      StatusSuccess,
+			Timestamp:   time.Now(),
+		}
 
-	subject, _, _ := provider.buildMessage(event)
+		subject, _, _ := provider.buildMessage(event)
 
-	// Subject should not contain newlines (header injection prevention)
-	assert.NotContains(t, subject, "\n")
-	assert.NotContains(t, subject, "\r")
+		// Subject should not contain newlines (header injection prevention)
+		assert.NotContains(t, subject, "\n")
+		assert.NotContains(t, subject, "\r")
+	})
+
+	t.Run("removes_header_injection_patterns", func(t *testing.T) {
+		event := RotationEvent{
+			Type:        EventTypeFailed,
+			Service:     "evil-service\r\nBcc: attacker@evil.com",
+			Environment: "prod\nX-Injected-Header: malicious",
+			Status:      StatusFailure,
+			Timestamp:   time.Now(),
+		}
+
+		subject, _, _ := provider.buildMessage(event)
+
+		// Subject should not contain newlines
+		assert.NotContains(t, subject, "\n")
+		assert.NotContains(t, subject, "\r")
+		// Subject should not contain header injection patterns
+		assert.NotContains(t, subject, "Bcc:")
+		assert.NotContains(t, subject, "X-Injected-Header:")
+		// Should still contain the safe parts
+		assert.Contains(t, subject, "evil-service")
+		assert.Contains(t, subject, "prod")
+	})
+
+	t.Run("removes_various_header_patterns", func(t *testing.T) {
+		event := RotationEvent{
+			Type:        EventTypeCompleted,
+			Service:     "test Cc: someone@evil.com To: another@evil.com",
+			Environment: "From: fake@sender.com Reply-To: phishing@evil.com",
+			Status:      StatusSuccess,
+			Timestamp:   time.Now(),
+		}
+
+		subject, _, _ := provider.buildMessage(event)
+
+		// All header patterns should be removed
+		assert.NotContains(t, subject, "Cc:")
+		assert.NotContains(t, subject, "To:")
+		assert.NotContains(t, subject, "From:")
+		assert.NotContains(t, subject, "Reply-To:")
+	})
 }
 
 func TestEmailProvider_ContextCancellation(t *testing.T) {

@@ -36,6 +36,7 @@ type SSMConfig struct {
 	AssumeRole      string
 	WithDecryption  bool
 	ParameterPrefix string
+	Endpoint        string // Optional custom endpoint for LocalStack or testing
 }
 
 // SSMProviderOption is a functional option for configuring SSM providers
@@ -72,6 +73,9 @@ func NewAWSSSMProvider(name string, configMap map[string]interface{}, opts ...SS
 	if prefix, ok := configMap["parameter_prefix"].(string); ok {
 		config.ParameterPrefix = prefix
 	}
+	if endpoint, ok := configMap["endpoint"].(string); ok {
+		config.Endpoint = endpoint
+	}
 
 	p := &AWSSSMProvider{
 		name:   name,
@@ -99,7 +103,7 @@ func NewAWSSSMProvider(name string, configMap map[string]interface{}, opts ...SS
 // createSSMClient creates an AWS SSM client with the given configuration
 func createSSMClient(config SSMConfig) (*ssm.Client, error) {
 	ctx := context.Background()
-	
+
 	// Build config options
 	var configOpts []func(*awsconfig.LoadOptions) error
 
@@ -119,7 +123,16 @@ func createSSMClient(config SSMConfig) (*ssm.Client, error) {
 
 	// TODO: Add assume role support if config.AssumeRole is set
 
-	return ssm.NewFromConfig(cfg), nil
+	// Create SSM client with optional custom endpoint
+	var clientOpts []func(*ssm.Options)
+	if config.Endpoint != "" {
+		endpoint := config.Endpoint
+		clientOpts = append(clientOpts, func(o *ssm.Options) {
+			o.BaseEndpoint = &endpoint
+		})
+	}
+
+	return ssm.NewFromConfig(cfg, clientOpts...), nil
 }
 
 // Name returns the provider name
