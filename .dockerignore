@@ -1,0 +1,70 @@
+# Docker build context exclusions
+# Keep build context minimal for faster builds
+
+# Git
+.git/
+.gitignore
+
+# Build artifacts (we build inside Docker)
+bin/
+dist/
+build/
+
+# Dependencies (downloaded during build)
+vendor/
+
+# Development tools
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment and secrets
+.env
+.env.*
+*.key
+*.pem
+secrets/
+credentials/
+
+# Test files
+tests/
+*_test.go
+coverage*.txt
+coverage.html
+*.test
+*.out
+
+# Documentation (not needed in image)
+docs/
+*.md
+!README.md
+
+# Nix
+.direnv/
+result
+result-*
+.go/
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Specs (not needed in image)
+specs/
+
+# CI/CD config
+.github/
+
+# Docker files (avoid recursion)
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# GoReleaser artifacts
+.goreleaser.yml
+
+# Completions (generated during build)
+completions/

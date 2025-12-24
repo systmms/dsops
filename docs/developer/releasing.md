@@ -1,12 +1,12 @@
-# Quickstart: Creating a dsops Release
+# Release Process
 
-**Date**: 2025-12-24
-**Feature**: SPEC-020 Release & Distribution
+This document describes how to create releases for dsops.
 
 ## Prerequisites
 
 - Push access to `systmms/dsops` repository
 - Push access to `systmms/homebrew-tap` repository (for Homebrew updates)
+- `HOMEBREW_TAP_GITHUB_TOKEN` secret configured in repository settings
 
 ## Creating a Release
 
@@ -14,7 +14,7 @@
 
 1. Ensure all changes are merged to `main`
 2. Verify CI passes on `main` branch
-3. Update CHANGELOG.md if not auto-generated
+3. Review the changes since the last release
 
 ### Step 2: Create and Push Version Tag
 
@@ -37,50 +37,59 @@ git push origin v1.0.0
 2. Find the running "Release" workflow
 3. Wait for completion (~5-10 minutes)
 
+The workflow will:
+- Run tests to verify build
+- Build binaries for all platforms
+- Generate checksums
+- Create GitHub Release with changelog
+- Build and push Docker image to ghcr.io
+- Update Homebrew formula (for non-pre-releases)
+
 ### Step 4: Verify Release Artifacts
 
 After workflow completes, verify:
 
-- [ ] **GitHub Releases**: New release with:
+- **GitHub Releases**: New release with:
   - 5 platform archives (darwin-arm64, darwin-amd64, linux-amd64, linux-arm64, windows-amd64)
   - Checksums file
   - Auto-generated changelog
 
-- [ ] **Docker**: `docker pull ghcr.io/systmms/dsops:v1.0.0`
+- **Docker**: `docker pull ghcr.io/systmms/dsops:v1.0.0`
 
-- [ ] **Homebrew**: Formula updated in `systmms/homebrew-tap`
+- **Homebrew**: Formula updated in `systmms/homebrew-tap`
 
-## Testing the Release
+## Pre-releases (Beta/RC)
 
-### Test Binary Download
+For pre-release versions, use semver pre-release syntax:
 
 ```bash
-# macOS (Apple Silicon)
-curl -L https://github.com/systmms/dsops/releases/download/v1.0.0/dsops_1.0.0_darwin_arm64.tar.gz -o dsops.tar.gz
-tar -xzf dsops.tar.gz
-./dsops --version
+# Beta release
+git tag -a v1.0.0-beta.1 -m "Beta release v1.0.0-beta.1"
+git push origin v1.0.0-beta.1
+
+# Release candidate
+git tag -a v1.0.0-rc.1 -m "Release candidate v1.0.0-rc.1"
+git push origin v1.0.0-rc.1
 ```
 
-### Test Homebrew
+Pre-releases:
+- Are published to GitHub Releases (marked as pre-release)
+- Are published to Docker with version tag (no `:latest`)
+- Do NOT update Homebrew tap (stable releases only)
+
+## Local Testing
+
+Test GoReleaser locally without publishing:
 
 ```bash
-brew update
-brew install systmms/tap/dsops
-dsops --version
-```
+# Install GoReleaser
+brew install goreleaser
 
-### Test Docker
+# Dry run (no publishing)
+goreleaser release --snapshot --clean
 
-```bash
-docker run --rm ghcr.io/systmms/dsops:v1.0.0 --version
-docker run --rm ghcr.io/systmms/dsops:latest --version
-```
-
-### Test go install
-
-```bash
-go install github.com/systmms/dsops/cmd/dsops@v1.0.0
-dsops --version
+# Check generated artifacts
+ls dist/
 ```
 
 ## Troubleshooting
@@ -114,36 +123,16 @@ dsops --version
    docker push ghcr.io/systmms/dsops:v1.0.0
    ```
 
-## Pre-release (Beta/RC) Versions
+## Release Infrastructure
 
-For pre-release versions, use semver pre-release syntax:
+The release process uses:
 
-```bash
-# Beta release
-git tag -a v1.0.0-beta.1 -m "Beta release v1.0.0-beta.1"
-git push origin v1.0.0-beta.1
+- **GoReleaser**: Cross-platform builds, changelog, checksum generation
+- **GitHub Actions**: Workflow automation
+- **GitHub Container Registry**: Docker image hosting
+- **Homebrew Tap** (`systmms/homebrew-tap`): macOS/Linux package distribution
 
-# Release candidate
-git tag -a v1.0.0-rc.1 -m "Release candidate v1.0.0-rc.1"
-git push origin v1.0.0-rc.1
-```
-
-Pre-releases:
-- ✅ Published to GitHub Releases (marked as pre-release)
-- ✅ Published to Docker with version tag (no `:latest`)
-- ❌ NOT published to Homebrew tap (stable only)
-
-## Local Testing Before Release
-
-Test GoReleaser locally without publishing:
-
-```bash
-# Install GoReleaser
-brew install goreleaser
-
-# Dry run (no publishing)
-goreleaser release --snapshot --clean
-
-# Check generated artifacts
-ls dist/
-```
+Configuration files:
+- `.goreleaser.yml` - GoReleaser configuration
+- `.github/workflows/release.yml` - Release workflow
+- `Dockerfile` - Container image definition

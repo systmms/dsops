@@ -69,7 +69,7 @@ Dockerfile               # NEW: Production Docker image
 ### External Repository
 
 ```text
-systmms/homebrew-dsops/  # NEW: Separate GitHub repository
+systmms/homebrew-tap/  # NEW: Separate GitHub repository
 └── Formula/
     └── dsops.rb         # Homebrew formula (auto-updated by GoReleaser)
 ```
@@ -111,7 +111,7 @@ No constitution violations require justification. The implementation uses standa
 
 ### Phase 3: Homebrew Tap
 
-5. **Create `systmms/homebrew-dsops` repository**
+5. **Create `systmms/homebrew-tap` repository**
    - Initialize with README and Formula directory
    - Configure repository for GoReleaser access
 

@@ -72,7 +72,7 @@
 
 ## Decision 3: Homebrew Tap Structure
 
-**Decision**: Create `systmms/homebrew-dsops` as a separate repository
+**Decision**: Create `systmms/homebrew-tap` as a separate repository
 
 **Rationale**:
 - Homebrew convention: taps are named `homebrew-<name>`

@@ -1,6 +1,5 @@
-# GoReleaser Configuration Contract
-# This file documents the expected .goreleaser.yml structure for dsops releases
-# Actual implementation will be at repository root: .goreleaser.yml
+# GoReleaser configuration for dsops
+# https://goreleaser.com
 
 version: 2
 

@@ -21,7 +21,7 @@ This feature adds files at repository root:
 - `.github/workflows/release.yml` - Release automation
 
 External repository:
-- `systmms/homebrew-dsops` - Homebrew tap (separate GitHub repo)
+- `systmms/homebrew-tap` - Homebrew tap (separate GitHub repo)
 
 ---
 
@@ -29,8 +29,8 @@ External repository:
 
 **Purpose**: Project preparation and prerequisites
 
-- [ ] T001 Create completions directory at repository root: `mkdir -p completions`
-- [ ] T002 [P] Verify Makefile LDFLAGS work with manual build: `make build && ./bin/dsops --version`
+- [x] T001 Create completions directory at repository root: `mkdir -p completions`
+- [x] T002 [P] Verify Makefile LDFLAGS work with manual build: `make build && ./bin/dsops --version`
 - [ ] T003 [P] Verify existing CI workflow passes on main branch
 
 **Checkpoint**: Project ready for release infrastructure
@@ -47,34 +47,34 @@ External repository:
 
 ### Implementation for US5
 
-- [ ] T004 [US5] Create GoReleaser configuration at `.goreleaser.yml` with:
+- [x] T004 [US5] Create GoReleaser configuration at `.goreleaser.yml` with:
   - Project name: dsops
   - Builds for 5 platform/arch combinations (darwin-arm64, darwin-amd64, linux-amd64, linux-arm64, windows-amd64)
   - LDFLAGS for version embedding: `-X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}}`
   - CGO_ENABLED=0 for static binaries
   - See contracts/goreleaser.yaml for reference
 
-- [ ] T005 [US5] Configure archive settings in `.goreleaser.yml`:
+- [x] T005 [US5] Configure archive settings in `.goreleaser.yml`:
   - Format: tar.gz for Unix, zip for Windows
   - Name template: `dsops_{{.Version}}_{{.Os}}_{{.Arch}}`
   - Include: LICENSE, README.md, completions/*
 
-- [ ] T006 [US5] Configure changelog generation in `.goreleaser.yml`:
+- [x] T006 [US5] Configure changelog generation in `.goreleaser.yml`:
   - Use GitHub for changelog source
   - Group by: feat, fix, perf
   - Exclude: docs, test, ci, chore commits
 
-- [ ] T007 [US5] Configure checksum generation in `.goreleaser.yml`:
+- [x] T007 [US5] Configure checksum generation in `.goreleaser.yml`:
   - Algorithm: sha256
   - Name template: `dsops_{{.Version}}_checksums.txt`
 
-- [ ] T008 [US5] Create GitHub Actions release workflow at `.github/workflows/release.yml`:
+- [x] T008 [US5] Create GitHub Actions release workflow at `.github/workflows/release.yml`:
   - Trigger: push tags matching `v*`
   - Permissions: contents:write, packages:write
   - Job 1: Run tests (fail-fast before release)
   - Job 2: Run GoReleaser with GITHUB_TOKEN
 
-- [ ] T009 [US5] Add shell completion generation hooks to `.goreleaser.yml`:
+- [x] T009 [US5] Add shell completion generation hooks to `.goreleaser.yml`:
   - Post-build hook: generate bash completion to completions/dsops.bash
   - Post-build hook: generate zsh completion to completions/dsops.zsh
   - Post-build hook: generate fish completion to completions/dsops.fish
@@ -154,8 +154,8 @@ External repository:
 
 ### Implementation for US3
 
-- [ ] T016 [US3] Create multi-stage Dockerfile at repository root:
-  - Stage 1 (builder): golang:1.21-alpine, build static binary
+- [x] T016 [US3] Create multi-stage Dockerfile at repository root:
+  - Stage 1 (builder): golang:1.25-alpine, build static binary
   - Stage 2 (runtime): gcr.io/distroless/static-debian12:nonroot
   - Copy CA certificates from builder
   - Set WORKDIR=/work for volume mounts
@@ -163,26 +163,26 @@ External repository:
   - Add OCI labels (version, source, licenses)
   - See contracts/Dockerfile for reference
 
-- [ ] T017 [US3] Test Docker build locally:
+- [x] T017 [US3] Test Docker build locally:
   ```bash
   docker build -t dsops:local .
   docker run --rm dsops:local --version
   docker images dsops:local --format "{{.Size}}"  # Verify under 50MB
   ```
 
-- [ ] T018 [US3] Add Docker login step to release workflow in `.github/workflows/release.yml`:
+- [x] T018 [US3] Add Docker login step to release workflow in `.github/workflows/release.yml`:
   - Use docker/login-action@v3
   - Registry: ghcr.io
   - Username: github.actor
   - Password: secrets.GITHUB_TOKEN
 
-- [ ] T019 [US3] Add Docker publishing to GoReleaser in `.goreleaser.yml`:
+- [x] T019 [US3] Add Docker publishing to GoReleaser in `.goreleaser.yml`:
   - Image templates: ghcr.io/systmms/dsops:{{.Version}}, ghcr.io/systmms/dsops:latest
   - Reference Dockerfile at repository root
   - Add OCI labels via build_flag_templates
   - Skip :latest for pre-releases (skip_push: auto)
 
-- [ ] T020 [US3] Add verification job to release workflow:
+- [x] T020 [US3] Add verification job to release workflow:
   - Pull published image
   - Run `--version` to verify
   - Check image size is under 50MB
@@ -199,30 +199,30 @@ External repository:
 
 ### Implementation for US1
 
-- [ ] T021 [US1] Create Homebrew tap repository `systmms/homebrew-dsops` on GitHub:
+- [x] T021 [US1] Create Homebrew tap repository `systmms/homebrew-tap` on GitHub:
   - Initialize with README.md explaining the tap
   - Create Formula/ directory
   - Set repository to public
 
-- [ ] T022 [US1] Create initial Homebrew formula at `systmms/homebrew-dsops/Formula/dsops.rb`:
+- [x] T022 [US1] Create initial Homebrew formula at `systmms/homebrew-tap/Formula/dsops.rb`:
   - Use template from data-model.md
   - Set homepage, description, license
   - Install binary to bin/
   - Install completions to correct locations
   - Add test block: `system "#{bin}/dsops", "--version"`
 
-- [ ] T023 [US1] Create Personal Access Token (PAT) for cross-repo access:
-  - Scope: repo (for systmms/homebrew-dsops)
+- [x] T023 [US1] Create Personal Access Token (PAT) for cross-repo access:
+  - Scope: repo (for systmms/homebrew-tap)
   - Store as repository secret: HOMEBREW_TAP_GITHUB_TOKEN
 
-- [ ] T024 [US1] Add Homebrew tap configuration to `.goreleaser.yml`:
-  - Repository: systmms/homebrew-dsops
+- [x] T024 [US1] Add Homebrew tap configuration to `.goreleaser.yml`:
+  - Repository: systmms/homebrew-tap
   - Folder: Formula
   - Token: `{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}`
   - Skip for pre-releases (skip_upload: auto)
   - Install block with completion scripts
 
-- [ ] T025 [US1] Update release workflow to pass HOMEBREW_TAP_GITHUB_TOKEN to GoReleaser
+- [x] T025 [US1] Update release workflow to pass HOMEBREW_TAP_GITHUB_TOKEN to GoReleaser
 
 - [ ] T026 [US1] Test Homebrew installation after release:
   ```bash
@@ -269,9 +269,9 @@ External repository:
 
 **Purpose**: Documentation and final validation
 
-- [ ] T030 [P] Verify docs/content/getting-started/installation.md matches implemented methods
+- [x] T030 [P] Verify docs/content/getting-started/installation.md matches implemented methods
 - [ ] T031 [P] Update CONTRIBUTING.md with release process (how to create a release)
-- [ ] T032 [P] Add developer documentation for release workflow in docs/developer/
+- [x] T032 [P] Add developer documentation for release workflow in docs/developer/
 - [ ] T036 [P] Add release example in examples/release-workflow.md showing version tagging best practices
 - [ ] T033 Create first official release (v0.2.0 or appropriate version)
 - [ ] T034 Run full validation from quickstart.md:
@@ -346,7 +346,7 @@ Task: "T009 [US5] Add shell completion generation hooks to .goreleaser.yml"
 ```bash
 # Once Phase 2 is complete, these can start in parallel:
 Task: "T016 [US3] Create multi-stage Dockerfile at repository root"
-Task: "T021 [US1] Create Homebrew tap repository systmms/homebrew-dsops on GitHub"
+Task: "T021 [US1] Create Homebrew tap repository systmms/homebrew-tap on GitHub"
 ```
 
 ---

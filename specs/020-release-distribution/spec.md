@@ -154,7 +154,7 @@ A security-conscious user wants to verify that the downloaded binary matches wha
 
 - The GitHub repository will be made public (required for Homebrew, go install, and public releases)
 - The organization has access to GitHub Container Registry (ghcr.io)
-- A separate Homebrew tap repository (`systmms/homebrew-dsops`) will be created
+- A separate Homebrew tap repository (`systmms/homebrew-tap`) will be created
 - GoReleaser is the industry-standard tool for Go binary releases and will be used
 - Maintainers will use conventional commit messages to enable automatic changelog generation
 - Maintainers will follow semantic versioning (FR-009) by convention; GoReleaser extracts version from tag

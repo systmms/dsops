@@ -1,6 +1,5 @@
-# GitHub Actions Release Workflow Contract
-# This file documents the expected .github/workflows/release.yml structure
-# Actual implementation will be at: .github/workflows/release.yml
+# GitHub Actions Release Workflow for dsops
+# Triggered by pushing version tags (v*)
 
 name: Release
 
@@ -30,7 +29,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.25'
           cache: true
 
       - name: Run tests
@@ -54,7 +53,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.25'
           cache: true
 
       - name: Login to GitHub Container Registry
@@ -68,10 +67,10 @@ jobs:
         run: mkdir -p completions
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
-          version: latest
+          version: '~> v2'
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -81,19 +80,17 @@ jobs:
     name: Verify Release
     needs: release
     runs-on: ubuntu-latest
+    env:
+      TAG_NAME: ${{ github.ref_name }}
+      REPO_NAME: ${{ github.repository }}
     steps:
       - name: Verify Docker image
         run: |
-          docker pull ghcr.io/systmms/dsops:${{ github.ref_name }}
-          docker run --rm ghcr.io/systmms/dsops:${{ github.ref_name }} --version
+          docker pull "ghcr.io/systmms/dsops:${TAG_NAME}"
+          docker run --rm "ghcr.io/systmms/dsops:${TAG_NAME}" --version
 
       - name: Verify GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view ${{ github.ref_name }} --repo ${{ github.repository }}
-
-# Notes:
-# - HOMEBREW_TAP_GITHUB_TOKEN: Personal access token with repo scope for systmms/homebrew-tap
-# - If Homebrew update fails, formula can be manually updated
-# - Pre-releases (e.g., v1.0.0-beta.1) skip Homebrew and :latest Docker tag
+          gh release view "${TAG_NAME}" --repo "${REPO_NAME}"
