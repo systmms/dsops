@@ -524,3 +524,10 @@ When making significant architectural decisions (naming, interfaces, major desig
 ADRs provide decision history and rationale for future maintainers. See `docs/adr/README.md` for full guidelines.
 
 **IMPORTANT**: When implementing features from ADR-001, always update the implementation status table in `docs/ADR-001-IMPACT-ANALYSIS.md`. Change status from ❌ **Not Started** → 🟢 **Started** → ✅ **Complete** as work progresses.
+
+## Active Technologies
+- Go 1.21+ (matches existing project) + GoReleaser (v2.x), GitHub Actions, Docker (020-release-distribution)
+- N/A (stateless release infrastructure) (020-release-distribution)
+
+## Recent Changes
+- 020-release-distribution: Added Go 1.21+ (matches existing project) + GoReleaser (v2.x), GitHub Actions, Docker

@@ -1,0 +1,122 @@
+# GoReleaser Configuration Contract
+# This file documents the expected .goreleaser.yml structure for dsops releases
+# Actual implementation will be at repository root: .goreleaser.yml
+
+version: 2
+
+project_name: dsops
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: dsops
+    binary: dsops
+    main: ./cmd/dsops
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.date={{.Date}}
+    hooks:
+      post:
+        # Generate shell completions after build
+        - cmd: "{{ .Path }} completion bash > completions/dsops.bash"
+          output: true
+        - cmd: "{{ .Path }} completion zsh > completions/dsops.zsh"
+          output: true
+        - cmd: "{{ .Path }} completion fish > completions/dsops.fish"
+          output: true
+
+archives:
+  - id: default
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - completions/*
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+  algorithm: sha256
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+      - "Merge pull request"
+      - "Merge branch"
+  groups:
+    - title: Features
+      regexp: "^feat"
+      order: 0
+    - title: Bug Fixes
+      regexp: "^fix"
+      order: 1
+    - title: Performance
+      regexp: "^perf"
+      order: 2
+    - title: Other
+      order: 999
+
+release:
+  github:
+    owner: systmms
+    name: dsops
+  draft: false
+  prerelease: auto
+  name_template: "v{{ .Version }}"
+
+brews:
+  - name: dsops
+    repository:
+      owner: systmms
+      name: homebrew-dsops
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    folder: Formula
+    homepage: "https://github.com/systmms/dsops"
+    description: "Secret management for development and production environments"
+    license: "MIT"
+    skip_upload: auto  # Skip for pre-releases
+    test: |
+      system "#{bin}/dsops", "--version"
+    install: |
+      bin.install "dsops"
+      bash_completion.install "completions/dsops.bash" => "dsops"
+      zsh_completion.install "completions/dsops.zsh" => "_dsops"
+      fish_completion.install "completions/dsops.fish"
+
+dockers:
+  - image_templates:
+      - "ghcr.io/systmms/dsops:{{ .Version }}"
+      - "ghcr.io/systmms/dsops:latest"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+    skip_push: auto  # Skip :latest for pre-releases
