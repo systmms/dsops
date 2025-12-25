@@ -1,0 +1,58 @@
+# Validate release configuration on PRs
+# Catches GoReleaser and Dockerfile issues before merge
+
+name: Release Config Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.goreleaser.yml'
+      - 'Dockerfile'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/release-config-check.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.goreleaser.yml'
+      - 'Dockerfile'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/release-config-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  goreleaser-check:
+    name: Validate GoReleaser Config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Validate GoReleaser config
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: check
+
+  docker-build-check:
+    name: Validate Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image (validation only)
+        run: |
+          docker build --target builder -t dsops:build-check .
+          echo "Docker build validation successful"
