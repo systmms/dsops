@@ -11,6 +11,8 @@ on:
 permissions:
   contents: write      # Create releases
   packages: write      # Push Docker images to ghcr.io
+  id-token: write      # For build attestations (OIDC)
+  attestations: write  # For build attestations
 
 concurrency:
   group: release-${{ github.ref }}
@@ -76,6 +78,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Attest build provenance (checksums)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-checksums: ./dist/checksums.txt
 
   verify:
     name: Verify Release

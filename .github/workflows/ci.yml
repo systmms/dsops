@@ -55,6 +55,11 @@ jobs:
           version: v2.7.2
           args: --timeout=5m
 
+      - name: Run security scanner (gosec)
+        uses: securego/gosec@master
+        with:
+          args: -exclude-generated ./...
+
       - name: Run unit tests
         run: go test -short -race -coverprofile=coverage-unit.txt -covermode=atomic ./...
 
