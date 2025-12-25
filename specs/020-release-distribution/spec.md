@@ -67,7 +67,7 @@ A Go developer wants to install dsops using the standard Go toolchain. They expe
 
 **Acceptance Scenarios**:
 
-1. **Given** Go 1.21+ is installed, **When** the user runs `go install github.com/systmms/dsops/cmd/dsops@latest`, **Then** dsops is installed to `$GOPATH/bin`
+1. **Given** Go 1.25+ is installed, **When** the user runs `go install github.com/systmms/dsops/cmd/dsops@latest`, **Then** dsops is installed to `$GOPATH/bin`
 2. **Given** a specific version tag, **When** the user runs `go install github.com/systmms/dsops/cmd/dsops@v1.0.0`, **Then** that specific version is installed
 
 ---

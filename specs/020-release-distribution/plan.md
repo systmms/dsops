@@ -9,7 +9,7 @@ Implement automated release infrastructure that enables users to install dsops v
 
 ## Technical Context
 
-**Language/Version**: Go 1.21+ (matches existing project)
+**Language/Version**: Go 1.25+ (matches existing project)
 **Primary Dependencies**: GoReleaser (v2.x), GitHub Actions, Docker
 **Storage**: N/A (stateless release infrastructure)
 **Testing**: Manual release testing + workflow validation

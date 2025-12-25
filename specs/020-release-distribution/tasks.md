@@ -226,11 +226,11 @@ External repository:
 
 - [ ] T026 [US1] Test Homebrew installation after release:
   ```bash
-  brew tap systmms/dsops
+  brew tap systmms/tap
   brew install dsops
   dsops --version
   brew uninstall dsops
-  brew untap systmms/dsops
+  brew untap systmms/tap
   ```
 
 **Checkpoint**: `brew install systmms/tap/dsops` works on macOS
