@@ -265,7 +265,41 @@ External repository:
 
 ---
 
-## Phase 8: Polish & Cross-Cutting Concerns
+## Phase 8: Automated Version Management (US7, Priority: P1)
+
+**Goal**: Enable automated version bumping and changelog generation via release-please
+
+**Independent Test**: Merge a commit with `feat:` prefix and verify release-please creates a Release PR
+
+### Implementation for US7
+
+- [x] T037 [US7] Create release-please workflow at `.github/workflows/release-please.yml`:
+  - Trigger: push to main branch
+  - Uses: googleapis/release-please-action@v4
+  - Token: RELEASE_PLEASE_TOKEN secret
+
+- [x] T038 [US7] Create release-please config at `release-please-config.json`:
+  - release-type: go
+  - bump-minor-pre-major: true (stay on 0.x.x for breaking changes)
+  - bump-patch-for-minor-pre-major: true
+  - changelog-path: CHANGELOG.md
+
+- [x] T039 [US7] Create release-please manifest at `.release-please-manifest.json`:
+  - Initial version: 0.1.0
+
+- [x] T040 [US7] Create RELEASE_PLEASE_TOKEN secret with repo scope for workflow chaining
+
+- [ ] T041 [US7] Test release-please workflow:
+  - Push a commit with `fix:` prefix to main
+  - Verify Release PR is created with patch bump
+  - Merge Release PR
+  - Verify tag is created and GoReleaser workflow triggers
+
+**Checkpoint**: Merging a Release PR automatically creates a tag and triggers the full release workflow
+
+---
+
+## Phase 9: Polish & Cross-Cutting Concerns
 
 **Purpose**: Documentation and final validation
 
@@ -295,18 +329,19 @@ External repository:
 - **US3 (Phase 5)**: Depends on US5 completion (Docker builds during release)
 - **US1 (Phase 6)**: Depends on US5 completion (Homebrew updated during release)
 - **US4 (Phase 7)**: Depends on public repository (external dependency)
-- **Polish (Phase 8)**: Depends on all user stories being verifiable
+- **US7 (Phase 8)**: Depends on US5 completion (release-please triggers GoReleaser)
+- **Polish (Phase 9)**: Depends on all user stories being verifiable
 
 ### User Story Dependencies
 
 ```
-US5 (Automated Release) ─────┬─────> US2 (Binary Downloads)
-                             │
-                             ├─────> US6 (Checksum Verification)
-                             │
-                             ├─────> US3 (Docker)
-                             │
-                             └─────> US1 (Homebrew)
+US7 (Release-Please) ────────────> US5 (Automated Release) ─────┬─────> US2 (Binary Downloads)
+                                                                 │
+                                                                 ├─────> US6 (Checksum Verification)
+                                                                 │
+                                                                 ├─────> US3 (Docker)
+                                                                 │
+                                                                 └─────> US1 (Homebrew)
 
 US4 (go install) ────────────────> [Requires public repository only]
 ```

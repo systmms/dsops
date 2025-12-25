@@ -104,6 +104,24 @@ A security-conscious user wants to verify that the downloaded binary matches wha
 
 ---
 
+### User Story 7 - Automated Version Management (Priority: P1)
+
+A maintainer wants version numbers and changelogs to be managed automatically based on conventional commit messages. They should not need to manually decide version bumps or write changelogs.
+
+**Why this priority**: Automation reduces human error and ensures consistent versioning based on the type of changes made. This complements the automated release workflow.
+
+**Independent Test**: Can be tested by merging commits with `feat:` and `fix:` prefixes and verifying release-please creates appropriate release PRs.
+
+**Acceptance Scenarios**:
+
+1. **Given** commits with `fix:` prefix are pushed to main, **When** release-please runs, **Then** a Release PR is created/updated proposing a patch version bump
+2. **Given** commits with `feat:` prefix are pushed to main, **When** release-please runs, **Then** a Release PR is created/updated proposing a minor version bump
+3. **Given** commits with `feat!:` or `BREAKING CHANGE:` are pushed to main while version < 1.0.0, **When** release-please runs, **Then** a Release PR proposes a minor version bump (not major)
+4. **Given** a Release PR is merged, **When** the merge completes, **Then** release-please creates a version tag and GitHub Release
+5. **Given** a version tag is created by release-please, **When** the tag is pushed, **Then** the existing GoReleaser workflow triggers and publishes all artifacts
+
+---
+
 ### Edge Cases
 
 - What happens when a user tries to install on an unsupported platform (e.g., FreeBSD)?
@@ -130,6 +148,12 @@ A security-conscious user wants to verify that the downloaded binary matches wha
 - **FR-009**: System MUST use semantic versioning (major.minor.patch) for releases
 - **FR-010**: System MUST fail the entire release if any platform build fails (no partial releases)
 - **FR-011**: Docker image MUST use a minimal base image for security and small size
+- **FR-012**: System MUST automatically create Release PRs based on conventional commit messages
+- **FR-013**: System MUST bump patch version for `fix:` commits
+- **FR-014**: System MUST bump minor version for `feat:` commits
+- **FR-015**: System MUST keep version < 1.0.0 for breaking changes until explicitly promoted (bump-minor-pre-major)
+- **FR-016**: System MUST maintain a CHANGELOG.md file updated with each release
+- **FR-017**: System MUST create version tags automatically when Release PRs are merged
 
 ### Key Entities
 
@@ -156,8 +180,9 @@ A security-conscious user wants to verify that the downloaded binary matches wha
 - The organization has access to GitHub Container Registry (ghcr.io)
 - A separate Homebrew tap repository (`systmms/homebrew-tap`) will be created
 - GoReleaser is the industry-standard tool for Go binary releases and will be used
-- Maintainers will use conventional commit messages to enable automatic changelog generation
-- Maintainers will follow semantic versioning (FR-009) by convention; GoReleaser extracts version from tag
+- Release-please will be used to automate version management and changelog generation
+- Maintainers will use conventional commit messages (feat:, fix:, etc.) to enable automatic versioning
+- Maintainers will follow semantic versioning (FR-009); release-please determines version from commits
 - Code signing for macOS binaries is out of scope for initial release (may cause Gatekeeper prompts)
 - Windows binaries will not be code-signed initially (may trigger SmartScreen warnings)
 
