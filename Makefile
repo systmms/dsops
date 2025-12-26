@@ -107,6 +107,12 @@ lint: ## Run linter
 	@echo "Running linter..."
 	golangci-lint run
 
+.PHONY: security
+security: ## Run security scanner (gosec)
+	@echo "Running security scanner..."
+	@EXCLUDES=$$(jq -r '.excludes | join(",")' .gosec.json) && \
+		gosec -exclude-generated -exclude="$$EXCLUDES" ./...
+
 .PHONY: fmt
 fmt: ## Format code
 	@echo "Formatting code..."
@@ -143,7 +149,7 @@ release: clean test build-all ## Create a release (clean, test, build all platfo
 	@ls -la $(BUILD_DIR)/
 
 .PHONY: check
-check: lint vet test ## Run all checks (lint, vet, test)
+check: lint security vet test ## Run all checks (lint, security, vet, test)
 
 .PHONY: ci
 ci: check build ## Run CI pipeline (check + build)

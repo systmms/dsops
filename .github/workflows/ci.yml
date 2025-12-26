@@ -55,10 +55,15 @@ jobs:
           version: v2.7.2
           args: --timeout=5m
 
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+
       - name: Run security scanner (gosec)
-        uses: securego/gosec@master
-        with:
-          args: -exclude-generated -conf .gosec.json ./...
+        run: |
+          # Read exclusions from .gosec.json (single source of truth)
+          EXCLUDES=$(jq -r '.excludes | join(",")' .gosec.json)
+          echo "Excluding rules: $EXCLUDES"
+          gosec -exclude-generated -exclude="$EXCLUDES" ./...
 
       - name: Run unit tests
         run: go test -short -race -coverprofile=coverage-unit.txt -covermode=atomic ./...
