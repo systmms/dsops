@@ -39,11 +39,38 @@ jobs:
           cache: true
 
       - name: Validate GoReleaser config
+        id: goreleaser-check
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: '~> v2'
           args: check
+        continue-on-error: true
+
+      - name: Check for real errors vs deprecation warnings
+        env:
+          CHECK_OUTCOME: ${{ steps.goreleaser-check.outcome }}
+        run: |
+          # If check passed, we're done
+          if [ "$CHECK_OUTCOME" = "success" ]; then
+            echo "GoReleaser config is valid"
+            exit 0
+          fi
+
+          # Run check again to capture output
+          output=$(goreleaser check 2>&1) || true
+
+          # If the only issue is deprecation warnings, treat as success
+          if echo "$output" | grep -q "configuration is valid, but uses deprecated properties"; then
+            echo "::warning::GoReleaser config uses deprecated properties (brews/dockers will be phased out in future versions)"
+            echo "$output"
+            exit 0
+          fi
+
+          # Otherwise, it's a real error
+          echo "::error::GoReleaser config has errors"
+          echo "$output"
+          exit 1
 
   docker-build-check:
     name: Validate Docker Build

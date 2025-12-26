@@ -82,7 +82,7 @@ jobs:
       - name: Attest build provenance (checksums)
         uses: actions/attest-build-provenance@v2
         with:
-          subject-checksums: ./dist/checksums.txt
+          subject-path: ./dist/dsops_*_checksums.txt
 
   verify:
     name: Verify Release
