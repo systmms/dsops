@@ -30,6 +30,7 @@
             # Linting and formatting
             golangci-lint
             gofumpt
+            gosec
 
             # Build tools
             gnumake
