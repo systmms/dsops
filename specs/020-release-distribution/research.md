@@ -76,7 +76,7 @@
 
 **Rationale**:
 - Homebrew convention: taps are named `homebrew-<name>`
-- Enables `brew tap systmms/dsops` then `brew install dsops`
+- Enables `brew tap systmms/tap` then `brew install dsops`
 - Or direct: `brew install systmms/tap/dsops`
 - GoReleaser can auto-update formula via GitHub token
 

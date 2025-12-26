@@ -17,7 +17,7 @@ Establish comprehensive testing infrastructure to achieve 80% test coverage acro
 
 ## Technical Context
 
-**Language/Version**: Go 1.21+
+**Language/Version**: Go 1.25+
 **Primary Dependencies**:
 - Standard `go test` framework (no external test frameworks)
 - Docker & Docker Compose (test infrastructure)

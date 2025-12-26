@@ -44,10 +44,12 @@ builds:
 
 archives:
   - id: default
-    format: tar.gz
+    formats:
+      - tar.gz
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - LICENSE
@@ -59,7 +61,7 @@ checksum:
   algorithm: sha256
 
 changelog:
-  use: github
+  use: github-native
   sort: asc
   filters:
     exclude:
@@ -96,7 +98,7 @@ brews:
       owner: systmms
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    folder: Formula
+    directory: Formula
     homepage: "https://github.com/systmms/dsops"
     description: "Secret management for development and production environments"
     license: "MIT"

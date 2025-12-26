@@ -9,8 +9,8 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /build
 
-# Install CA certificates for HTTPS
-RUN apk add --no-cache ca-certificates
+# Install CA certificates and git for version info
+RUN apk add --no-cache ca-certificates git
 
 # Copy go mod files first for layer caching
 COPY go.mod go.sum ./
@@ -21,7 +21,7 @@ COPY . .
 
 # Build static binary
 RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-s -w -X main.version=docker -X main.commit=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)" \
+    -ldflags="-s -w -X main.version=docker -X main.commit=$(git rev-parse --short HEAD 2>/dev/null || echo unknown) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     -o dsops \
     ./cmd/dsops
 

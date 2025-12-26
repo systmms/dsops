@@ -115,8 +115,8 @@ A maintainer wants version numbers and changelogs to be managed automatically ba
 **Acceptance Scenarios**:
 
 1. **Given** commits with `fix:` prefix are pushed to main, **When** release-please runs, **Then** a Release PR is created/updated proposing a patch version bump
-2. **Given** commits with `feat:` prefix are pushed to main, **When** release-please runs, **Then** a Release PR is created/updated proposing a minor version bump
-3. **Given** commits with `feat!:` or `BREAKING CHANGE:` are pushed to main while version < 1.0.0, **When** release-please runs, **Then** a Release PR proposes a minor version bump (not major)
+2. **Given** commits with `feat:` prefix are pushed to main while version < 1.0.0, **When** release-please runs, **Then** a Release PR is created/updated proposing a patch version bump (bump-patch-for-minor-pre-major)
+3. **Given** commits with `feat!:` or `BREAKING CHANGE:` are pushed to main while version < 1.0.0, **When** release-please runs, **Then** a Release PR proposes a minor version bump (not major, due to bump-minor-pre-major)
 4. **Given** a Release PR is merged, **When** the merge completes, **Then** release-please creates a version tag and GitHub Release
 5. **Given** a version tag is created by release-please, **When** the tag is pushed, **Then** the existing GoReleaser workflow triggers and publishes all artifacts
 
@@ -150,8 +150,8 @@ A maintainer wants version numbers and changelogs to be managed automatically ba
 - **FR-011**: Docker image MUST use a minimal base image for security and small size
 - **FR-012**: System MUST automatically create Release PRs based on conventional commit messages
 - **FR-013**: System MUST bump patch version for `fix:` commits
-- **FR-014**: System MUST bump minor version for `feat:` commits
-- **FR-015**: System MUST keep version < 1.0.0 for breaking changes until explicitly promoted (bump-minor-pre-major)
+- **FR-014**: System MUST bump patch version for `feat:` commits while version < 1.0.0 (bump-patch-for-minor-pre-major)
+- **FR-015**: System MUST bump minor version for breaking changes (`feat!:` or `BREAKING CHANGE:`) while version < 1.0.0 (bump-minor-pre-major)
 - **FR-016**: System MUST maintain a CHANGELOG.md file updated with each release
 - **FR-017**: System MUST create version tags automatically when Release PRs are merged
 

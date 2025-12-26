@@ -24,11 +24,12 @@ Use these prefixes for your commit messages:
 | Prefix | Version Bump | Example |
 |--------|--------------|---------|
 | `fix:` | Patch (0.0.X) | `fix: resolve config parsing error` |
-| `feat:` | Minor (0.X.0) | `feat: add new provider support` |
-| `feat!:` | Minor* (0.X.0) | `feat!: change config format` |
-| `BREAKING CHANGE:` | Minor* (0.X.0) | Footer in commit body |
+| `feat:` | Patch* (0.0.X) | `feat: add new provider support` |
+| `feat!:` | Minor** (0.X.0) | `feat!: change config format` |
+| `BREAKING CHANGE:` | Minor** (0.X.0) | Footer in commit body |
 
-*While version < 1.0.0, breaking changes bump minor, not major.
+*While version < 1.0.0, `feat:` commits bump patch, not minor.
+**While version < 1.0.0, breaking changes bump minor, not major.
 
 ## Creating a Release (Automated)
 
