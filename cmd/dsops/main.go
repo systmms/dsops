@@ -74,6 +74,7 @@ launches commands with ephemeral environment variables.`,
 		commands.NewLeakCommand(cfg),
 		commands.NewSecretsCommand(cfg),           // Secrets subcommand with rotation
 		commands.NewRotationCommand(cfg),          // Rotation metadata commands
+		commands.NewCompletionCommand(cfg),        // Shell completion generation
 	)
 
 	return rootCmd.Execute()
