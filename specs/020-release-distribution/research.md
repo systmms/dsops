@@ -66,7 +66,7 @@
 - Set non-root user (UID 65532 for distroless)
 - Working directory: `/work` for volume mounts
 
-**Image Size Target**: Under 20MB (distroless base + ~15MB Go binary)
+**Image Size Target**: Under 50MB (distroless base ~2MB + Go binary ~15-20MB)
 
 ---
 

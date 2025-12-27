@@ -116,6 +116,7 @@ dockers:
       - "ghcr.io/systmms/dsops:latest"
     dockerfile: Dockerfile
     build_flag_templates:
+      - "--build-arg=VERSION={{ .Version }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
       - "--label=org.opencontainers.image.source={{ .GitURL }}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"

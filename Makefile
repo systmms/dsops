@@ -107,6 +107,16 @@ lint: ## Run linter
 	@echo "Running linter..."
 	golangci-lint run
 
+# Gosec exclusions (see .gosec.json):
+#   G107: URL from variable - intentional for dynamic secret store URLs
+#   G115: int->int32 overflow - AWS SDK validates duration bounds
+#   G204: subprocess with variable args - intentional for exec command
+#   G301/G306: file permissions - appropriate for config files
+#   G304: file path from variable - intentional for config loading
+#   G401/G505: SHA1 usage - required for AWS SSO cache compatibility
+#   G402: TLS InsecureSkipVerify - intentional user opt-in for Vault
+#   G404: math/rand in tests - not security-sensitive for test data
+#   G101: k8s token path - standard path, not hardcoded credentials
 .PHONY: security
 security: ## Run security scanner (gosec)
 	@echo "Running security scanner..."
