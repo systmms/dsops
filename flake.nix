@@ -31,6 +31,7 @@
             golangci-lint
             gofumpt
             gosec
+            govulncheck
 
             # Build tools
             gnumake

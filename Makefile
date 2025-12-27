@@ -111,7 +111,12 @@ lint: ## Run linter
 security: ## Run security scanner (gosec)
 	@echo "Running security scanner..."
 	@EXCLUDES=$$(jq -r '.excludes | join(",")' .gosec.json) && \
-		gosec -exclude-generated -exclude="$$EXCLUDES" ./...
+		gosec -exclude-dir=.cache -exclude-dir=.go -exclude-generated -exclude="$$EXCLUDES" ./...
+
+.PHONY: vuln
+vuln: ## Check for vulnerable dependencies (govulncheck)
+	@echo "Checking for vulnerable dependencies..."
+	govulncheck ./...
 
 .PHONY: fmt
 fmt: ## Format code
