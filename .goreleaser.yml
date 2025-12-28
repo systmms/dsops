@@ -88,34 +88,32 @@ release:
   prerelease: auto
   name_template: "v{{ .Version }}"
 
-brews:
+homebrew_casks:
   - name: dsops
     repository:
       owner: systmms
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
+    directory: Casks
     homepage: "https://github.com/systmms/dsops"
     description: "Secret management for development and production environments"
-    license: "MIT"
+    binaries:
+      - dsops
     skip_upload: auto  # Skip for pre-releases
-    test: |
-      system "#{bin}/dsops", "--version"
-    install: |
-      bin.install "dsops"
-      bash_completion.install "completions/dsops.bash" => "dsops"
-      zsh_completion.install "completions/dsops.zsh" => "_dsops"
-      fish_completion.install "completions/dsops.fish"
 
-dockers:
-  - image_templates:
-      - "ghcr.io/systmms/dsops:{{ .Version }}"
-      - "ghcr.io/systmms/dsops:latest"
-    dockerfile: Dockerfile
-    build_flag_templates:
-      - "--build-arg=VERSION={{ .Version }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.source={{ .GitURL }}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.created={{ .Date }}"
-    skip_push: auto  # Skip :latest for pre-releases
+dockers_v2:
+  - images:
+      - "ghcr.io/systmms/dsops"
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .IsSnapshot }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    build_args:
+      VERSION: "{{ .Version }}"
+    labels:
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.source": "{{ .GitURL }}"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.created": "{{ .Date }}"
