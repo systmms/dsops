@@ -9,6 +9,12 @@ before:
   hooks:
     - go mod tidy
     - go generate ./...
+    # Generate shell completions before cross-compilation
+    # (must use go run since we can't execute cross-compiled binaries)
+    - mkdir -p completions
+    - go run ./cmd/dsops completion bash > completions/dsops.bash
+    - go run ./cmd/dsops completion zsh > completions/dsops.zsh
+    - go run ./cmd/dsops completion fish > completions/dsops.fish
 
 builds:
   - id: dsops
@@ -31,15 +37,6 @@ builds:
       - -X main.version={{.Version}}
       - -X main.commit={{.ShortCommit}}
       - -X main.date={{.Date}}
-    hooks:
-      post:
-        # Generate shell completions after build
-        - cmd: "{{ .Path }} completion bash > completions/dsops.bash"
-          output: true
-        - cmd: "{{ .Path }} completion zsh > completions/dsops.zsh"
-          output: true
-        - cmd: "{{ .Path }} completion fish > completions/dsops.fish"
-          output: true
 
 archives:
   - id: default
