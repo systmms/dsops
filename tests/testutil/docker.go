@@ -96,7 +96,8 @@ func StartDockerEnv(t *testing.T, services []string) *DockerTestEnv {
 	}
 
 	// Use test name as project name to avoid conflicts
-	projectName := fmt.Sprintf("dsops-test-%d", time.Now().Unix())
+	// UnixNano provides nanosecond precision to prevent collisions in parallel tests
+	projectName := fmt.Sprintf("dsops-test-%d", time.Now().UnixNano())
 
 	env := &DockerTestEnv{
 		t:           t,
