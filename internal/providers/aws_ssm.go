@@ -7,11 +7,12 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/logging"
 	"github.com/systmms/dsops/pkg/provider"
-	dserrors "github.com/systmms/dsops/internal/errors"
 )
 
 // SSMClientAPI defines the interface for AWS SSM Parameter Store operations
@@ -37,6 +38,8 @@ type SSMConfig struct {
 	WithDecryption  bool
 	ParameterPrefix string
 	Endpoint        string // Optional custom endpoint for LocalStack or testing
+	AccessKeyID     string // Optional static credentials for LocalStack/testing
+	SecretAccessKey string // Optional static credentials for LocalStack/testing
 }
 
 // SSMProviderOption is a functional option for configuring SSM providers
@@ -76,6 +79,12 @@ func NewAWSSSMProvider(name string, configMap map[string]interface{}, opts ...SS
 	if endpoint, ok := configMap["endpoint"].(string); ok {
 		config.Endpoint = endpoint
 	}
+	if accessKeyID, ok := configMap["access_key_id"].(string); ok {
+		config.AccessKeyID = accessKeyID
+	}
+	if secretAccessKey, ok := configMap["secret_access_key"].(string); ok {
+		config.SecretAccessKey = secretAccessKey
+	}
 
 	p := &AWSSSMProvider{
 		name:   name,
@@ -113,6 +122,13 @@ func createSSMClient(config SSMConfig) (*ssm.Client, error) {
 
 	if config.Profile != "" {
 		configOpts = append(configOpts, awsconfig.WithSharedConfigProfile(config.Profile))
+	}
+
+	// Use static credentials if provided (for LocalStack/testing)
+	if config.AccessKeyID != "" && config.SecretAccessKey != "" {
+		configOpts = append(configOpts, awsconfig.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(config.AccessKeyID, config.SecretAccessKey, ""),
+		))
 	}
 
 	// Load AWS configuration
