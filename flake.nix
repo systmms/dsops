@@ -27,11 +27,9 @@
             go-tools
             delve
 
-            # Linting and formatting
-            golangci-lint
+            # Linting and formatting (golangci-lint and govulncheck installed via go install)
             gofumpt
             gosec
-            govulncheck
 
             # Build tools
             gnumake
@@ -82,8 +80,19 @@
             # Create directories if they don't exist
             mkdir -p .go .cache/go-build .cache/go-mod
 
-            # Add local bin to PATH for installed tools
-            export PATH="$(pwd)/bin:$PATH"
+            # Add local bin and GOPATH/bin to PATH for installed tools
+            export PATH="$GOPATH/bin:$(pwd)/bin:$PATH"
+
+            # Install Go tools that need to be built with Go 1.25
+            if ! command -v golangci-lint &> /dev/null; then
+              echo "📦 Installing golangci-lint..."
+              go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+            fi
+
+            if ! command -v govulncheck &> /dev/null; then
+              echo "📦 Installing govulncheck..."
+              go install golang.org/x/vuln/cmd/govulncheck@latest
+            fi
             
             # Provider CLI configuration hints
             echo "Provider CLI tools available:"
