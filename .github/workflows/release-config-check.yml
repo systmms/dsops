@@ -72,6 +72,46 @@ jobs:
           echo "$output"
           exit 1
 
+  goreleaser-snapshot:
+    name: Test GoReleaser Snapshot Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Run GoReleaser Snapshot
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --snapshot --clean --skip=docker,publish
+
+      - name: Verify artifacts created
+        run: |
+          echo "Checking dist/ for expected artifacts..."
+          ls -la dist/
+
+          # Verify binaries exist
+          test -f dist/dsops_linux_amd64_v1/dsops || (echo "Missing linux/amd64 binary" && exit 1)
+          test -f dist/dsops_darwin_arm64_v8.0/dsops || (echo "Missing darwin/arm64 binary" && exit 1)
+
+          # Verify archives exist
+          ls dist/*.tar.gz || (echo "Missing tar.gz archives" && exit 1)
+          ls dist/*.zip || (echo "Missing zip archives" && exit 1)
+
+          # Verify checksums exist
+          ls dist/*checksums.txt || (echo "Missing checksums file" && exit 1)
+
+          echo "All expected artifacts found!"
+
   docker-build-check:
     name: Validate Docker Build
     runs-on: ubuntu-latest
