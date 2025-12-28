@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/systmms/dsops/compare/v0.2.0...v0.2.1) (2025-12-28)
+
+
+### Bug Fixes
+
+* **release:** move completion generation to before hooks ([d6706df](https://github.com/systmms/dsops/commit/d6706dfc9f3b54758032f10a4ca95807c6ad73e3))
+
 ## [0.2.0](https://github.com/systmms/dsops/compare/v0.1.0...v0.2.0) (2025-12-28)
 
 
