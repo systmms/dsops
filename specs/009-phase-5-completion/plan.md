@@ -9,7 +9,7 @@ Complete Phase 5 rotation features: Notifications (Slack/Email/PagerDuty/Webhook
 
 ## Technical Context
 
-**Language/Version**: Go 1.21+
+**Language/Version**: Go 1.25+
 **Primary Dependencies**: net/http, net/smtp, github.com/prometheus/client_golang
 **Storage**: File-based (existing `internal/rotation/storage/`)
 **Testing**: go test with testify, Docker Compose for integration

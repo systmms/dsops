@@ -107,6 +107,27 @@ lint: ## Run linter
 	@echo "Running linter..."
 	golangci-lint run
 
+# Gosec exclusions (see .gosec.json):
+#   G107: URL from variable - intentional for dynamic secret store URLs
+#   G115: int->int32 overflow - AWS SDK validates duration bounds
+#   G204: subprocess with variable args - intentional for exec command
+#   G301/G306: file permissions - appropriate for config files
+#   G304: file path from variable - intentional for config loading
+#   G401/G505: SHA1 usage - required for AWS SSO cache compatibility
+#   G402: TLS InsecureSkipVerify - intentional user opt-in for Vault
+#   G404: math/rand in tests - not security-sensitive for test data
+#   G101: k8s token path - standard path, not hardcoded credentials
+.PHONY: security
+security: ## Run security scanner (gosec)
+	@echo "Running security scanner..."
+	@EXCLUDES=$$(jq -r '.excludes | join(",")' .gosec.json) && \
+		gosec -exclude-dir=.cache -exclude-dir=.go -exclude-generated -exclude="$$EXCLUDES" ./...
+
+.PHONY: vuln
+vuln: ## Check for vulnerable dependencies (govulncheck)
+	@echo "Checking for vulnerable dependencies..."
+	govulncheck ./...
+
 .PHONY: fmt
 fmt: ## Format code
 	@echo "Formatting code..."
@@ -143,7 +164,7 @@ release: clean test build-all ## Create a release (clean, test, build all platfo
 	@ls -la $(BUILD_DIR)/
 
 .PHONY: check
-check: lint vet test ## Run all checks (lint, vet, test)
+check: lint security vet test ## Run all checks (lint, security, vet, test)
 
 .PHONY: ci
 ci: check build ## Run CI pipeline (check + build)

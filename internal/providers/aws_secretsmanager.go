@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/systmms/dsops/pkg/provider"
@@ -56,6 +57,15 @@ func NewAWSSecretsManagerProvider(name string, providerConfig map[string]interfa
 		endpoint = e
 	}
 
+	// Get optional static credentials for LocalStack/testing
+	var accessKeyID, secretAccessKey string
+	if ak, ok := providerConfig["access_key_id"].(string); ok && ak != "" {
+		accessKeyID = ak
+	}
+	if sk, ok := providerConfig["secret_access_key"].(string); ok && sk != "" {
+		secretAccessKey = sk
+	}
+
 	p := &AWSSecretsManagerProvider{
 		name:     name,
 		region:   region,
@@ -69,10 +79,19 @@ func NewAWSSecretsManagerProvider(name string, providerConfig map[string]interfa
 
 	// If no client was provided via options, create real client
 	if p.client == nil {
+		// Build config options
+		var configOpts []func(*config.LoadOptions) error
+		configOpts = append(configOpts, config.WithRegion(region))
+
+		// Use static credentials if provided (for LocalStack/testing)
+		if accessKeyID != "" && secretAccessKey != "" {
+			configOpts = append(configOpts, config.WithCredentialsProvider(
+				credentials.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, ""),
+			))
+		}
+
 		// Load AWS config
-		cfg, err := config.LoadDefaultConfig(context.Background(),
-			config.WithRegion(region),
-		)
+		cfg, err := config.LoadDefaultConfig(context.Background(), configOpts...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load AWS config: %w", err)
 		}

@@ -55,6 +55,21 @@ jobs:
           version: v2.7.2
           args: --timeout=5m
 
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+
+      - name: Run security scanner (gosec)
+        run: |
+          # Read exclusions from .gosec.json (single source of truth)
+          EXCLUDES=$(jq -r '.excludes | join(",")' .gosec.json)
+          echo "Excluding rules: $EXCLUDES"
+          gosec -exclude-dir=.cache -exclude-dir=.go -exclude-generated -exclude="$EXCLUDES" ./...
+
+      - name: Check for vulnerable dependencies (govulncheck)
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
       - name: Run unit tests
         run: go test -short -race -coverprofile=coverage-unit.txt -covermode=atomic ./...
 

@@ -16,6 +16,20 @@ For macOS and Linux users with [Homebrew](https://brew.sh) installed:
 brew install systmms/tap/dsops
 ```
 
+## Go Install
+
+For Go developers with Go 1.25 or later:
+
+```bash
+go install github.com/systmms/dsops/cmd/dsops@latest
+```
+
+Or install a specific version:
+
+```bash
+go install github.com/systmms/dsops/cmd/dsops@v0.2.0
+```
+
 ## Binary Download
 
 Download pre-compiled binaries from [GitHub Releases](https://github.com/systmms/dsops/releases):
@@ -26,8 +40,9 @@ Download pre-compiled binaries from [GitHub Releases](https://github.com/systmms
 
 ### Linux
 ```bash
-# Download latest release (adjust version and architecture)
-curl -L https://github.com/systmms/dsops/releases/latest/download/dsops-linux-amd64.tar.gz -o dsops.tar.gz
+# Download a specific version (adjust version as needed)
+VERSION="0.2.0"
+curl -L "https://github.com/systmms/dsops/releases/download/v${VERSION}/dsops_${VERSION}_linux_amd64.tar.gz" -o dsops.tar.gz
 
 # Extract
 tar -xzf dsops.tar.gz
@@ -42,8 +57,11 @@ dsops --version
 
 ### macOS
 ```bash
-# Download latest release (adjust for your architecture)
-curl -L https://github.com/systmms/dsops/releases/latest/download/dsops-darwin-arm64.tar.gz -o dsops.tar.gz
+# Download a specific version (adjust version and architecture as needed)
+VERSION="0.2.0"
+# Use darwin_arm64 for Apple Silicon, darwin_amd64 for Intel Macs
+ARCH="darwin_arm64"
+curl -L "https://github.com/systmms/dsops/releases/download/v${VERSION}/dsops_${VERSION}_${ARCH}.tar.gz" -o dsops.tar.gz
 
 # Extract
 tar -xzf dsops.tar.gz
@@ -56,9 +74,23 @@ sudo chmod +x /usr/local/bin/dsops
 dsops --version
 ```
 
+### Verify Checksums
+
+For security-conscious users, verify the downloaded archive:
+
+```bash
+# Download checksums file
+curl -LO "https://github.com/systmms/dsops/releases/download/v${VERSION}/dsops_${VERSION}_checksums.txt"
+
+# Verify (uses sha256sum on Linux, shasum on macOS)
+sha256sum -c dsops_${VERSION}_checksums.txt --ignore-missing
+# or on macOS:
+shasum -a 256 -c dsops_${VERSION}_checksums.txt --ignore-missing
+```
+
 ## From Source
 
-Build from source using Go 1.21 or later:
+Build from source using Go 1.25 or later:
 
 ```bash
 # Clone repository

@@ -78,6 +78,3 @@ services:
       retries: 10
       start_period: 3s
 
-networks:
-  default:
-    name: dsops-test-network

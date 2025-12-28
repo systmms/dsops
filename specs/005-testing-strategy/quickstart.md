@@ -1,7 +1,7 @@
 # Quick Start: Writing Tests for dsops
 
 **Audience**: dsops developers writing unit, integration, and end-to-end tests
-**Prerequisites**: Go 1.21+, Docker (for integration tests)
+**Prerequisites**: Go 1.25+, Docker (for integration tests)
 **Status**: Reference Guide
 
 ## Overview

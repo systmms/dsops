@@ -96,7 +96,8 @@ func StartDockerEnv(t *testing.T, services []string) *DockerTestEnv {
 	}
 
 	// Use test name as project name to avoid conflicts
-	projectName := fmt.Sprintf("dsops-test-%d", time.Now().Unix())
+	// UnixNano provides nanosecond precision to prevent collisions in parallel tests
+	projectName := fmt.Sprintf("dsops-test-%d", time.Now().UnixNano())
 
 	env := &DockerTestEnv{
 		t:           t,
@@ -416,10 +417,13 @@ func (e *DockerTestEnv) PostgresConfig() map[string]interface{} {
 }
 
 // LocalStackConfig returns LocalStack configuration
+// Includes dummy credentials that LocalStack accepts for testing
 func (e *DockerTestEnv) LocalStackConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"region":   "us-east-1",
-		"endpoint": "http://127.0.0.1:4566",
+		"region":            "us-east-1",
+		"endpoint":          "http://127.0.0.1:4566",
+		"access_key_id":     "test",
+		"secret_access_key": "test",
 	}
 }
 
