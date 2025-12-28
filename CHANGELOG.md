@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/systmms/dsops/compare/v0.2.1...v0.2.2) (2025-12-28)
+
+
+### Bug Fixes
+
+* **release:** migrate to homebrew_casks and dockers_v2 ([d58dac9](https://github.com/systmms/dsops/commit/d58dac9066fc7dac0d5891f00043585a77360892))
+
 ## [0.2.1](https://github.com/systmms/dsops/compare/v0.2.0...v0.2.1) (2025-12-28)
 
 
