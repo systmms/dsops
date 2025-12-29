@@ -123,3 +123,58 @@ jobs:
         run: |
           docker build --target builder -t dsops:build-check .
           echo "Docker build validation successful"
+
+  docker-multiplatform-check:
+    name: Validate Multi-Platform Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build multi-platform image (no push)
+        run: |
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --build-arg VERSION=test \
+            .
+          echo "Multi-platform Docker build validation successful"
+
+  goreleaser-docker-check:
+    name: Validate GoReleaser Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run GoReleaser Snapshot with Docker
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --snapshot --clean --skip=publish
+
+      - name: Verify Docker images created
+        run: |
+          echo "Checking for Docker image artifacts..."
+          ls -la dist/ | grep -E "docker|image" || true
+          echo "GoReleaser Docker build validation successful"

@@ -163,6 +163,26 @@ release: clean test build-all ## Create a release (clean, test, build all platfo
 	@echo "Binaries available in $(BUILD_DIR)/"
 	@ls -la $(BUILD_DIR)/
 
+# GoReleaser validation targets
+.PHONY: release-check
+release-check: ## Validate GoReleaser configuration
+	@echo "Validating GoReleaser configuration..."
+	goreleaser check
+
+.PHONY: release-snapshot
+release-snapshot: ## Build a snapshot release (no Docker, no publish)
+	@echo "Building GoReleaser snapshot (no Docker)..."
+	goreleaser release --snapshot --clean --skip=docker,publish
+	@echo "Snapshot complete. Check dist/ for artifacts."
+
+.PHONY: release-snapshot-docker
+release-snapshot-docker: ## Build a snapshot release with Docker (requires buildx)
+	@echo "Setting up Docker buildx builder..."
+	@docker buildx create --name goreleaser --use 2>/dev/null || docker buildx use goreleaser 2>/dev/null || true
+	@echo "Building GoReleaser snapshot with Docker..."
+	goreleaser release --snapshot --clean --skip=publish
+	@echo "Snapshot complete. Check dist/ for artifacts."
+
 .PHONY: check
 check: lint security vet test ## Run all checks (lint, security, vet, test)
 
