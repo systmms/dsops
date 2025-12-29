@@ -104,6 +104,7 @@ homebrew_casks:
 dockers_v2:
   - images:
       - "ghcr.io/systmms/dsops"
+    dockerfile: Dockerfile.goreleaser
     tags:
       - "{{ .Version }}"
       - "{{ if not .IsSnapshot }}latest{{ end }}"
