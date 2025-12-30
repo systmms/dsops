@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.3](https://github.com/systmms/dsops/compare/v0.2.2...v0.2.3) (2025-12-30)
+
+
+### Bug Fixes
+
+* **release:** add docker buildx setup for attestation support ([1019304](https://github.com/systmms/dsops/commit/10193040bb81e3cba216ca4ac7de56b6527a659f))
+* **release:** add docker buildx setup for attestation support ([bce60a6](https://github.com/systmms/dsops/commit/bce60a6f4a842ee0bbcc538d1db5aaf3c33d5f91))
+* **release:** add separate Dockerfile for GoReleaser builds ([a3c1c14](https://github.com/systmms/dsops/commit/a3c1c149a745430ac21472a84a6bb6685bb0dc37))
+* **tests:** use dynamic port allocation to prevent flaky tests ([01261d9](https://github.com/systmms/dsops/commit/01261d9dec1d3248e31f81efda326544ad360ce8))
+
 ## [0.2.2](https://github.com/systmms/dsops/compare/v0.2.1...v0.2.2) (2025-12-28)
 
 
