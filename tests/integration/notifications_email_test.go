@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +16,16 @@ import (
 	"github.com/systmms/dsops/internal/rotation/notifications"
 	"github.com/systmms/dsops/tests/testutil"
 )
+
+// parseHostPort parses a "host:port" string and returns the host and port separately.
+func parseHostPort(addr string) (string, int) {
+	parts := strings.Split(addr, ":")
+	if len(parts) != 2 {
+		return addr, 0
+	}
+	port, _ := strconv.Atoi(parts[1])
+	return parts[0], port
+}
 
 // mailhogMessage represents a message in MailHog's API response.
 type mailhogMessage struct {
@@ -46,10 +58,10 @@ type mailhogResponse struct {
 }
 
 // fetchMailHogMessages fetches messages from MailHog API.
-func fetchMailHogMessages(t *testing.T) []mailhogMessage {
+func fetchMailHogMessages(t *testing.T, apiAddr string) []mailhogMessage {
 	t.Helper()
 
-	resp, err := http.Get("http://127.0.0.1:8025/api/v2/messages")
+	resp, err := http.Get(apiAddr + "/api/v2/messages")
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -61,10 +73,10 @@ func fetchMailHogMessages(t *testing.T) []mailhogMessage {
 }
 
 // deleteMailHogMessages deletes all messages from MailHog.
-func deleteMailHogMessages(t *testing.T) {
+func deleteMailHogMessages(t *testing.T, apiAddr string) {
 	t.Helper()
 
-	req, err := http.NewRequest("DELETE", "http://127.0.0.1:8025/api/v1/messages", nil)
+	req, err := http.NewRequest("DELETE", apiAddr+"/api/v1/messages", nil)
 	require.NoError(t, err)
 
 	client := &http.Client{}
@@ -81,19 +93,21 @@ func TestEmailSMTP_BasicDelivery(t *testing.T) {
 
 	// Start MailHog via Docker
 	env := testutil.StartDockerEnv(t, []string{"mailhog"})
-	_ = env // Keep reference
+	smtpAddr := env.MailhogSMTPAddr()
+	apiAddr := env.MailhogAPIAddr()
 
 	// Clear any existing messages
-	deleteMailHogMessages(t)
+	deleteMailHogMessages(t, apiAddr)
 
 	// Wait a moment for MailHog to be ready
 	time.Sleep(500 * time.Millisecond)
 
 	// Create email provider with MailHog config
+	smtpHost, smtpPort := parseHostPort(smtpAddr)
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "127.0.0.1",
-			Port: 1025, // MailHog SMTP port
+			Host: smtpHost,
+			Port: smtpPort,
 		},
 		From: "dsops@example.com",
 		To:   []string{"team@example.com"},
@@ -123,7 +137,7 @@ func TestEmailSMTP_BasicDelivery(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Fetch messages from MailHog API
-	messages := fetchMailHogMessages(t)
+	messages := fetchMailHogMessages(t, apiAddr)
 	require.Len(t, messages, 1, "Expected exactly one email")
 
 	message := messages[0]
@@ -165,17 +179,19 @@ func TestEmailSMTP_MultipleRecipients(t *testing.T) {
 
 	// Start MailHog via Docker
 	env := testutil.StartDockerEnv(t, []string{"mailhog"})
-	_ = env
+	smtpAddr := env.MailhogSMTPAddr()
+	apiAddr := env.MailhogAPIAddr()
 
 	// Clear any existing messages
-	deleteMailHogMessages(t)
+	deleteMailHogMessages(t, apiAddr)
 	time.Sleep(500 * time.Millisecond)
 
 	// Create email provider with multiple recipients
+	smtpHost, smtpPort := parseHostPort(smtpAddr)
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "127.0.0.1",
-			Port: 1025,
+			Host: smtpHost,
+			Port: smtpPort,
 		},
 		From: "dsops@example.com",
 		To: []string{
@@ -202,7 +218,7 @@ func TestEmailSMTP_MultipleRecipients(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Fetch messages from MailHog
-	messages := fetchMailHogMessages(t)
+	messages := fetchMailHogMessages(t, apiAddr)
 	require.Len(t, messages, 1, "Should send one message with multiple recipients")
 
 	message := messages[0]
@@ -236,17 +252,19 @@ func TestEmailSMTP_EventFiltering(t *testing.T) {
 
 	// Start MailHog via Docker
 	env := testutil.StartDockerEnv(t, []string{"mailhog"})
-	_ = env
+	smtpAddr := env.MailhogSMTPAddr()
+	apiAddr := env.MailhogAPIAddr()
 
 	// Clear any existing messages
-	deleteMailHogMessages(t)
+	deleteMailHogMessages(t, apiAddr)
 	time.Sleep(500 * time.Millisecond)
 
 	// Create email provider that only sends for "failed" events
+	smtpHost, smtpPort := parseHostPort(smtpAddr)
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "127.0.0.1",
-			Port: 1025,
+			Host: smtpHost,
+			Port: smtpPort,
 		},
 		From:   "dsops@example.com",
 		To:     []string{"oncall@example.com"},
@@ -278,7 +296,7 @@ func TestEmailSMTP_EventFiltering(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Should have exactly 1 email (only the failed event)
-	messages := fetchMailHogMessages(t)
+	messages := fetchMailHogMessages(t, apiAddr)
 	require.Len(t, messages, 1)
 
 	// Validate it's the failed event
@@ -295,17 +313,19 @@ func TestEmailSMTP_HTMLAndTextParts(t *testing.T) {
 
 	// Start MailHog via Docker
 	env := testutil.StartDockerEnv(t, []string{"mailhog"})
-	_ = env
+	smtpAddr := env.MailhogSMTPAddr()
+	apiAddr := env.MailhogAPIAddr()
 
 	// Clear any existing messages
-	deleteMailHogMessages(t)
+	deleteMailHogMessages(t, apiAddr)
 	time.Sleep(500 * time.Millisecond)
 
 	// Create email provider
+	smtpHost, smtpPort := parseHostPort(smtpAddr)
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "127.0.0.1",
-			Port: 1025,
+			Host: smtpHost,
+			Port: smtpPort,
 		},
 		From: "dsops@example.com",
 		To:   []string{"user@example.com"},
@@ -329,7 +349,7 @@ func TestEmailSMTP_HTMLAndTextParts(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Fetch message
-	messages := fetchMailHogMessages(t)
+	messages := fetchMailHogMessages(t, apiAddr)
 	require.Len(t, messages, 1)
 
 	message := messages[0]
@@ -366,17 +386,19 @@ func TestEmailSMTP_MetadataInBody(t *testing.T) {
 
 	// Start MailHog via Docker
 	env := testutil.StartDockerEnv(t, []string{"mailhog"})
-	_ = env
+	smtpAddr := env.MailhogSMTPAddr()
+	apiAddr := env.MailhogAPIAddr()
 
 	// Clear any existing messages
-	deleteMailHogMessages(t)
+	deleteMailHogMessages(t, apiAddr)
 	time.Sleep(500 * time.Millisecond)
 
 	// Create email provider
+	smtpHost, smtpPort := parseHostPort(smtpAddr)
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "127.0.0.1",
-			Port: 1025,
+			Host: smtpHost,
+			Port: smtpPort,
 		},
 		From: "dsops@example.com",
 		To:   []string{"ops@example.com"},
@@ -408,7 +430,7 @@ func TestEmailSMTP_MetadataInBody(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Fetch message
-	messages := fetchMailHogMessages(t)
+	messages := fetchMailHogMessages(t, apiAddr)
 	require.Len(t, messages, 1)
 
 	body := messages[0].Raw.Data
@@ -435,17 +457,19 @@ func TestEmailSMTP_HeaderInjectionPrevention(t *testing.T) {
 
 	// Start MailHog via Docker
 	env := testutil.StartDockerEnv(t, []string{"mailhog"})
-	_ = env
+	smtpAddr := env.MailhogSMTPAddr()
+	apiAddr := env.MailhogAPIAddr()
 
 	// Clear any existing messages
-	deleteMailHogMessages(t)
+	deleteMailHogMessages(t, apiAddr)
 	time.Sleep(500 * time.Millisecond)
 
 	// Create email provider
+	smtpHost, smtpPort := parseHostPort(smtpAddr)
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "127.0.0.1",
-			Port: 1025,
+			Host: smtpHost,
+			Port: smtpPort,
 		},
 		From: "dsops@example.com",
 		To:   []string{"security@example.com"},
@@ -468,7 +492,7 @@ func TestEmailSMTP_HeaderInjectionPrevention(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Fetch message
-	messages := fetchMailHogMessages(t)
+	messages := fetchMailHogMessages(t, apiAddr)
 	require.Len(t, messages, 1)
 
 	message := messages[0]
@@ -539,17 +563,19 @@ func TestEmailSMTP_DifferentEventTypes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Start MailHog via Docker
 			env := testutil.StartDockerEnv(t, []string{"mailhog"})
-			_ = env
+			smtpAddr := env.MailhogSMTPAddr()
+			apiAddr := env.MailhogAPIAddr()
 
 			// Clear messages
-			deleteMailHogMessages(t)
+			deleteMailHogMessages(t, apiAddr)
 			time.Sleep(200 * time.Millisecond)
 
 			// Create provider
+			smtpHost, smtpPort := parseHostPort(smtpAddr)
 			provider := notifications.NewEmailProvider(notifications.EmailConfig{
 				SMTP: notifications.SMTPConfig{
-					Host: "127.0.0.1",
-					Port: 1025,
+					Host: smtpHost,
+					Port: smtpPort,
 				},
 				From: "dsops@example.com",
 				To:   []string{"test@example.com"},
@@ -572,7 +598,7 @@ func TestEmailSMTP_DifferentEventTypes(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 
 			// Fetch message
-			messages := fetchMailHogMessages(t)
+			messages := fetchMailHogMessages(t, apiAddr)
 			require.Len(t, messages, 1)
 
 			// Validate subject contains expected title
@@ -630,15 +656,17 @@ func TestEmailSMTP_TimeoutHandling(t *testing.T) {
 
 	// Start MailHog
 	env := testutil.StartDockerEnv(t, []string{"mailhog"})
-	_ = env
+	smtpAddr := env.MailhogSMTPAddr()
+	apiAddr := env.MailhogAPIAddr()
 
-	deleteMailHogMessages(t)
+	deleteMailHogMessages(t, apiAddr)
 	time.Sleep(500 * time.Millisecond)
 
+	smtpHost, smtpPort := parseHostPort(smtpAddr)
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "127.0.0.1",
-			Port: 1025,
+			Host: smtpHost,
+			Port: smtpPort,
 		},
 		From: "dsops@example.com",
 		To:   []string{"test@example.com"},
@@ -673,17 +701,19 @@ func TestEmailSMTP_RealWorldScenario(t *testing.T) {
 
 	// Start MailHog via Docker
 	env := testutil.StartDockerEnv(t, []string{"mailhog"})
-	_ = env
+	smtpAddr := env.MailhogSMTPAddr()
+	apiAddr := env.MailhogAPIAddr()
 
 	// Clear messages
-	deleteMailHogMessages(t)
+	deleteMailHogMessages(t, apiAddr)
 	time.Sleep(500 * time.Millisecond)
 
 	// Create provider with realistic config
+	smtpHost, smtpPort := parseHostPort(smtpAddr)
 	provider := notifications.NewEmailProvider(notifications.EmailConfig{
 		SMTP: notifications.SMTPConfig{
-			Host: "127.0.0.1",
-			Port: 1025,
+			Host: smtpHost,
+			Port: smtpPort,
 		},
 		From: "dsops-prod@company.com",
 		To: []string{
@@ -723,7 +753,7 @@ func TestEmailSMTP_RealWorldScenario(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Fetch and validate message
-	messages := fetchMailHogMessages(t)
+	messages := fetchMailHogMessages(t, apiAddr)
 	require.Len(t, messages, 1)
 
 	message := messages[0]

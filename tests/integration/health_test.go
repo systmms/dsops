@@ -37,7 +37,7 @@ func TestHealthMonitor_PostgreSQL(t *testing.T) {
 	checker := health.NewSQLHealthChecker("postgres-health", sqlConfig)
 	// Note: PostgresTestClient wraps *sql.DB internally; we use a new connection for the health checker
 
-	connStr := "host=127.0.0.1 port=5432 user=test password=test-password dbname=testdb sslmode=disable"
+	connStr := env.PostgresConnString()
 	db, err := sql.Open("postgres", connStr)
 	require.NoError(t, err)
 	defer func() { _ = db.Close() }()
@@ -87,7 +87,7 @@ func TestSQLHealthChecker_RealPostgres(t *testing.T) {
 	_ = env.PostgresClient() // Ensure connection is ready
 
 	// Connect to database
-	connStr := "host=127.0.0.1 port=5432 user=test password=test-password dbname=testdb sslmode=disable"
+	connStr := env.PostgresConnString()
 	db, err := sql.Open("postgres", connStr)
 	require.NoError(t, err)
 	defer func() { _ = db.Close() }()
