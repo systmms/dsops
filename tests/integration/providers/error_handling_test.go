@@ -78,7 +78,7 @@ func TestProviderErrorHandling_AuthError(t *testing.T) {
 	t.Run("vault_invalid_token_returns_autherror", func(t *testing.T) {
 		// Create Vault provider with invalid token
 		invalidConfig := map[string]interface{}{
-			"address": "http://127.0.0.1:8200",
+			"address": env.VaultAddress(),
 			"token":   "invalid-token-that-does-not-exist",
 		}
 
@@ -104,7 +104,7 @@ func TestProviderErrorHandling_AuthError(t *testing.T) {
 
 	t.Run("vault_resolve_with_invalid_token", func(t *testing.T) {
 		invalidConfig := map[string]interface{}{
-			"address": "http://127.0.0.1:8200",
+			"address": env.VaultAddress(),
 			"token":   "bad-token-12345",
 		}
 
@@ -133,7 +133,7 @@ func TestProviderErrorHandling_AuthError(t *testing.T) {
 
 	t.Run("vault_describe_with_invalid_token", func(t *testing.T) {
 		invalidConfig := map[string]interface{}{
-			"address": "http://127.0.0.1:8200",
+			"address": env.VaultAddress(),
 			"token":   "invalid-describe-token",
 		}
 

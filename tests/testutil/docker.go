@@ -31,6 +31,7 @@ type DockerTestEnv struct {
 	clients       map[string]interface{}
 	cleanupFuncs  []func()
 	projectName   string
+	ports         map[string]map[int]int // service -> containerPort -> hostPort
 }
 
 // VaultTestClient wraps Vault HTTP API for testing
@@ -89,6 +90,10 @@ func StartDockerEnv(t *testing.T, services []string) *DockerTestEnv {
 	// Check Docker availability
 	SkipIfDockerUnavailable(t)
 
+	// Clear provider-specific environment variables that could interfere with tests
+	// These variables are read by providers and would override config addresses
+	clearProviderEnvVars(t)
+
 	// Find docker-compose.yml path (relative to test file)
 	composePath := findDockerComposePath(t)
 	if composePath == "" {
@@ -120,7 +125,41 @@ func StartDockerEnv(t *testing.T, services []string) *DockerTestEnv {
 		t.Fatalf("Docker services failed to become healthy: %v", err)
 	}
 
+	// Discover dynamically assigned ports
+	if err := env.discoverPorts(); err != nil {
+		t.Fatalf("Failed to discover ports: %v", err)
+	}
+
 	return env
+}
+
+// clearProviderEnvVars clears environment variables that providers read
+// which could override test configuration with stale values
+func clearProviderEnvVars(t *testing.T) {
+	t.Helper()
+
+	// Provider environment variables that override config addresses
+	envVars := []string{
+		// Vault provider
+		"VAULT_ADDR",
+		"VAULT_TOKEN",
+		// AWS providers
+		"AWS_ENDPOINT_URL",
+		"AWS_ENDPOINT_URL_SECRETSMANAGER",
+		"AWS_ENDPOINT_URL_SSM",
+		// MongoDB
+		"MONGODB_URI",
+		// PostgreSQL
+		"PGHOST",
+		"PGPORT",
+	}
+
+	for _, env := range envVars {
+		if val := os.Getenv(env); val != "" {
+			t.Logf("Clearing %s (was: %s) to prevent config override", env, val)
+			_ = os.Unsetenv(env)
+		}
+	}
 }
 
 // SkipIfDockerUnavailable skips the test if Docker is not available
@@ -274,6 +313,109 @@ func (e *DockerTestEnv) checkHealth() bool {
 	return true
 }
 
+// discoverPorts discovers dynamically assigned host ports for all services
+func (e *DockerTestEnv) discoverPorts() error {
+	e.ports = make(map[string]map[int]int)
+
+	// Map of services to their container ports
+	servicePorts := map[string][]int{
+		"vault":      {8200},
+		"postgres":   {5432},
+		"localstack": {4566},
+		"mongodb":    {27017},
+		"mailhog":    {1025, 8025},
+	}
+
+	composeDir := filepath.Dir(e.composePath)
+
+	for _, service := range e.services {
+		ports, ok := servicePorts[service]
+		if !ok {
+			continue
+		}
+
+		e.ports[service] = make(map[int]int)
+
+		for _, containerPort := range ports {
+			// Run: docker compose -p PROJECT port SERVICE CONTAINER_PORT
+			cmd := exec.Command("docker", "compose",
+				"-f", e.composePath,
+				"-p", e.projectName,
+				"port", service, fmt.Sprintf("%d", containerPort))
+			cmd.Dir = composeDir
+
+			output, err := cmd.Output()
+			if err != nil {
+				return fmt.Errorf("failed to get port for %s:%d: %w", service, containerPort, err)
+			}
+
+			// Parse output: "0.0.0.0:32768" -> extract 32768
+			portStr := strings.TrimSpace(string(output))
+			parts := strings.Split(portStr, ":")
+			if len(parts) != 2 {
+				return fmt.Errorf("unexpected port output format: %s", portStr)
+			}
+
+			hostPort := 0
+			if _, err := fmt.Sscanf(parts[1], "%d", &hostPort); err != nil {
+				return fmt.Errorf("failed to parse host port from %s: %w", portStr, err)
+			}
+
+			e.ports[service][containerPort] = hostPort
+			e.t.Logf("Discovered port mapping: %s:%d -> localhost:%d", service, containerPort, hostPort)
+		}
+	}
+
+	return nil
+}
+
+// GetPort returns the host port for a service's container port
+// Returns the container port as fallback if not found (for backward compatibility)
+func (e *DockerTestEnv) GetPort(service string, containerPort int) int {
+	if servicePorts, ok := e.ports[service]; ok {
+		if hostPort, ok := servicePorts[containerPort]; ok {
+			return hostPort
+		}
+	}
+	return containerPort // fallback for compatibility
+}
+
+// PostgresConnString returns the PostgreSQL connection string with dynamic port
+func (e *DockerTestEnv) PostgresConnString() string {
+	port := e.GetPort("postgres", 5432)
+	return fmt.Sprintf("host=127.0.0.1 port=%d user=test password=test-password dbname=testdb sslmode=disable", port)
+}
+
+// VaultAddress returns the Vault address with dynamic port
+func (e *DockerTestEnv) VaultAddress() string {
+	port := e.GetPort("vault", 8200)
+	return fmt.Sprintf("http://127.0.0.1:%d", port)
+}
+
+// LocalStackEndpoint returns the LocalStack endpoint with dynamic port
+func (e *DockerTestEnv) LocalStackEndpoint() string {
+	port := e.GetPort("localstack", 4566)
+	return fmt.Sprintf("http://127.0.0.1:%d", port)
+}
+
+// MailhogSMTPAddr returns the MailHog SMTP address with dynamic port
+func (e *DockerTestEnv) MailhogSMTPAddr() string {
+	port := e.GetPort("mailhog", 1025)
+	return fmt.Sprintf("127.0.0.1:%d", port)
+}
+
+// MailhogAPIAddr returns the MailHog HTTP API address with dynamic port
+func (e *DockerTestEnv) MailhogAPIAddr() string {
+	port := e.GetPort("mailhog", 8025)
+	return fmt.Sprintf("http://127.0.0.1:%d", port)
+}
+
+// MongoDBConnString returns the MongoDB connection string with dynamic port
+func (e *DockerTestEnv) MongoDBConnString() string {
+	port := e.GetPort("mongodb", 27017)
+	return fmt.Sprintf("mongodb://test:test-password@127.0.0.1:%d/", port)
+}
+
 // VaultClient returns a Vault test client
 func (e *DockerTestEnv) VaultClient() *VaultTestClient {
 	e.t.Helper()
@@ -283,7 +425,7 @@ func (e *DockerTestEnv) VaultClient() *VaultTestClient {
 	}
 
 	client := &VaultTestClient{
-		address: "http://127.0.0.1:8200",
+		address: e.VaultAddress(),
 		token:   "test-root-token",
 		client: &http.Client{
 			Timeout: 10 * time.Second,
@@ -302,7 +444,7 @@ func (e *DockerTestEnv) PostgresClient() *PostgresTestClient {
 		return client
 	}
 
-	connStr := "host=127.0.0.1 port=5432 user=test password=test-password dbname=testdb sslmode=disable"
+	connStr := e.PostgresConnString()
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		e.t.Fatalf("Failed to connect to PostgreSQL: %v", err)
@@ -359,8 +501,8 @@ func (e *DockerTestEnv) LocalStackClient() *LocalStackTestClient {
 		e.t.Fatalf("Failed to load AWS config: %v", err)
 	}
 
-	// Override endpoint for LocalStack
-	endpoint := "http://127.0.0.1:4566"
+	// Override endpoint for LocalStack with dynamic port
+	endpoint := e.LocalStackEndpoint()
 
 	smClient := secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
 		o.BaseEndpoint = &endpoint
@@ -389,7 +531,7 @@ func (e *DockerTestEnv) MongoClient() *MongoTestClient {
 
 	// TODO: Implement MongoDB client when needed
 	client := &MongoTestClient{
-		connectionString: "mongodb://test:test-password@127.0.0.1:27017/",
+		connectionString: e.MongoDBConnString(),
 	}
 
 	e.clients["mongodb"] = client
@@ -399,7 +541,7 @@ func (e *DockerTestEnv) MongoClient() *MongoTestClient {
 // VaultConfig returns Vault configuration for provider testing
 func (e *DockerTestEnv) VaultConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"address": "http://127.0.0.1:8200",
+		"address": e.VaultAddress(),
 		"token":   "test-root-token",
 	}
 }
@@ -408,7 +550,7 @@ func (e *DockerTestEnv) VaultConfig() map[string]interface{} {
 func (e *DockerTestEnv) PostgresConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"host":     "127.0.0.1",
-		"port":     5432,
+		"port":     e.GetPort("postgres", 5432),
 		"user":     "test",
 		"password": "test-password",
 		"database": "testdb",
@@ -421,7 +563,7 @@ func (e *DockerTestEnv) PostgresConfig() map[string]interface{} {
 func (e *DockerTestEnv) LocalStackConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"region":            "us-east-1",
-		"endpoint":          "http://127.0.0.1:4566",
+		"endpoint":          e.LocalStackEndpoint(),
 		"access_key_id":     "test",
 		"secret_access_key": "test",
 	}
