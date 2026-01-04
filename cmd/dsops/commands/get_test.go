@@ -404,25 +404,19 @@ func TestGetCommand_MultipleEnvironments(t *testing.T) {
 	configBytes, _ := yaml.Marshal(configData)
 	require.NoError(t, os.WriteFile(configPath, configBytes, 0644))
 
-	t.Run("get from dev", func(t *testing.T) {
-		cfg := &config.Config{
-			Path:   configPath,
-			Logger: logging.New(false, true),
-		}
-		require.NoError(t, cfg.Load())
+	cfg := &config.Config{
+		Path:   configPath,
+		Logger: logging.New(false, true),
+	}
+	require.NoError(t, cfg.Load())
 
+	t.Run("get from dev", func(t *testing.T) {
 		cmd := NewGetCommand(cfg)
 		output := captureGetOutput(t, cmd, []string{"--env", "dev", "--var", "DATABASE_URL"})
 		assert.Equal(t, "postgres://localhost/dev", output)
 	})
 
 	t.Run("get from prod", func(t *testing.T) {
-		cfg := &config.Config{
-			Path:   configPath,
-			Logger: logging.New(false, true),
-		}
-		require.NoError(t, cfg.Load())
-
 		cmd := NewGetCommand(cfg)
 		output := captureGetOutput(t, cmd, []string{"--env", "prod", "--var", "DATABASE_URL"})
 		assert.Equal(t, "postgres://prod-server/prod", output)
@@ -454,36 +448,18 @@ func TestGetCommand_SpecialCharacterValues(t *testing.T) {
 	require.NoError(t, cfg.Load())
 
 	t.Run("special characters in password", func(t *testing.T) {
-		cfg := &config.Config{
-			Path:   configPath,
-			Logger: logging.New(false, true),
-		}
-		require.NoError(t, cfg.Load())
-
 		cmd := NewGetCommand(cfg)
 		output := captureGetOutput(t, cmd, []string{"--env", "test", "--var", "PASSWORD_WITH_SPECIAL"})
 		assert.Equal(t, "p@ss=word!#$%^&*()", output)
 	})
 
 	t.Run("multiline value", func(t *testing.T) {
-		cfg := &config.Config{
-			Path:   configPath,
-			Logger: logging.New(false, true),
-		}
-		require.NoError(t, cfg.Load())
-
 		cmd := NewGetCommand(cfg)
 		output := captureGetOutput(t, cmd, []string{"--env", "test", "--var", "MULTILINE"})
 		assert.Equal(t, "line1\nline2\nline3", output)
 	})
 
 	t.Run("quotes in value", func(t *testing.T) {
-		cfg := &config.Config{
-			Path:   configPath,
-			Logger: logging.New(false, true),
-		}
-		require.NoError(t, cfg.Load())
-
 		cmd := NewGetCommand(cfg)
 		output := captureGetOutput(t, cmd, []string{"--env", "test", "--var", "WITH_QUOTES"})
 		assert.Equal(t, `value with "quotes" and 'apostrophes'`, output)

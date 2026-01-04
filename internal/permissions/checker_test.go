@@ -7,6 +7,7 @@ import (
 
 	"github.com/systmms/dsops/internal/dsopsdata"
 	"github.com/systmms/dsops/internal/logging"
+	"github.com/systmms/dsops/pkg/rotation"
 )
 
 func TestPermissionCheckerBasics(t *testing.T) {
@@ -433,15 +434,61 @@ func TestGetPrincipalForRotation(t *testing.T) {
 	logger := logging.New(false, true)
 	checker := NewPermissionChecker(nil, logger)
 
-	// Test that checker was created successfully
-	if checker == nil {
-		t.Fatal("Expected checker to be created")
+	tests := []struct {
+		name     string
+		secret   rotation.SecretInfo
+		expected string
+	}{
+		{
+			name: "principal in metadata",
+			secret: rotation.SecretInfo{
+				Key:      "test-secret",
+				Metadata: map[string]string{"principal": "test-user"},
+			},
+			expected: "test-user",
+		},
+		{
+			name: "no principal in metadata",
+			secret: rotation.SecretInfo{
+				Key:      "test-secret",
+				Metadata: map[string]string{"other": "value"},
+			},
+			expected: "",
+		},
+		{
+			name: "nil metadata",
+			secret: rotation.SecretInfo{
+				Key:      "test-secret",
+				Metadata: nil,
+			},
+			expected: "",
+		},
+		{
+			name: "empty metadata",
+			secret: rotation.SecretInfo{
+				Key:      "test-secret",
+				Metadata: map[string]string{},
+			},
+			expected: "",
+		},
+		{
+			name: "principal with empty value",
+			secret: rotation.SecretInfo{
+				Key:      "test-secret",
+				Metadata: map[string]string{"principal": ""},
+			},
+			expected: "",
+		},
 	}
 
-	// Note: GetPrincipalForRotation requires a rotation.SecretInfo type
-	// which has a specific structure. The function extracts "principal"
-	// from the Metadata map if present, or returns empty string.
-	// Full integration testing would require the rotation package.
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := checker.GetPrincipalForRotation(context.Background(), tt.secret)
+			if result != tt.expected {
+				t.Errorf("GetPrincipalForRotation() = %q, expected %q", result, tt.expected)
+			}
+		})
+	}
 }
 
 // Helper function to check if string contains substring
