@@ -79,7 +79,7 @@ External repository:
   - Post-build hook: generate zsh completion to completions/dsops.zsh
   - Post-build hook: generate fish completion to completions/dsops.fish
 
-- [ ] T010 [US5] Test GoReleaser locally with dry-run: `goreleaser release --snapshot --clean`
+- [x] T010 [US5] Test GoReleaser locally with dry-run: `goreleaser release --snapshot --clean`
 
 **Checkpoint**: Push a test tag (v0.0.1-test.1) and verify workflow runs. Binaries should appear in GitHub Releases.
 
@@ -95,7 +95,7 @@ External repository:
 
 ### Implementation for US2
 
-- [ ] T011 [US2] Verify release archives contain correct files:
+- [x] T011 [US2] Verify release archives contain correct files:
   - dsops binary (executable)
   - LICENSE file
   - README.md file
