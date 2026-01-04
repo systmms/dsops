@@ -416,8 +416,17 @@ func TestEnvironmentRestrictions(t *testing.T) {
 	}
 
 	// Test multi-env user in dev (denied - not in metadata list)
-	result = checker.CheckRotationPermission(context.Background(), devRequest)
-	// This should be denied since multi-env-user isn't in request, we're using devRequest which has prod-only-user
+	multiEnvDevRequest := RotationRequest{
+		Principal:      "multi-env-user",
+		ServiceType:    "api",
+		CredentialKind: "api_key",
+		Environment:    "development", // Not in metadata list (only prod, staging)
+		SecretKey:      "API_KEY",
+	}
+	result = checker.CheckRotationPermission(context.Background(), multiEnvDevRequest)
+	if result.Allowed {
+		t.Error("Expected multi-env user in dev environment to be denied (not in metadata list)")
+	}
 }
 
 func TestGetPrincipalForRotation(t *testing.T) {
