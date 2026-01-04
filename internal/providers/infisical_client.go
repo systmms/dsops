@@ -103,7 +103,7 @@ func (c *infisicalHTTPClient) authenticateMachineIdentity(ctx context.Context) (
 	if err != nil {
 		return "", 0, fmt.Errorf("auth request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -158,7 +158,7 @@ func (c *infisicalHTTPClient) GetSecret(ctx context.Context, token, secretName s
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, ErrInfisicalSecretNotFound
@@ -225,7 +225,7 @@ func (c *infisicalHTTPClient) ListSecrets(ctx context.Context, token string) ([]
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
