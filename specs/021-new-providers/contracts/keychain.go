@@ -3,8 +3,6 @@
 package contracts
 
 import (
-	"context"
-
 	"github.com/systmms/dsops/pkg/provider"
 )
 
