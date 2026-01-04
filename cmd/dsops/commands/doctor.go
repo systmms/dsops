@@ -260,9 +260,61 @@ func getSuggestions(providerType string, err error) []string {
 		}
 
 	case "aws.ssm":
-		suggestions = append(suggestions, "Configure AWS credentials via CLI, env vars, or IAM roles") 
+		suggestions = append(suggestions, "Configure AWS credentials via CLI, env vars, or IAM roles")
 		suggestions = append(suggestions, "Run: aws configure")
 		suggestions = append(suggestions, "Or set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY")
+
+	case "keychain":
+		if contains(err.Error(), "not available") {
+			suggestions = append(suggestions, "Keychain is only available on macOS and Linux")
+			suggestions = append(suggestions, "On macOS: Ensure Keychain Access app is working")
+			suggestions = append(suggestions, "On Linux: Install and configure gnome-keyring or KWallet")
+		}
+		if contains(err.Error(), "headless") {
+			suggestions = append(suggestions, "Keychain access requires a GUI session")
+			suggestions = append(suggestions, "Set up a keyring daemon for headless use")
+		}
+		if contains(err.Error(), "not found") {
+			suggestions = append(suggestions, "Ensure the secret exists in your keychain")
+			suggestions = append(suggestions, "On macOS: Add via Keychain Access app")
+			suggestions = append(suggestions, "Or use: security add-generic-password -a <account> -s <service> -w")
+		}
+
+	case "infisical":
+		suggestions = append(suggestions, "Configure Infisical authentication in dsops.yaml")
+		if contains(err.Error(), "unauthorized") || contains(err.Error(), "401") {
+			suggestions = append(suggestions, "Check your machine_identity or service_token credentials")
+			suggestions = append(suggestions, "Verify client_id and client_secret are correct")
+		}
+		if contains(err.Error(), "project") {
+			suggestions = append(suggestions, "Verify project_id in configuration")
+			suggestions = append(suggestions, "Ensure you have access to the project")
+		}
+		if contains(err.Error(), "environment") {
+			suggestions = append(suggestions, "Verify environment slug (dev, staging, prod)")
+		}
+		if contains(err.Error(), "connection") || contains(err.Error(), "timeout") {
+			suggestions = append(suggestions, "Check host URL (default: https://app.infisical.com)")
+			suggestions = append(suggestions, "For self-hosted: verify your Infisical instance is running")
+		}
+
+	case "akeyless":
+		suggestions = append(suggestions, "Configure Akeyless authentication in dsops.yaml")
+		if contains(err.Error(), "authentication failed") || contains(err.Error(), "unauthorized") {
+			suggestions = append(suggestions, "Check your access_id and authentication configuration")
+			suggestions = append(suggestions, "For API key: ensure access_key is correct")
+			suggestions = append(suggestions, "For AWS IAM: verify your AWS credentials")
+			suggestions = append(suggestions, "For Azure AD: check your Azure identity configuration")
+			suggestions = append(suggestions, "For GCP: verify your GCP service account")
+		}
+		if contains(err.Error(), "not found") {
+			suggestions = append(suggestions, "Verify the secret path exists in Akeyless")
+			suggestions = append(suggestions, "Check path format: /folder/secret-name")
+		}
+		if contains(err.Error(), "gateway") || contains(err.Error(), "connection") {
+			suggestions = append(suggestions, "Check gateway_url configuration")
+			suggestions = append(suggestions, "Default is Akeyless cloud: https://api.akeyless.io")
+		}
 
 	default:
 		suggestions = append(suggestions, "Check provider documentation")

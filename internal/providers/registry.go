@@ -41,6 +41,9 @@ func NewRegistry() *Registry {
 	registry.RegisterFactory("vault", NewVaultProviderFactory)
 	registry.RegisterFactory("doppler", NewDopplerProviderFactory)
 	registry.RegisterFactory("pass", NewPassProviderFactory)
+	registry.RegisterFactory("keychain", NewKeychainProviderFactory)
+	registry.RegisterFactory("infisical", NewInfisicalProviderFactory)
+	registry.RegisterFactory("akeyless", NewAkeylessProviderFactory)
 
 	return registry
 }
@@ -180,4 +183,19 @@ func NewPassProviderFactory(name string, config map[string]interface{}) (provide
 	}
 
 	return NewPassProvider(passConfig), nil
+}
+
+// NewKeychainProviderFactory creates a keychain provider factory
+func NewKeychainProviderFactory(name string, config map[string]interface{}) (provider.Provider, error) {
+	return NewKeychainProvider(name, config), nil
+}
+
+// NewInfisicalProviderFactory creates an Infisical provider factory
+func NewInfisicalProviderFactory(name string, config map[string]interface{}) (provider.Provider, error) {
+	return NewInfisicalProvider(name, config)
+}
+
+// NewAkeylessProviderFactory creates an Akeyless provider factory
+func NewAkeylessProviderFactory(name string, config map[string]interface{}) (provider.Provider, error) {
+	return NewAkeylessProvider(name, config)
 }
