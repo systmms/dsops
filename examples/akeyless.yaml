@@ -1,0 +1,161 @@
+version: 0
+
+# Akeyless Provider Example Configuration
+# Enterprise zero-knowledge secret management with Distributed Fragment Cryptography
+# FIPS 140-2 certified, multi-cloud authentication support
+
+secretStores:
+  # API Key authentication (simplest)
+  akeyless:
+    type: akeyless
+    access_id: "p-1234567890abcdef"
+    auth:
+      method: api_key
+      access_key: "${AKEYLESS_ACCESS_KEY}"
+
+  # AWS IAM authentication (recommended for AWS environments)
+  akeyless-aws:
+    type: akeyless
+    access_id: "p-aws-access-id"
+    auth:
+      method: aws_iam
+      # Uses default AWS credential chain
+
+  # Azure AD authentication
+  akeyless-azure:
+    type: akeyless
+    access_id: "p-azure-access-id"
+    auth:
+      method: azure_ad
+      azure_ad_object_id: "12345678-1234-1234-1234-123456789012"
+
+  # GCP authentication
+  akeyless-gcp:
+    type: akeyless
+    access_id: "p-gcp-access-id"
+    auth:
+      method: gcp
+      gcp_audience: "akeyless.io"
+
+  # Custom gateway (self-hosted or private)
+  akeyless-private:
+    type: akeyless
+    access_id: "p-private-access-id"
+    gateway_url: "https://gateway.company.com"
+    auth:
+      method: api_key
+      access_key: "${AKEYLESS_PRIVATE_KEY}"
+
+envs:
+  development:
+    # Simple secret path retrieval
+    DATABASE_PASSWORD:
+      from: { store: "store://akeyless/Dev/Database/password" }
+
+    # API keys in folder structure
+    API_KEY:
+      from: { store: "store://akeyless/Dev/Services/api-key" }
+
+    # Secret with specific version
+    ENCRYPTION_KEY:
+      from: { store: "store://akeyless/Dev/Crypto/encryption-key@v2" }
+
+    # Optional secrets
+    DEBUG_TOKEN:
+      from: { store: "store://akeyless/Dev/Debug/token" }
+      optional: true
+
+  production:
+    # Production secrets with AWS IAM auth
+    DATABASE_PASSWORD:
+      from: { store: "store://akeyless-aws/Prod/Database/master-password" }
+
+    DATABASE_URL:
+      from: { store: "store://akeyless-aws/Prod/Database/connection-string" }
+
+    # TLS certificates
+    TLS_CERT:
+      from: { store: "store://akeyless-aws/Prod/Certs/server-cert" }
+
+    TLS_KEY:
+      from: { store: "store://akeyless-aws/Prod/Certs/server-key" }
+
+    # Cloud provider credentials
+    AWS_ACCESS_KEY_ID:
+      from: { store: "store://akeyless-aws/Prod/AWS/access-key-id" }
+
+    AWS_SECRET_ACCESS_KEY:
+      from: { store: "store://akeyless-aws/Prod/AWS/secret-access-key" }
+
+  azure-production:
+    # Azure environment using Azure AD auth
+    DATABASE_PASSWORD:
+      from: { store: "store://akeyless-azure/Prod/Database/password" }
+
+    AZURE_CLIENT_SECRET:
+      from: { store: "store://akeyless-azure/Prod/Azure/client-secret" }
+
+  gcp-production:
+    # GCP environment using GCP auth
+    DATABASE_PASSWORD:
+      from: { store: "store://akeyless-gcp/Prod/Database/password" }
+
+    GCP_SERVICE_ACCOUNT:
+      from: { store: "store://akeyless-gcp/Prod/GCP/service-account-key" }
+
+# Akeyless Integration Notes:
+#
+# Authentication Methods:
+#
+# 1. API Key (access_id + access_key):
+#    - Create an API Key access role in Akeyless Console
+#    - Simple but requires storing the access key securely
+#
+# 2. AWS IAM:
+#    - Create an AWS IAM Auth Method in Akeyless
+#    - Uses AWS instance credentials or IAM roles
+#    - Best for EC2, ECS, Lambda workloads
+#
+# 3. Azure AD:
+#    - Create an Azure AD Auth Method in Akeyless
+#    - Uses Azure Managed Identity or Service Principal
+#    - Best for Azure-hosted workloads
+#
+# 4. GCP:
+#    - Create a GCP Auth Method in Akeyless
+#    - Uses GCP Service Account credentials
+#    - Best for GCE, GKE, Cloud Run workloads
+#
+# Key Format:
+# store://provider-name/path/to/secret
+# store://provider-name/path/to/secret@vN
+#
+# Path Structure:
+# - Paths start with / (added automatically if omitted)
+# - Use hierarchical structure: /Environment/Service/secret-name
+# - Example: /Prod/Database/password
+#
+# Secret Types:
+# - Static Secrets: Fixed values
+# - Dynamic Secrets: Generated on-demand (AWS, Azure, GCP credentials)
+# - SSH Certificates: On-demand SSH certificate signing
+# - PKI Certificates: TLS/SSL certificate generation
+#
+# Gateway Configuration:
+# - Cloud Gateway: https://api.akeyless.io (default)
+# - Customer Gateway: Your own hosted gateway for private networks
+# - Configure with gateway_url setting
+#
+# Best Practices:
+# - Use cloud-native authentication (AWS IAM, Azure AD, GCP) in production
+# - Organize secrets by environment and service
+# - Use access roles to limit which secrets each identity can access
+# - Enable audit logging for compliance
+# - Consider dynamic secrets for database credentials
+#
+# Setup Steps:
+# 1. Create Akeyless account at console.akeyless.io
+# 2. Create access role with appropriate permissions
+# 3. Configure authentication method
+# 4. Add static secrets or configure dynamic secret targets
+# 5. Configure dsops with access credentials

@@ -1,0 +1,90 @@
+version: 0
+
+# OS Keychain Provider Example Configuration
+# Retrieves secrets from native OS credential storage:
+# - macOS: Keychain Services (hardware-backed on Apple Silicon)
+# - Linux: Secret Service D-Bus API (gnome-keyring, KWallet)
+
+secretStores:
+  # Default keychain access
+  keychain:
+    type: keychain
+    # Optional: prefix for service names
+    # service_prefix: "com.myapp"
+    # Optional: macOS keychain access group (for app groups)
+    # access_group: "TEAM_ID.com.myapp.shared"
+
+  # Work-specific keychain configuration
+  work-keychain:
+    type: keychain
+    service_prefix: "com.company.devtools"
+
+envs:
+  development:
+    # Simple keychain retrieval: service/account format
+    DATABASE_PASSWORD:
+      from: { store: "store://keychain/myapp/database-password" }
+
+    # API keys stored in keychain
+    GITHUB_TOKEN:
+      from: { store: "store://keychain/github.com/personal-token" }
+
+    # AWS credentials from keychain
+    AWS_ACCESS_KEY_ID:
+      from: { store: "store://keychain/aws/access-key-id" }
+
+    AWS_SECRET_ACCESS_KEY:
+      from: { store: "store://keychain/aws/secret-access-key" }
+
+    # SSH passphrase
+    SSH_KEY_PASSPHRASE:
+      from: { store: "store://keychain/ssh/id_rsa-passphrase" }
+      optional: true
+
+  work:
+    # Using prefixed keychain for work secrets
+    DATABASE_URL:
+      from: { store: "store://work-keychain/postgres/connection-string" }
+
+    SLACK_BOT_TOKEN:
+      from: { store: "store://work-keychain/slack/bot-token" }
+
+    # Service accounts
+    SERVICE_ACCOUNT_KEY:
+      from: { store: "store://work-keychain/gcp/service-account" }
+
+# Keychain Integration Notes:
+#
+# macOS Setup:
+# 1. Open Keychain Access.app
+# 2. File > New Password Item
+# 3. Service Name: "myapp" (or your app identifier)
+# 4. Account: "database-password" (the key name)
+# 5. Password: <your secret value>
+#
+# Or via command line:
+# security add-generic-password -a "database-password" -s "myapp" -w "secret-value"
+#
+# To retrieve:
+# security find-generic-password -a "database-password" -s "myapp" -w
+#
+# Linux Setup (gnome-keyring):
+# 1. Ensure gnome-keyring is running: eval $(gnome-keyring-daemon --start)
+# 2. Use secret-tool:
+#    secret-tool store --label="My App Database Password" service myapp account database-password
+#    secret-tool lookup service myapp account database-password
+#
+# Key Format:
+# store://keychain/service-name/account-name
+#
+# Security Features:
+# - macOS: Touch ID/password protection, hardware-backed on M1/M2 Macs
+# - Linux: Session-based unlocking with gnome-keyring
+# - Works offline - no network required
+# - Integrates with OS authentication
+#
+# Best Practices:
+# - Use descriptive service names (app identifier)
+# - Use descriptive account names (credential type)
+# - Group related credentials with consistent service prefixes
+# - Consider access groups for shared credentials on macOS
