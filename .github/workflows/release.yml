@@ -72,6 +72,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Verify buildx state
+        run: |
+          echo "=== Docker info ==="
+          docker info | head -30
+          echo ""
+          echo "=== Buildx version ==="
+          docker buildx version
+          echo ""
+          echo "=== Buildx builders ==="
+          docker buildx ls
+          echo ""
+          echo "=== Current builder details ==="
+          docker buildx inspect
+          echo ""
+          echo "=== Auth config structure (no secrets) ==="
+          cat ~/.docker/config.json | jq 'del(.auths[].auth) | del(.auths[].identitytoken)'
+
       - name: Create completions directory
         run: mkdir -p completions
 
@@ -80,7 +97,7 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean
+          args: release --clean --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
