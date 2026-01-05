@@ -206,9 +206,9 @@
 - [X] T083 [P] Create user documentation in docs/content/providers/infisical.md
 - [X] T084 [P] Create user documentation in docs/content/providers/akeyless.md
 - [X] T085 Update docs/PROVIDERS.md with new provider entries (provider docs in docs/content/providers/)
-- [ ] T086 [P] Create integration test for keychain in tests/integration/keychain_integration_test.go (deferred - requires keychain access)
-- [ ] T087 [P] Create integration test for infisical in tests/integration/infisical_integration_test.go (deferred - requires Infisical instance)
-- [ ] T088 [P] Create integration test for akeyless in tests/integration/akeyless_integration_test.go (deferred - requires Akeyless account)
+- [ ] T086 [P] Create integration test for keychain in tests/integration/keychain_integration_test.go (deferred - requires OS keychain access, can't mock HTTP)
+- [X] T087 [P] Create integration test for infisical in tests/integration/providers/infisical_integration_test.go (uses mock HTTP server)
+- [X] T088 [P] Create integration test for akeyless in tests/integration/providers/akeyless_integration_test.go (uses mock HTTP server)
 - [X] T089 Run all provider contract tests to verify interface compliance (SC-006)
 - [X] T090 Run `make lint` and fix any linting issues
 - [X] T091 Run `make test-race` to verify no race conditions (SC-005)
@@ -306,7 +306,7 @@ With 3 developers after Phase 2:
 
 | Metric | Count | Completed |
 |--------|-------|-----------|
-| Total Tasks | 92 | 89 |
+| Total Tasks | 92 | 91 |
 | Phase 1 (Setup) | 4 | 4 ✅ |
 | Phase 2 (Foundational) | 5 | 5 ✅ |
 | Phase 3 (US1 Keychain) | 14 | 14 ✅ |
@@ -314,17 +314,22 @@ With 3 developers after Phase 2:
 | Phase 5 (US3 Akeyless) | 19 | 19 ✅ |
 | Phase 6 (US4 Config) | 12 | 12 ✅ |
 | Phase 7 (US5 Doctor) | 8 | 8 ✅ |
-| Phase 8 (Polish) | 14 | 11 |
+| Phase 8 (Polish) | 14 | 13 |
 | Parallelizable [P] | 38 | - |
 
-**Implementation Status**: ✅ **COMPLETE** (97% - 89/92 tasks)
+**Implementation Status**: ✅ **COMPLETE** (99% - 91/92 tasks)
 
-**Deferred Tasks** (3 remaining):
-- T086-T088: Integration tests require external services (keychain access, Infisical instance, Akeyless account) - can be added when CI/CD environment supports them
+**Deferred Tasks** (1 remaining):
+- T086: Keychain integration test requires OS-level keychain access (macOS Keychain or Linux Secret Service) - can't be mocked via HTTP
+
+**Completed via Mock HTTP Servers**:
+- T087: Infisical integration test using httptest.NewServer() mock
+- T088: Akeyless integration test using httptest.NewServer() mock
 
 **Notes**:
 - [P] tasks = different files, no dependencies
 - [Story] label maps task to specific user story for traceability
 - Each provider can be independently completed and tested
 - All unit tests pass with race detection
+- Integration tests for Infisical/Akeyless use mock HTTP servers
 - Spec status updated to Implemented
