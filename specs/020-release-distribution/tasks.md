@@ -224,7 +224,7 @@ External repository:
 
 - [x] T025 [US1] Update release workflow to pass HOMEBREW_TAP_GITHUB_TOKEN to GoReleaser
 
-- [ ] T026 [US1] Test Homebrew installation after release:
+- [x] T026 [US1] Test Homebrew installation after release (tested via nix-darwin cask):
   ```bash
   brew tap systmms/tap
   brew install dsops
