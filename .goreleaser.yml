@@ -88,24 +88,31 @@ release:
   prerelease: auto
   name_template: "v{{ .Version }}"
 
-brews:
+homebrew_casks:
   - name: dsops
     repository:
       owner: systmms
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
+    directory: Casks
     homepage: "https://github.com/systmms/dsops"
     description: "Secret management for development and production environments"
-    license: "MIT"
     skip_upload: auto  # Skip for pre-releases
-    test: |
-      system "#{bin}/dsops", "--version"
-    install: |
-      bin.install "dsops"
-      bash_completion.install "completions/dsops.bash" => "dsops"
-      zsh_completion.install "completions/dsops.zsh" => "_dsops"
-      fish_completion.install "completions/dsops.fish"
+    # URL verification for homebrew audit
+    url:
+      verified: github.com/systmms/dsops
+    # Shell completions
+    completions:
+      bash: "completions/dsops.bash"
+      zsh: "completions/dsops.zsh"
+      fish: "completions/dsops.fish"
+    # Quarantine removal for unsigned binary
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/dsops"]
+          end
 
 dockers_v2:
   - images:
