@@ -31,7 +31,7 @@ External repository:
 
 - [x] T001 Create completions directory at repository root: `mkdir -p completions`
 - [x] T002 [P] Verify Makefile LDFLAGS work with manual build: `make build && ./bin/dsops --version`
-- [ ] T003 [P] Verify existing CI workflow passes on main branch
+- [x] T003 [P] Verify existing CI workflow passes on main branch
 
 **Checkpoint**: Project ready for release infrastructure
 
@@ -101,14 +101,14 @@ External repository:
   - README.md file
   - completions/ directory with bash, zsh, fish scripts
 
-- [ ] T012 [US2] Test binary download and execution on macOS:
+- [x] T012 [US2] Test binary download and execution on macOS:
   ```bash
   curl -L <release-url>/dsops_<version>_darwin_arm64.tar.gz -o dsops.tar.gz
   tar -xzf dsops.tar.gz
   ./dsops --version
   ```
 
-- [ ] T013 [P] [US2] Test binary download and execution on Linux (via Docker):
+- [x] T013 [P] [US2] Test binary download and execution on Linux (via Docker):
   ```bash
   docker run --rm -v $(pwd):/work ubuntu:22.04 bash -c "
     curl -L <release-url>/dsops_<version>_linux_amd64.tar.gz -o dsops.tar.gz
@@ -131,11 +131,11 @@ External repository:
 
 ### Implementation for US6
 
-- [ ] T014 [US6] Verify checksums file is published with release:
+- [x] T014 [US6] Verify checksums file is published with release:
   - Check GitHub Release contains `dsops_<version>_checksums.txt`
   - Verify format is compatible with sha256sum
 
-- [ ] T015 [US6] Test checksum verification:
+- [x] T015 [US6] Test checksum verification:
   ```bash
   curl -LO <release-url>/dsops_<version>_darwin_arm64.tar.gz
   curl -LO <release-url>/dsops_<version>_checksums.txt
@@ -247,15 +247,15 @@ External repository:
 
 ### Implementation for US4
 
-- [ ] T027 [US4] Verify repository is public on GitHub (prerequisite for go install)
+- [x] T027 [US4] Verify repository is public on GitHub (prerequisite for go install)
 
-- [ ] T028 [US4] Test go install with specific version tag:
+- [x] T028 [US4] Test go install with specific version tag:
   ```bash
   go install github.com/systmms/dsops/cmd/dsops@v0.2.0
   dsops --version
   ```
 
-- [ ] T029 [US4] Test go install with @latest:
+- [x] T029 [US4] Test go install with @latest:
   ```bash
   go install github.com/systmms/dsops/cmd/dsops@latest
   dsops --version
@@ -304,10 +304,10 @@ External repository:
 **Purpose**: Documentation and final validation
 
 - [x] T030 [P] Verify docs/content/getting-started/installation.md matches implemented methods
-- [ ] T031 [P] Update CONTRIBUTING.md with release process (how to create a release)
+- [x] T031 [P] Update CONTRIBUTING.md with release process (how to create a release)
 - [x] T032 [P] Add developer documentation for release workflow in docs/developer/
 - [ ] T036 [P] Add release example in examples/release-workflow.md showing version tagging best practices
-- [ ] T033 Create first official release (v0.2.0 or appropriate version)
+- [x] T033 Create first official release (v0.2.0 or appropriate version) - v0.2.3 exists
 - [ ] T034 Run full validation from quickstart.md:
   - Test Homebrew install
   - Test binary download
