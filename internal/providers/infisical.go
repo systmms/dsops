@@ -107,7 +107,7 @@ func (p *InfisicalProvider) Describe(ctx context.Context, ref provider.Reference
 
 	token, err := p.getToken(ctx)
 	if err != nil {
-		return provider.Metadata{Exists: false}, nil
+		return provider.Metadata{}, fmt.Errorf("failed to authenticate with infisical: %w", err)
 	}
 
 	secret, err := p.client.GetSecret(ctx, token, infRef.Name, infRef.Version)
@@ -115,7 +115,7 @@ func (p *InfisicalProvider) Describe(ctx context.Context, ref provider.Reference
 		if isInfisicalNotFoundError(err) {
 			return provider.Metadata{Exists: false}, nil
 		}
-		return provider.Metadata{Exists: false}, nil
+		return provider.Metadata{}, fmt.Errorf("failed to describe infisical secret: %w", err)
 	}
 
 	return provider.Metadata{
@@ -272,7 +272,7 @@ func isInfisicalNotFoundError(err error) bool {
 	if err == nil {
 		return false
 	}
-	errStr := err.Error()
+	errStr := strings.ToLower(err.Error())
 	return strings.Contains(errStr, "not found") ||
 		strings.Contains(errStr, "404")
 }

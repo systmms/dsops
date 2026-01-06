@@ -106,7 +106,7 @@ func (p *AkeylessProvider) Describe(ctx context.Context, ref provider.Reference)
 
 	token, err := p.getToken(ctx)
 	if err != nil {
-		return provider.Metadata{Exists: false}, nil
+		return provider.Metadata{}, fmt.Errorf("failed to authenticate with akeyless: %w", err)
 	}
 
 	meta, err := p.client.DescribeItem(ctx, token, akRef.Path)
@@ -114,7 +114,7 @@ func (p *AkeylessProvider) Describe(ctx context.Context, ref provider.Reference)
 		if isAkeylessNotFoundError(err) {
 			return provider.Metadata{Exists: false}, nil
 		}
-		return provider.Metadata{Exists: false}, nil
+		return provider.Metadata{}, fmt.Errorf("failed to describe akeyless item: %w", err)
 	}
 
 	// Convert Akeyless tags ([]string) to map format
@@ -259,7 +259,8 @@ func isAkeylessNotFoundError(err error) bool {
 	if err == nil {
 		return false
 	}
-	errStr := err.Error()
+	errStr := strings.ToLower(err.Error())
 	return strings.Contains(errStr, "not found") ||
-		strings.Contains(errStr, "itemNotFound")
+		strings.Contains(errStr, "itemnotfound") ||
+		strings.Contains(errStr, "404")
 }

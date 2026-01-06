@@ -2,12 +2,15 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 	"github.com/systmms/dsops/internal/config"
+	"github.com/systmms/dsops/internal/providers"
 	"github.com/systmms/dsops/internal/resolve"
 	"github.com/systmms/dsops/pkg/provider"
 )
@@ -265,55 +268,123 @@ func getSuggestions(providerType string, err error) []string {
 		suggestions = append(suggestions, "Or set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY")
 
 	case "keychain":
-		if contains(err.Error(), "not available") {
-			suggestions = append(suggestions, "Keychain is only available on macOS and Linux")
-			suggestions = append(suggestions, "On macOS: Ensure Keychain Access app is working")
-			suggestions = append(suggestions, "On Linux: Install and configure gnome-keyring or KWallet")
-		}
-		if contains(err.Error(), "headless") {
-			suggestions = append(suggestions, "Keychain access requires a GUI session")
-			suggestions = append(suggestions, "Set up a keyring daemon for headless use")
-		}
-		if contains(err.Error(), "not found") {
-			suggestions = append(suggestions, "Ensure the secret exists in your keychain")
-			suggestions = append(suggestions, "On macOS: Add via Keychain Access app")
-			suggestions = append(suggestions, "Or use: security add-generic-password -a <account> -s <service> -w")
+		var keychainErr *providers.KeychainError
+		if errors.As(err, &keychainErr) {
+			switch keychainErr.Op {
+			case "query":
+				if errors.Is(keychainErr.Err, providers.ErrKeychainItemNotFound) {
+					suggestions = append(suggestions, "Ensure the secret exists in your keychain")
+					suggestions = append(suggestions, "On macOS: Add via Keychain Access app")
+					suggestions = append(suggestions, fmt.Sprintf("Or use: security add-generic-password -a \"%s\" -s \"%s\" -w", keychainErr.Account, keychainErr.Service))
+				} else if errors.Is(keychainErr.Err, providers.ErrKeychainAccessDenied) {
+					suggestions = append(suggestions, "Keychain access was denied")
+					suggestions = append(suggestions, "On macOS: Check Keychain Access permissions")
+				}
+			case "validate":
+				if errors.Is(keychainErr.Err, providers.ErrKeychainUnsupportedPlatform) {
+					suggestions = append(suggestions, "Keychain is only available on macOS and Linux")
+				} else if errors.Is(keychainErr.Err, providers.ErrKeychainHeadless) {
+					suggestions = append(suggestions, "Keychain access requires a GUI session")
+					suggestions = append(suggestions, "Set up a keyring daemon for headless use")
+				}
+			}
+		} else {
+			// Fallback to string matching for non-typed errors
+			errStr := err.Error()
+			if strings.Contains(errStr, "not available") || strings.Contains(errStr, "not supported") {
+				suggestions = append(suggestions, "Keychain is only available on macOS and Linux")
+				suggestions = append(suggestions, "On macOS: Ensure Keychain Access app is working")
+				suggestions = append(suggestions, "On Linux: Install and configure gnome-keyring or KWallet")
+			}
+			if strings.Contains(errStr, "headless") || strings.Contains(errStr, "GUI") {
+				suggestions = append(suggestions, "Keychain access requires a GUI session")
+				suggestions = append(suggestions, "Set up a keyring daemon for headless use")
+			}
+			if strings.Contains(errStr, "not found") {
+				suggestions = append(suggestions, "Ensure the secret exists in your keychain")
+				suggestions = append(suggestions, "On macOS: Add via Keychain Access app")
+				suggestions = append(suggestions, "Or use: security add-generic-password -a <account> -s <service> -w")
+			}
 		}
 
 	case "infisical":
 		suggestions = append(suggestions, "Configure Infisical authentication in dsops.yaml")
-		if contains(err.Error(), "unauthorized") || contains(err.Error(), "401") {
-			suggestions = append(suggestions, "Check your machine_identity or service_token credentials")
-			suggestions = append(suggestions, "Verify client_id and client_secret are correct")
-		}
-		if contains(err.Error(), "project") {
-			suggestions = append(suggestions, "Verify project_id in configuration")
-			suggestions = append(suggestions, "Ensure you have access to the project")
-		}
-		if contains(err.Error(), "environment") {
-			suggestions = append(suggestions, "Verify environment slug (dev, staging, prod)")
-		}
-		if contains(err.Error(), "connection") || contains(err.Error(), "timeout") {
-			suggestions = append(suggestions, "Check host URL (default: https://app.infisical.com)")
-			suggestions = append(suggestions, "For self-hosted: verify your Infisical instance is running")
+		var infisicalErr *providers.InfisicalError
+		if errors.As(err, &infisicalErr) {
+			switch infisicalErr.Op {
+			case "auth":
+				suggestions = append(suggestions, "Check your machine_identity or service_token credentials")
+				suggestions = append(suggestions, "Verify client_id and client_secret are correct")
+			case "fetch":
+				if infisicalErr.StatusCode == 404 {
+					suggestions = append(suggestions, "Verify the secret name exists in Infisical")
+					suggestions = append(suggestions, "Check that you're querying the correct environment")
+				} else if infisicalErr.StatusCode == 401 || infisicalErr.StatusCode == 403 {
+					suggestions = append(suggestions, "Check your access permissions for this secret")
+				}
+			}
+			if infisicalErr.StatusCode == 401 {
+				suggestions = append(suggestions, "Authentication failed - verify credentials")
+			}
+		} else {
+			// Fallback to string matching for non-typed errors
+			errStr := err.Error()
+			if strings.Contains(errStr, "unauthorized") || strings.Contains(errStr, "401") {
+				suggestions = append(suggestions, "Check your machine_identity or service_token credentials")
+				suggestions = append(suggestions, "Verify client_id and client_secret are correct")
+			}
+			if strings.Contains(errStr, "project") {
+				suggestions = append(suggestions, "Verify project_id in configuration")
+				suggestions = append(suggestions, "Ensure you have access to the project")
+			}
+			if strings.Contains(errStr, "environment") {
+				suggestions = append(suggestions, "Verify environment slug (dev, staging, prod)")
+			}
+			if strings.Contains(errStr, "connection") || strings.Contains(errStr, "timeout") {
+				suggestions = append(suggestions, "Check host URL (default: https://app.infisical.com)")
+				suggestions = append(suggestions, "For self-hosted: verify your Infisical instance is running")
+			}
 		}
 
 	case "akeyless":
 		suggestions = append(suggestions, "Configure Akeyless authentication in dsops.yaml")
-		if contains(err.Error(), "authentication failed") || contains(err.Error(), "unauthorized") {
-			suggestions = append(suggestions, "Check your access_id and authentication configuration")
-			suggestions = append(suggestions, "For API key: ensure access_key is correct")
-			suggestions = append(suggestions, "For AWS IAM: verify your AWS credentials")
-			suggestions = append(suggestions, "For Azure AD: check your Azure identity configuration")
-			suggestions = append(suggestions, "For GCP: verify your GCP service account")
-		}
-		if contains(err.Error(), "not found") {
-			suggestions = append(suggestions, "Verify the secret path exists in Akeyless")
-			suggestions = append(suggestions, "Check path format: /folder/secret-name")
-		}
-		if contains(err.Error(), "gateway") || contains(err.Error(), "connection") {
-			suggestions = append(suggestions, "Check gateway_url configuration")
-			suggestions = append(suggestions, "Default is Akeyless cloud: https://api.akeyless.io")
+		var akeylessErr *providers.AkeylessError
+		if errors.As(err, &akeylessErr) {
+			switch akeylessErr.Op {
+			case "auth":
+				suggestions = append(suggestions, "Check your access_id and authentication configuration")
+				suggestions = append(suggestions, "For API key: ensure access_key is correct")
+				suggestions = append(suggestions, "For AWS IAM: verify your AWS credentials")
+				suggestions = append(suggestions, "For Azure AD: check your Azure identity configuration")
+				suggestions = append(suggestions, "For GCP: verify your GCP service account")
+			case "fetch":
+				if strings.Contains(akeylessErr.Message, "not found") {
+					suggestions = append(suggestions, "Verify the secret path exists in Akeyless")
+					suggestions = append(suggestions, fmt.Sprintf("Check path: %s", akeylessErr.Path))
+				} else {
+					suggestions = append(suggestions, "Check your access permissions for this secret")
+				}
+			case "describe":
+				suggestions = append(suggestions, "Verify the secret path exists in Akeyless")
+			}
+		} else {
+			// Fallback to string matching for non-typed errors
+			errStr := err.Error()
+			if strings.Contains(errStr, "authentication failed") || strings.Contains(errStr, "unauthorized") {
+				suggestions = append(suggestions, "Check your access_id and authentication configuration")
+				suggestions = append(suggestions, "For API key: ensure access_key is correct")
+				suggestions = append(suggestions, "For AWS IAM: verify your AWS credentials")
+				suggestions = append(suggestions, "For Azure AD: check your Azure identity configuration")
+				suggestions = append(suggestions, "For GCP: verify your GCP service account")
+			}
+			if strings.Contains(errStr, "not found") {
+				suggestions = append(suggestions, "Verify the secret path exists in Akeyless")
+				suggestions = append(suggestions, "Check path format: /folder/secret-name")
+			}
+			if strings.Contains(errStr, "gateway") || strings.Contains(errStr, "connection") {
+				suggestions = append(suggestions, "Check gateway_url configuration")
+				suggestions = append(suggestions, "Default is Akeyless cloud: https://api.akeyless.io")
+			}
 		}
 
 	default:

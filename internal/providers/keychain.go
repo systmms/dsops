@@ -133,8 +133,7 @@ func (kc *KeychainProvider) Describe(ctx context.Context, ref provider.Reference
 		if isKeychainNotFoundError(err) {
 			return provider.Metadata{Exists: false}, nil
 		}
-		// For other errors, still report non-existence rather than failing
-		return provider.Metadata{Exists: false}, nil
+		return provider.Metadata{}, fmt.Errorf("failed to describe keychain item: %w", err)
 	}
 
 	return provider.Metadata{
