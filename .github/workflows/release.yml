@@ -124,13 +124,16 @@ jobs:
 
       - name: Verify Docker image
         run: |
+          # Strip 'v' prefix for Docker tag (GoReleaser uses .Version without v)
+          VERSION_NO_V="${TAG_NAME#v}"
+          echo "Docker tag: ${VERSION_NO_V}"
           # Wait for image to be available in registry
           echo "Waiting 30s for image to propagate..."
           sleep 30
           # Retry pull up to 3 times with delay
           for i in 1 2 3; do
-            if docker pull "ghcr.io/systmms/dsops:${TAG_NAME}"; then
-              docker run --rm "ghcr.io/systmms/dsops:${TAG_NAME}" --version
+            if docker pull "ghcr.io/systmms/dsops:${VERSION_NO_V}"; then
+              docker run --rm "ghcr.io/systmms/dsops:${VERSION_NO_V}" --version
               exit 0
             fi
             echo "Attempt $i failed, retrying in 10s..."
