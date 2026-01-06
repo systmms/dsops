@@ -316,15 +316,16 @@ func getSuggestions(providerType string, err error) []string {
 				suggestions = append(suggestions, "Check your machine_identity or service_token credentials")
 				suggestions = append(suggestions, "Verify client_id and client_secret are correct")
 			case "fetch":
-				if infisicalErr.StatusCode == 404 {
+				switch infisicalErr.StatusCode {
+				case 404:
 					suggestions = append(suggestions, "Verify the secret name exists in Infisical")
 					suggestions = append(suggestions, "Check that you're querying the correct environment")
-				} else if infisicalErr.StatusCode == 401 || infisicalErr.StatusCode == 403 {
+				case 401:
+					suggestions = append(suggestions, "Check your access permissions for this secret")
+					suggestions = append(suggestions, "Authentication failed - verify credentials")
+				case 403:
 					suggestions = append(suggestions, "Check your access permissions for this secret")
 				}
-			}
-			if infisicalErr.StatusCode == 401 {
-				suggestions = append(suggestions, "Authentication failed - verify credentials")
 			}
 		} else {
 			// Fallback to string matching for non-typed errors
