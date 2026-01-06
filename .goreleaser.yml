@@ -88,18 +88,24 @@ release:
   prerelease: auto
   name_template: "v{{ .Version }}"
 
-homebrew_casks:
+brews:
   - name: dsops
     repository:
       owner: systmms
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Casks
+    directory: Formula
     homepage: "https://github.com/systmms/dsops"
     description: "Secret management for development and production environments"
-    binaries:
-      - dsops
+    license: "MIT"
     skip_upload: auto  # Skip for pre-releases
+    test: |
+      system "#{bin}/dsops", "--version"
+    install: |
+      bin.install "dsops"
+      bash_completion.install "completions/dsops.bash" => "dsops"
+      zsh_completion.install "completions/dsops.zsh" => "_dsops"
+      fish_completion.install "completions/dsops.fish"
 
 dockers_v2:
   - images:
