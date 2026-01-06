@@ -59,6 +59,27 @@
           ];
 
           shellHook = ''
+            # Set up Go environment first (before any tool checks)
+            export GOPATH=$(pwd)/.go
+            export GOCACHE=$(pwd)/.cache/go-build
+            export GOMODCACHE=$(pwd)/.cache/go-mod
+
+            # Create directories if they don't exist
+            mkdir -p .go .cache/go-build .cache/go-mod
+
+            # Add GOPATH/bin FIRST in PATH to ensure locally installed Go tools take precedence
+            export PATH="$GOPATH/bin:$(pwd)/bin:$PATH"
+
+            # Always install Go tools that need to be built with Go 1.25+
+            # This ensures they're compiled with the correct Go version
+            echo "📦 Ensuring golangci-lint is built with Go 1.25..."
+            go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest 2>/dev/null
+
+            if ! command -v govulncheck &> /dev/null; then
+              echo "📦 Installing govulncheck..."
+              go install golang.org/x/vuln/cmd/govulncheck@latest
+            fi
+
             echo "🔐 dsops development environment activated"
             echo ""
             echo "Available commands:"
@@ -69,30 +90,8 @@
             echo "  make dev       - Build and run in development mode"
             echo ""
             echo "Go version: $(go version)"
-            echo "golangci-lint version: $(golangci-lint --version)"
+            echo "golangci-lint version: $(golangci-lint --version 2>/dev/null || echo 'not found')"
             echo ""
-
-            # Set up Go environment
-            export GOPATH=$(pwd)/.go
-            export GOCACHE=$(pwd)/.cache/go-build
-            export GOMODCACHE=$(pwd)/.cache/go-mod
-            
-            # Create directories if they don't exist
-            mkdir -p .go .cache/go-build .cache/go-mod
-
-            # Add local bin and GOPATH/bin to PATH for installed tools
-            export PATH="$GOPATH/bin:$(pwd)/bin:$PATH"
-
-            # Install Go tools that need to be built with Go 1.25
-            if ! command -v golangci-lint &> /dev/null; then
-              echo "📦 Installing golangci-lint..."
-              go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
-            fi
-
-            if ! command -v govulncheck &> /dev/null; then
-              echo "📦 Installing govulncheck..."
-              go install golang.org/x/vuln/cmd/govulncheck@latest
-            fi
             
             # Provider CLI configuration hints
             echo "Provider CLI tools available:"

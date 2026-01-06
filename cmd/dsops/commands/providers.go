@@ -106,6 +106,9 @@ func getProviderDescription(providerType string) string {
 		"vault":               "HashiCorp Vault",
 		"doppler":             "Doppler centralized secrets management",
 		"pass":                "pass (zx2c4) Unix password manager",
+		"keychain":            "OS native keychain (macOS Keychain, Linux Secret Service)",
+		"infisical":           "Infisical open-source secret management platform",
+		"akeyless":            "Akeyless enterprise zero-knowledge secret management",
 	}
 	
 	if desc, exists := descriptions[providerType]; exists {
@@ -235,6 +238,30 @@ func getProviderDetails(providerType string) []string {
 			"Hierarchical organization with folders",
 			"GPG key-based encryption",
 			"Key format: 'path/to/secret' (filesystem-like paths)",
+		},
+		"keychain": {
+			"OS native credential storage",
+			"macOS: Keychain Services (hardware-backed on Apple Silicon)",
+			"Linux: Secret Service D-Bus API (gnome-keyring, KWallet)",
+			"Works offline with no external dependencies",
+			"Key format: 'service-name/account-name'",
+			"Supports Touch ID authentication on macOS",
+		},
+		"infisical": {
+			"Open-source secret management platform",
+			"Self-hosted or cloud-hosted (infisical.com)",
+			"End-to-end encryption with zero-knowledge architecture",
+			"Project and environment-based organization",
+			"Auth methods: machine_identity, service_token, api_key",
+			"Key format: 'SECRET_NAME' or 'folder/SECRET_NAME[@vN]'",
+		},
+		"akeyless": {
+			"Enterprise zero-knowledge secret management",
+			"FIPS 140-2 certified with Distributed Fragment Cryptography",
+			"Multiple auth methods: api_key, aws_iam, azure_ad, gcp",
+			"Supports dynamic secrets and certificate management",
+			"Key format: '/path/to/secret[@vN]'",
+			"Self-hosted or cloud-hosted gateway",
 		},
 	}
 	

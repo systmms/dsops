@@ -1,0 +1,133 @@
+version: 0
+
+# Infisical Provider Example Configuration
+# Open-source secret management platform with end-to-end encryption
+# Cloud-hosted (infisical.com) or self-hosted
+
+secretStores:
+  # Cloud-hosted Infisical
+  infisical:
+    type: infisical
+    project_id: "64f7e4d2-1234-5678-abcd-1234567890ab"
+    environment: "dev"
+    auth:
+      method: machine_identity
+      client_id: "${INFISICAL_CLIENT_ID}"
+      client_secret: "${INFISICAL_CLIENT_SECRET}"
+
+  # Self-hosted Infisical instance
+  infisical-prod:
+    type: infisical
+    host: "https://secrets.company.com"
+    project_id: "production-project-id"
+    environment: "prod"
+    auth:
+      method: machine_identity
+      client_id: "${INFISICAL_PROD_CLIENT_ID}"
+      client_secret: "${INFISICAL_PROD_CLIENT_SECRET}"
+
+  # Service token authentication (simpler but less flexible)
+  infisical-staging:
+    type: infisical
+    project_id: "staging-project-id"
+    environment: "staging"
+    auth:
+      method: service_token
+      token: "${INFISICAL_SERVICE_TOKEN}"
+
+envs:
+  development:
+    # Simple secret retrieval by name
+    DATABASE_URL:
+      from: { store: "store://infisical/DATABASE_URL" }
+
+    # Secret with folder path
+    API_KEY:
+      from: { store: "store://infisical/services/API_KEY" }
+
+    # Nested folder structure
+    STRIPE_SECRET_KEY:
+      from: { store: "store://infisical/payments/stripe/SECRET_KEY" }
+
+    # Secret with specific version
+    ENCRYPTION_KEY:
+      from: { store: "store://infisical/crypto/ENCRYPTION_KEY@v2" }
+
+    # Optional secrets
+    FEATURE_FLAG_KEY:
+      from: { store: "store://infisical/flags/FEATURE_FLAG_KEY" }
+      optional: true
+
+  production:
+    # Production secrets from prod store
+    DATABASE_URL:
+      from: { store: "store://infisical-prod/DATABASE_URL" }
+
+    DATABASE_PASSWORD:
+      from: { store: "store://infisical-prod/DATABASE_PASSWORD" }
+
+    # AWS credentials
+    AWS_ACCESS_KEY_ID:
+      from: { store: "store://infisical-prod/aws/ACCESS_KEY_ID" }
+
+    AWS_SECRET_ACCESS_KEY:
+      from: { store: "store://infisical-prod/aws/SECRET_ACCESS_KEY" }
+
+    # Redis configuration
+    REDIS_URL:
+      from: { store: "store://infisical-prod/cache/REDIS_URL" }
+
+  staging:
+    # Staging environment from service token auth
+    DATABASE_URL:
+      from: { store: "store://infisical-staging/DATABASE_URL" }
+
+    API_ENDPOINT:
+      from: { store: "store://infisical-staging/API_ENDPOINT" }
+
+# Infisical Integration Notes:
+#
+# Authentication Methods:
+#
+# 1. Machine Identity (Recommended for production):
+#    - Create a Machine Identity in Infisical dashboard
+#    - Get client_id and client_secret
+#    - Grant the identity access to your project
+#
+# 2. Service Token:
+#    - Create a Service Token in Project Settings > Service Tokens
+#    - Tokens are scoped to specific environments and paths
+#    - Simpler but less flexible than Machine Identity
+#
+# 3. API Key (for development):
+#    - Get your API key from User Settings
+#    - Not recommended for production
+#
+# Key Format:
+# store://provider-name/SECRET_NAME
+# store://provider-name/folder/SECRET_NAME
+# store://provider-name/folder/SECRET_NAME@vN
+#
+# Environment Slugs:
+# - dev, development
+# - staging, stg
+# - prod, production
+#
+# Setup Steps:
+# 1. Create an account at infisical.com (or self-host)
+# 2. Create a project
+# 3. Add secrets to your project
+# 4. Create Machine Identity or Service Token
+# 5. Configure dsops with your credentials
+#
+# Self-Hosting:
+# - Docker: docker run -p 80:80 infisical/infisical
+# - Kubernetes: helm install infisical infisical/infisical
+# - Documentation: https://infisical.com/docs/self-hosting/overview
+#
+# Best Practices:
+# - Use Machine Identity for production workloads
+# - Organize secrets in folders by service/component
+# - Use meaningful environment names (dev, staging, prod)
+# - Enable audit logging in production
+# - Rotate credentials regularly

@@ -10,12 +10,15 @@ weight: 20
 
 ## Supported Providers
 
-dsops currently supports 14+ secret storage providers across different categories:
+dsops currently supports 17+ secret storage providers across different categories:
 
 ### Password Managers
 - [Bitwarden](/providers/bitwarden/) - Open source password manager with team features
 - [1Password](/providers/1password/) - Popular team password management solution
 - [pass](/providers/pass/) - Unix password store using GPG encryption
+
+### Local/OS Providers
+- [OS Keychain](/providers/keychain/) - macOS Keychain and Linux Secret Service
 
 ### AWS Secret Stores
 - [AWS Secrets Manager](/providers/aws-secrets-manager/) - Native AWS secret storage with rotation
@@ -36,6 +39,8 @@ dsops currently supports 14+ secret storage providers across different categorie
 ### Enterprise Solutions
 - [HashiCorp Vault](/providers/vault/) - Enterprise secret management platform
 - [Doppler](/providers/doppler/) - Developer-first secrets platform
+- [Infisical](/providers/infisical/) - Open-source secret management platform
+- [Akeyless](/providers/akeyless/) - Enterprise zero-knowledge secret management
 
 ### Development & Testing
 - [Literal Provider](/providers/literal/) - Static values for testing and development
@@ -55,9 +60,13 @@ Each provider supports different features:
 | AWS SSM | SDK | IAM, STS | ❌ | ✅ | ✅ |
 | Google Secret Manager | SDK | Service Account, ADC | ✅ | ✅ | 💰 |
 | Azure Key Vault | SDK | MSI, Service Principal | ✅ | ✅ | 💰 |
+| **Local/OS** |
+| OS Keychain | Native | OS Auth, Touch ID | ❌ | ❌ | ✅ |
 | **Enterprise** |
 | HashiCorp Vault | API | Token, AppRole, K8s | ✅ | ✅ | ✅ OSS |
 | Doppler | API | API Token | ✅ | ✅ | 💰 |
+| Infisical | API | Machine Identity, Token | ✅ | ✅ | ✅ OSS |
+| Akeyless | SDK | API Key, AWS, Azure, GCP | ✅ | ✅ | 💰 |
 
 Legend: ✅ Full support | 💰 Usage-based pricing | ❌ Not available
 

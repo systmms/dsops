@@ -132,6 +132,26 @@ The testing infrastructure is **production-ready** and all planned tasks are fin
 - Additional password managers (LastPass, KeePassXC)
 - Chaos testing integration
 
+### New Secret Store Providers
+
+**Status**: 📋 **SPEC-021 PLANNING** - Specification and contracts complete
+**Spec**: [SPEC-021: New Providers](https://github.com/systmms/dsops/blob/main/specs/021-new-providers/spec.md)
+
+Adding 3 new secret store providers to expand coverage:
+
+| Provider | Type | Score | Use Case | Status |
+|----------|------|-------|----------|--------|
+| OS Keychain | `keychain` | 8.25 | Local dev, offline workflows | 📋 Spec complete |
+| Infisical | `infisical` | 8.5 | Open-source SaaS alternative | 📋 Spec complete |
+| Akeyless | `akeyless` | 8.2 | Enterprise zero-knowledge | 📋 Spec complete |
+
+**Deliverables**:
+- ✅ Unified specification with 5 user stories, 17 functional requirements
+- ✅ Research document (library selection, API patterns, testing strategy)
+- ✅ Data model with configuration schemas and error types
+- ✅ Go contracts/interfaces for all 3 providers with mocks
+- ⏳ Implementation tasks (next: `/speckit.tasks`)
+
 ---
 
 ## How to Contribute
@@ -161,10 +181,10 @@ For maintainers and contributors tracking detailed progress:
 | Metric | Current | Target (v0.2) |
 |--------|---------|---------------|
 | Core Features | 100% ✅ | 100% |
-| Provider Support | 14 providers ✅ | 14+ |
+| Provider Support | 14 providers ✅ | 17 (3 new in SPEC-021) |
 | Test Coverage | 54.4% (Infrastructure ✅) | 80% ⚠️ |
 | Test Infrastructure | 100% ✅ | 100% ✅ |
 | Rotation Features | 56/61 (91%) | 61/61 (100%) ✅ |
 | Documentation | 100% ✅ | 100% |
 
-Last updated: November 18, 2025
+Last updated: January 3, 2026
