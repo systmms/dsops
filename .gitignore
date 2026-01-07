@@ -49,6 +49,9 @@ build/
 *.pem
 *.p12
 *.pfx
+*.p8
+*.cer
+*.certSigningRequest
 secrets/
 !tests/fixtures/secrets/
 credentials/
