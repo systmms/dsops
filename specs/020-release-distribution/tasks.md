@@ -318,6 +318,90 @@ External repository:
 
 ---
 
+## Phase 10: macOS Code Signing & Notarization (US8, Priority: P2)
+
+**Goal**: Sign and notarize macOS binaries for seamless Gatekeeper experience
+
+**Independent Test**: Download signed binary and run without `xattr -dr com.apple.quarantine`
+
+### Apple Developer Setup (One-time)
+
+- [ ] T042 [US8] Create Developer ID Application certificate in Apple Developer Portal:
+  - Go to https://developer.apple.com → Certificates, Identifiers & Profiles
+  - Create new certificate: Certificates → + → Developer ID Application
+  - Download .cer file and import into Keychain.app
+
+- [ ] T043 [US8] Export certificate as .p12 file:
+  - Open Keychain Access
+  - Find certificate, right-click → Export
+  - Save as .p12 with strong password
+  - Note: Must use 2048-bit RSA key
+
+- [ ] T044 [US8] Create App Store Connect API key:
+  - Go to https://appstoreconnect.apple.com
+  - Users and Access → Keys → Create new key
+  - Role: Developer or App Manager
+  - Download .p8 file (only available once!)
+  - Note the Key ID and Issuer ID
+
+- [ ] T045 [US8] Add GitHub repository secrets:
+  ```bash
+  # Encode files as base64
+  base64 -i Certificates.p12 | tr -d '\n' | pbcopy  # Copy to clipboard
+  base64 -i AuthKey_XXXX.p8 | tr -d '\n' | pbcopy
+  ```
+  Add these secrets in GitHub → Settings → Secrets and variables → Actions:
+  - `MACOS_SIGN_P12` (base64-encoded .p12)
+  - `MACOS_SIGN_PASSWORD` (.p12 password)
+  - `MACOS_NOTARY_ISSUER_ID` (UUID from App Store Connect)
+  - `MACOS_NOTARY_KEY_ID` (Key ID from App Store Connect)
+  - `MACOS_NOTARY_KEY` (base64-encoded .p8)
+
+### GoReleaser Configuration
+
+- [ ] T046 [US8] Add notarize section to `.goreleaser.yml`:
+  ```yaml
+  notarize:
+    macos:
+      - enabled: '{{ isEnvSet "MACOS_SIGN_P12" }}'
+        sign:
+          certificate: "{{ .Env.MACOS_SIGN_P12 }}"
+          password: "{{ .Env.MACOS_SIGN_PASSWORD }}"
+        notarize:
+          issuer_id: "{{ .Env.MACOS_NOTARY_ISSUER_ID }}"
+          key_id: "{{ .Env.MACOS_NOTARY_KEY_ID }}"
+          key: "{{ .Env.MACOS_NOTARY_KEY }}"
+  ```
+
+- [ ] T047 [US8] Update `.github/workflows/release.yml` to pass Apple secrets:
+  ```yaml
+  env:
+    MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+    MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+    MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+    MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+    MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+  ```
+
+- [ ] T048 [US8] Remove quarantine removal hook from homebrew_casks config (no longer needed)
+
+### Validation
+
+- [ ] T049 [US8] Test signed binary on macOS:
+  - Download from GitHub Release
+  - Run binary directly (no xattr command needed)
+  - Verify no Gatekeeper warning appears
+
+- [ ] T050 [US8] Verify notarization with Apple:
+  ```bash
+  spctl -a -vv ./dsops
+  # Expected output: source=Notarized Developer ID
+  ```
+
+**Checkpoint**: macOS binaries run without Gatekeeper warnings or quarantine removal
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -331,6 +415,7 @@ External repository:
 - **US4 (Phase 7)**: Depends on public repository (external dependency)
 - **US7 (Phase 8)**: Depends on US5 completion (release-please triggers GoReleaser)
 - **Polish (Phase 9)**: Depends on all user stories being verifiable
+- **US8 (Phase 10)**: Depends on US5 completion + Apple Developer credentials
 
 ### User Story Dependencies
 
@@ -341,7 +426,9 @@ US7 (Release-Please) ────────────> US5 (Automated Releas
                                                                  │
                                                                  ├─────> US3 (Docker)
                                                                  │
-                                                                 └─────> US1 (Homebrew)
+                                                                 ├─────> US1 (Homebrew)
+                                                                 │
+                                                                 └─────> US8 (macOS Signing) ──> [Apple Developer credentials]
 
 US4 (go install) ────────────────> [Requires public repository only]
 ```

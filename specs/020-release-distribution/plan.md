@@ -16,7 +16,7 @@ Implement automated release infrastructure that enables users to install dsops v
 **Target Platform**: macOS (arm64, amd64), Linux (amd64, arm64), Windows (amd64)
 **Project Type**: DevOps/Infrastructure (CI/CD configuration)
 **Performance Goals**: Release workflow completes in under 10 minutes; Docker image under 50MB
-**Constraints**: No code signing required for initial release
+**Constraints**: Apple Developer credentials required for macOS signing
 **Scale/Scope**: 5 platform/arch combinations, 3 distribution channels (Releases, Homebrew, Docker)
 
 ## Constitution Check
@@ -131,6 +131,29 @@ No constitution violations require justification. The implementation uses standa
    - Verify installation.md matches reality
    - Update CONTRIBUTING.md with release process
    - Add release process to developer docs
+
+### Phase 5: macOS Code Signing & Notarization
+
+9. **Configure Apple Developer credentials**
+   - Create Developer ID Application certificate in Apple Developer Portal
+   - Export certificate as .p12 file with password
+   - Create App Store Connect API key (.p8)
+   - Add 5 secrets to GitHub repository
+
+10. **Add notarize configuration to `.goreleaser.yml`**
+    - Use GoReleaser native notarize config
+    - Sign with Developer ID certificate
+    - Notarize via App Store Connect API
+    - Enable graceful skip when credentials missing
+
+11. **Update release workflow**
+    - Add Apple credential secrets to GoReleaser environment
+    - Verify signing works in release job
+    - Remove quarantine removal hook from homebrew_casks (no longer needed)
+
+12. **Validate signing**
+    - Test signed binary on macOS without xattr workaround
+    - Verify notarization with `spctl -a -vv ./dsops`
 
 ## Dependencies
 
