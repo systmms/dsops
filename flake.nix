@@ -81,7 +81,13 @@
             mkdir -p .go .cache/go-build .cache/go-mod
 
             # Add local bin and GOPATH/bin to PATH for installed tools
-            export PATH="$GOPATH/bin:$(pwd)/bin:$PATH"
+            # Include macOS system paths for xcrun, codesign, notarytool, etc.
+            export PATH="$GOPATH/bin:$(pwd)/bin:/usr/bin:/usr/local/bin:$PATH"
+
+            # Unset Nix SDK variables so xcrun uses real Xcode tools (notarytool, codesign, etc.)
+            # This is needed for macOS code signing and notarization
+            unset DEVELOPER_DIR
+            unset SDKROOT
 
             # Install Go tools that need to be built with Go 1.25
             if ! command -v golangci-lint &> /dev/null; then
