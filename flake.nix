@@ -59,24 +59,11 @@
           ];
 
           shellHook = ''
-            echo "🔐 dsops development environment activated"
-            echo ""
-            echo "Available commands:"
-            echo "  make setup     - Install development tools"
-            echo "  make build     - Build the binary"
-            echo "  make test      - Run tests"
-            echo "  make lint      - Run linter"
-            echo "  make dev       - Build and run in development mode"
-            echo ""
-            echo "Go version: $(go version)"
-            echo "golangci-lint version: $(golangci-lint --version)"
-            echo ""
-
-            # Set up Go environment
+            # Set up Go environment first (before any tool checks)
             export GOPATH=$(pwd)/.go
             export GOCACHE=$(pwd)/.cache/go-build
             export GOMODCACHE=$(pwd)/.cache/go-mod
-            
+
             # Create directories if they don't exist
             mkdir -p .go .cache/go-build .cache/go-mod
 
@@ -89,16 +76,28 @@
             unset DEVELOPER_DIR
             unset SDKROOT
 
-            # Install Go tools that need to be built with Go 1.25
-            if ! command -v golangci-lint &> /dev/null; then
-              echo "📦 Installing golangci-lint..."
-              go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
-            fi
+            # Always install Go tools that need to be built with Go 1.25+
+            # This ensures they're compiled with the correct Go version
+            echo "📦 Ensuring golangci-lint is built with Go 1.25..."
+            go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest 2>/dev/null
 
             if ! command -v govulncheck &> /dev/null; then
               echo "📦 Installing govulncheck..."
               go install golang.org/x/vuln/cmd/govulncheck@latest
             fi
+
+            echo "🔐 dsops development environment activated"
+            echo ""
+            echo "Available commands:"
+            echo "  make setup     - Install development tools"
+            echo "  make build     - Build the binary"
+            echo "  make test      - Run tests"
+            echo "  make lint      - Run linter"
+            echo "  make dev       - Build and run in development mode"
+            echo ""
+            echo "Go version: $(go version)"
+            echo "golangci-lint version: $(golangci-lint --version 2>/dev/null || echo 'not found')"
+            echo ""
             
             # Provider CLI configuration hints
             echo "Provider CLI tools available:"
