@@ -106,7 +106,7 @@ homebrew_casks:
       bash: "completions/dsops.bash"
       zsh: "completions/dsops.zsh"
       fish: "completions/dsops.fish"
-    # Quarantine removal for unsigned binary
+    # Quarantine removal fallback (safety net when signing unavailable or for older macOS)
     hooks:
       post:
         install: |
