@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.2.4](https://github.com/systmms/dsops/compare/v0.2.3...v0.2.4) (2026-01-08)
+
+
+### Features
+
+* **cli:** integrate keychain, infisical, and akeyless providers ([bbe3744](https://github.com/systmms/dsops/commit/bbe3744203e0d48b1dab1d002987adf3e02694ac))
+* **providers:** add Akeyless enterprise secret management provider ([e36486e](https://github.com/systmms/dsops/commit/e36486efe55ac2530a4c7d56063b2a2e8c65f078))
+* **providers:** add Infisical secret management provider ([a7bb070](https://github.com/systmms/dsops/commit/a7bb070ad12b0df24b08c95ae965f79f7952dc0e))
+* **providers:** add keychain, infisical, and akeyless providers ([65a3de6](https://github.com/systmms/dsops/commit/65a3de66c68b095bc597a94faf556c1666679b2b))
+* **providers:** add OS keychain provider for macOS and Linux ([14c9bc5](https://github.com/systmms/dsops/commit/14c9bc5bc9e15b3a2772b6aa41de264d804b958a))
+* **providers:** add shared infrastructure for new providers ([2e95727](https://github.com/systmms/dsops/commit/2e95727a96bbd69ecb3779f8c5c01ac0e06f89b4))
+* **release:** add macOS code signing and notarization support ([719bf05](https://github.com/systmms/dsops/commit/719bf05d70ab7751f3f71e4c8a12a5b05b43efea))
+* **release:** add shell completions and update task tracking ([0537967](https://github.com/systmms/dsops/commit/053796752aaa93d19d80109c2c4e53ccc8a87e2d))
+* **release:** Release & Distribution Infrastructure (SPEC-020) ([8315817](https://github.com/systmms/dsops/commit/8315817023576e59970765de8d8cc76d215b4f58))
+* **specs:** add SPEC-021 for new secret store providers ([12c1a4c](https://github.com/systmms/dsops/commit/12c1a4c3bf868bd665a21de452411867d15e776c))
+
+
+### Bug Fixes
+
+* **completions:** address shell completion safety issues from PR review ([dd0fa6a](https://github.com/systmms/dsops/commit/dd0fa6aa35c0ee64a3058938a431a427cec5cfdb))
+* **nix:** enable macOS native tools (xcrun, notarytool, codesign) ([4bc97cd](https://github.com/systmms/dsops/commit/4bc97cd61ed8732db15ce5e9bfd986e1d558348e))
+* **nix:** ensure golangci-lint is built with Go 1.25+ ([edfab7f](https://github.com/systmms/dsops/commit/edfab7fe13b8a3bc5f03534ade849bdbd940d598))
+* **permissions:** complete environment restriction test assertion ([466b427](https://github.com/systmms/dsops/commit/466b427fca32fcab99e23219d5319069426322cc))
+* **providers:** address PR review feedback ([61086ff](https://github.com/systmms/dsops/commit/61086ff9af03e74ba2f8a69d46bb0d63f85ea154))
+* **providers:** handle resp.Body.Close() errors in infisical client ([dc560f6](https://github.com/systmms/dsops/commit/dc560f634b86b9debb1a20fa46328ee7b891096d))
+* **release:** add Docker login to verify job ([2ed6399](https://github.com/systmms/dsops/commit/2ed6399ecebf91345c3c136f2de1b9f10fd31fb8))
+* **release:** add retry logic to Docker verification ([76208a9](https://github.com/systmms/dsops/commit/76208a9bd174475e17dad919503b27f7f510fe6a))
+* **release:** revert to homebrew_casks (GoReleaser v2.10+ recommended) ([79dc07d](https://github.com/systmms/dsops/commit/79dc07ddbd2e4851725394ac3aa8fc1112074327))
+* **release:** strip v prefix for Docker image verification ([8f6be76](https://github.com/systmms/dsops/commit/8f6be7680f964bd52846456ec689cfe23b45aeec))
+* **release:** use brews instead of homebrew_casks for CLI tool ([fedef44](https://github.com/systmms/dsops/commit/fedef441d70394a4bfd7521d941042aca695835f))
+
 ## [0.2.3](https://github.com/systmms/dsops/compare/v0.2.2...v0.2.3) (2025-12-30)
 
 
