@@ -63,9 +63,8 @@ git commit -m "feat(providers): add Azure Key Vault support"
 git commit -m "fix(resolve): handle empty secret values correctly"
 
 # Breaking change (triggers major version bump when v1.0+)
-git commit -m "feat(config)!: rename 'providers' to 'secretStores'
-
-BREAKING CHANGE: The 'providers' key in dsops.yaml is now 'secretStores'."
+git commit -m "feat(config)!: rename 'providers' to 'secretStores'" \
+  -m "BREAKING CHANGE: The 'providers' key in dsops.yaml is now 'secretStores'."
 ```
 
 ## Release Process

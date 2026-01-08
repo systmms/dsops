@@ -25,9 +25,8 @@ git commit -m "fix: resolve timeout issue"
 # Breaking changes trigger major version bump (0.1.0 -> 1.0.0)
 git commit -m "feat!: change configuration format"
 # or
-git commit -m "feat: change API
-
-BREAKING CHANGE: configuration schema has changed"
+git commit -m "feat: change API" \
+  -m "BREAKING CHANGE: configuration schema has changed"
 ```
 
 Release Please will:
