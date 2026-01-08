@@ -248,7 +248,9 @@ __dsops_handle_filename_extension_flag()
 __dsops_handle_subdirs_in_dir_flag()
 {
     local dir="$1"
-    pushd "${dir}" >/dev/null 2>&1 && _filedir -d && popd >/dev/null 2>&1 || return
+    pushd "${dir}" >/dev/null 2>&1 || return
+    _filedir -d
+    popd >/dev/null 2>&1 || return
 }
 
 __dsops_handle_flag()

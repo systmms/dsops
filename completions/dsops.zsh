@@ -62,9 +62,7 @@ _dsops()
 
     # Extract the directive integer following a : from the last line
     local lastLine
-    while IFS='\n' read -r line; do
-        lastLine=${line}
-    done < <(printf "%s\n" "${out[@]}")
+    lastLine=${${(f)out}[-1]}
     __dsops_debug "last line: ${lastLine}"
 
     if [ "${lastLine[1]}" = : ]; then
@@ -164,7 +162,7 @@ _dsops()
         subdir="${completions[1]}"
         if [ -n "$subdir" ]; then
             __dsops_debug "Listing directories in $subdir"
-            pushd "${subdir}" >/dev/null 2>&1
+            pushd "${subdir}" >/dev/null 2>&1 || return 1
         else
             __dsops_debug "Listing directories in ."
         fi
