@@ -97,9 +97,22 @@ homebrew_casks:
     directory: Casks
     homepage: "https://github.com/systmms/dsops"
     description: "Secret management for development and production environments"
-    binaries:
-      - dsops
     skip_upload: auto  # Skip for pre-releases
+    # URL verification for homebrew audit
+    url:
+      verified: github.com/systmms/dsops
+    # Shell completions
+    completions:
+      bash: "completions/dsops.bash"
+      zsh: "completions/dsops.zsh"
+      fish: "completions/dsops.fish"
+    # Quarantine removal fallback (safety net when signing unavailable or for older macOS)
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/dsops"]
+          end
 
 dockers_v2:
   - images:
@@ -118,3 +131,17 @@ dockers_v2:
       "org.opencontainers.image.source": "{{ .GitURL }}"
       "org.opencontainers.image.revision": "{{ .FullCommit }}"
       "org.opencontainers.image.created": "{{ .Date }}"
+
+# macOS code signing and notarization
+# Requires Apple Developer credentials configured as GitHub secrets
+# Signing is automatically skipped if credentials are not set (e.g., for forks or snapshots)
+notarize:
+  macos:
+    - enabled: '{{ isEnvSet "MACOS_SIGN_P12" }}'
+      sign:
+        certificate: "{{ .Env.MACOS_SIGN_P12 }}"
+        password: "{{ .Env.MACOS_SIGN_PASSWORD }}"
+      notarize:
+        issuer_id: "{{ .Env.MACOS_NOTARY_ISSUER_ID }}"
+        key_id: "{{ .Env.MACOS_NOTARY_KEY_ID }}"
+        key: "{{ .Env.MACOS_NOTARY_KEY }}"

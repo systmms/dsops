@@ -31,7 +31,7 @@ External repository:
 
 - [x] T001 Create completions directory at repository root: `mkdir -p completions`
 - [x] T002 [P] Verify Makefile LDFLAGS work with manual build: `make build && ./bin/dsops --version`
-- [ ] T003 [P] Verify existing CI workflow passes on main branch
+- [x] T003 [P] Verify existing CI workflow passes on main branch
 
 **Checkpoint**: Project ready for release infrastructure
 
@@ -79,7 +79,7 @@ External repository:
   - Post-build hook: generate zsh completion to completions/dsops.zsh
   - Post-build hook: generate fish completion to completions/dsops.fish
 
-- [ ] T010 [US5] Test GoReleaser locally with dry-run: `goreleaser release --snapshot --clean`
+- [x] T010 [US5] Test GoReleaser locally with dry-run: `goreleaser release --snapshot --clean`
 
 **Checkpoint**: Push a test tag (v0.0.1-test.1) and verify workflow runs. Binaries should appear in GitHub Releases.
 
@@ -95,20 +95,20 @@ External repository:
 
 ### Implementation for US2
 
-- [ ] T011 [US2] Verify release archives contain correct files:
+- [x] T011 [US2] Verify release archives contain correct files:
   - dsops binary (executable)
   - LICENSE file
   - README.md file
   - completions/ directory with bash, zsh, fish scripts
 
-- [ ] T012 [US2] Test binary download and execution on macOS:
+- [x] T012 [US2] Test binary download and execution on macOS:
   ```bash
   curl -L <release-url>/dsops_<version>_darwin_arm64.tar.gz -o dsops.tar.gz
   tar -xzf dsops.tar.gz
   ./dsops --version
   ```
 
-- [ ] T013 [P] [US2] Test binary download and execution on Linux (via Docker):
+- [x] T013 [P] [US2] Test binary download and execution on Linux (via Docker):
   ```bash
   docker run --rm -v $(pwd):/work ubuntu:22.04 bash -c "
     curl -L <release-url>/dsops_<version>_linux_amd64.tar.gz -o dsops.tar.gz
@@ -131,11 +131,11 @@ External repository:
 
 ### Implementation for US6
 
-- [ ] T014 [US6] Verify checksums file is published with release:
+- [x] T014 [US6] Verify checksums file is published with release:
   - Check GitHub Release contains `dsops_<version>_checksums.txt`
   - Verify format is compatible with sha256sum
 
-- [ ] T015 [US6] Test checksum verification:
+- [x] T015 [US6] Test checksum verification:
   ```bash
   curl -LO <release-url>/dsops_<version>_darwin_arm64.tar.gz
   curl -LO <release-url>/dsops_<version>_checksums.txt
@@ -224,7 +224,7 @@ External repository:
 
 - [x] T025 [US1] Update release workflow to pass HOMEBREW_TAP_GITHUB_TOKEN to GoReleaser
 
-- [ ] T026 [US1] Test Homebrew installation after release:
+- [x] T026 [US1] Test Homebrew installation after release (tested via nix-darwin cask):
   ```bash
   brew tap systmms/tap
   brew install dsops
@@ -247,15 +247,15 @@ External repository:
 
 ### Implementation for US4
 
-- [ ] T027 [US4] Verify repository is public on GitHub (prerequisite for go install)
+- [x] T027 [US4] Verify repository is public on GitHub (prerequisite for go install)
 
-- [ ] T028 [US4] Test go install with specific version tag:
+- [x] T028 [US4] Test go install with specific version tag:
   ```bash
   go install github.com/systmms/dsops/cmd/dsops@v0.2.0
   dsops --version
   ```
 
-- [ ] T029 [US4] Test go install with @latest:
+- [x] T029 [US4] Test go install with @latest:
   ```bash
   go install github.com/systmms/dsops/cmd/dsops@latest
   dsops --version
@@ -289,11 +289,12 @@ External repository:
 
 - [x] T040 [US7] Create RELEASE_PLEASE_TOKEN secret with repo scope for workflow chaining
 
-- [ ] T041 [US7] Test release-please workflow:
+- [x] T041 [US7] Test release-please workflow:
   - Push a commit with `fix:` prefix to main
   - Verify Release PR is created with patch bump
   - Merge Release PR
   - Verify tag is created and GoReleaser workflow triggers
+  - **Verified**: PR #16 (v0.2.4) created automatically by release-please
 
 **Checkpoint**: Merging a Release PR automatically creates a tag and triggers the full release workflow
 
@@ -304,17 +305,102 @@ External repository:
 **Purpose**: Documentation and final validation
 
 - [x] T030 [P] Verify docs/content/getting-started/installation.md matches implemented methods
-- [ ] T031 [P] Update CONTRIBUTING.md with release process (how to create a release)
+- [x] T031 [P] Update CONTRIBUTING.md with release process (how to create a release)
 - [x] T032 [P] Add developer documentation for release workflow in docs/developer/
-- [ ] T036 [P] Add release example in examples/release-workflow.md showing version tagging best practices
-- [ ] T033 Create first official release (v0.2.0 or appropriate version)
-- [ ] T034 Run full validation from quickstart.md:
+- [x] T036 [P] Add release example in examples/release-workflow.md showing version tagging best practices
+- [x] T033 Create first official release (v0.2.0 or appropriate version) - v0.2.3 exists
+- [x] T034 Run full validation from quickstart.md:
   - Test Homebrew install
   - Test binary download
   - Test Docker run
   - Test go install
   - Test checksum verification
-- [ ] T035 Update docs/content/reference/status.md to mark SPEC-020 as implemented
+  - **All tests passed** against v0.2.3
+- [x] T035 Update docs/content/reference/status.md to mark SPEC-020 as implemented
+
+---
+
+## Phase 10: macOS Code Signing & Notarization (US8, Priority: P2)
+
+**Goal**: Sign and notarize macOS binaries for seamless Gatekeeper experience
+
+**Independent Test**: Download signed binary and run without `xattr -dr com.apple.quarantine`
+
+### Apple Developer Setup (One-time)
+
+- [x] T042 [US8] Create Developer ID Application certificate in Apple Developer Portal:
+  - Go to https://developer.apple.com → Certificates, Identifiers & Profiles
+  - Create new certificate: Certificates → + → Developer ID Application
+  - Download .cer file and import into Keychain.app
+
+- [x] T043 [US8] Export certificate as .p12 file:
+  - Open Keychain Access
+  - Find certificate, right-click → Export
+  - Save as .p12 with strong password
+  - Note: Must use 2048-bit RSA key
+
+- [x] T044 [US8] Create App Store Connect API key:
+  - Go to https://appstoreconnect.apple.com
+  - Users and Access → Keys → Create new key
+  - Role: Developer or App Manager
+  - Download .p8 file (only available once!)
+  - Note the Key ID and Issuer ID
+
+- [x] T045 [US8] Add GitHub repository secrets:
+  ```bash
+  # Encode files as base64
+  base64 -i Certificates.p12 | tr -d '\n' | pbcopy  # Copy to clipboard
+  base64 -i AuthKey_XXXX.p8 | tr -d '\n' | pbcopy
+  ```
+  Add these secrets in GitHub → Settings → Secrets and variables → Actions:
+  - `MACOS_SIGN_P12` (base64-encoded .p12)
+  - `MACOS_SIGN_PASSWORD` (.p12 password)
+  - `MACOS_NOTARY_ISSUER_ID` (UUID from App Store Connect)
+  - `MACOS_NOTARY_KEY_ID` (Key ID from App Store Connect)
+  - `MACOS_NOTARY_KEY` (base64-encoded .p8)
+
+### GoReleaser Configuration
+
+- [x] T046 [US8] Add notarize section to `.goreleaser.yml`:
+  ```yaml
+  notarize:
+    macos:
+      - enabled: '{{ isEnvSet "MACOS_SIGN_P12" }}'
+        sign:
+          certificate: "{{ .Env.MACOS_SIGN_P12 }}"
+          password: "{{ .Env.MACOS_SIGN_PASSWORD }}"
+        notarize:
+          issuer_id: "{{ .Env.MACOS_NOTARY_ISSUER_ID }}"
+          key_id: "{{ .Env.MACOS_NOTARY_KEY_ID }}"
+          key: "{{ .Env.MACOS_NOTARY_KEY }}"
+  ```
+
+- [x] T047 [US8] Update `.github/workflows/release.yml` to pass Apple secrets:
+  ```yaml
+  env:
+    MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+    MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+    MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+    MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+    MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+  ```
+
+- [x] T048 [US8] Remove quarantine removal hook from homebrew_casks config (no longer needed)
+
+### Validation
+
+- [x] T049 [US8] Test signed binary on macOS:
+  - Download from GitHub Release
+  - Run binary directly (no xattr command needed)
+  - Verify no Gatekeeper warning appears
+
+- [x] T050 [US8] Verify notarization with Apple:
+  ```bash
+  spctl -a -vv ./dsops
+  # Expected output: source=Notarized Developer ID
+  ```
+
+**Checkpoint**: macOS binaries run without Gatekeeper warnings or quarantine removal
 
 ---
 
@@ -331,6 +417,7 @@ External repository:
 - **US4 (Phase 7)**: Depends on public repository (external dependency)
 - **US7 (Phase 8)**: Depends on US5 completion (release-please triggers GoReleaser)
 - **Polish (Phase 9)**: Depends on all user stories being verifiable
+- **US8 (Phase 10)**: Depends on US5 completion + Apple Developer credentials
 
 ### User Story Dependencies
 
@@ -341,7 +428,9 @@ US7 (Release-Please) ────────────> US5 (Automated Releas
                                                                  │
                                                                  ├─────> US3 (Docker)
                                                                  │
-                                                                 └─────> US1 (Homebrew)
+                                                                 ├─────> US1 (Homebrew)
+                                                                 │
+                                                                 └─────> US8 (macOS Signing) ──> [Apple Developer credentials]
 
 US4 (go install) ────────────────> [Requires public repository only]
 ```

@@ -8,18 +8,33 @@ draft: false
 weight: 30
 ---
 
-## Current Version: v0.1 MVP
+## Current Version: v0.2.x
 
-**Status**: Core features 100% complete, ready for production use
+**Status**: Core features 100% complete, release infrastructure complete, ready for production use
 
 - ✅ **CLI & Architecture**: Cobra-based framework with 9 commands
-- ✅ **Provider System**: 14 providers (1Password, Bitwarden, pass, AWS, GCP, Azure, Vault, Doppler)
+- ✅ **Provider System**: 17 providers (1Password, Bitwarden, pass, AWS, GCP, Azure, Vault, Doppler, Keychain, Infisical, Akeyless)
 - ✅ **Security Features**: Ephemeral execution, automatic redaction, process isolation
 - ✅ **Transform Pipeline**: 8 transform functions (JSON, YAML, base64, etc.)
 - ✅ **Output Formats**: dotenv, JSON, YAML, Go templates
-- ✅ **Documentation**: 100% complete for all v0.1 features
+- ✅ **Documentation**: 100% complete for all features
+- ✅ **Release Infrastructure**: Automated releases with GoReleaser, Homebrew, Docker, macOS code signing
 
 See [retrospective specs](https://github.com/systmms/dsops/tree/main/specs) (SPEC-001 through SPEC-004, SPEC-080 through SPEC-089) for detailed feature documentation.
+
+### Release & Distribution (SPEC-020)
+
+**Status**: ✅ **COMPLETE** - All distribution channels operational
+
+- ✅ **GitHub Releases**: Automated binary builds for macOS, Linux, Windows (5 arch combinations)
+- ✅ **Homebrew**: `brew install systmms/tap/dsops`
+- ✅ **Docker**: `docker pull ghcr.io/systmms/dsops`
+- ✅ **go install**: `go install github.com/systmms/dsops/cmd/dsops@latest`
+- ✅ **macOS Signing**: Binaries signed and notarized with Apple Developer ID
+- ✅ **Release Please**: Automated versioning from Conventional Commits
+- ✅ **Checksums**: SHA256 verification for all release artifacts
+
+**See [SPEC-020: Release & Distribution](https://github.com/systmms/dsops/blob/main/specs/020-release-distribution/spec.md) for details.**
 
 ---
 
@@ -181,10 +196,11 @@ For maintainers and contributors tracking detailed progress:
 | Metric | Current | Target (v0.2) |
 |--------|---------|---------------|
 | Core Features | 100% ✅ | 100% |
-| Provider Support | 14 providers ✅ | 17 (3 new in SPEC-021) |
+| Provider Support | 17 providers ✅ | 17 (3 new in SPEC-021) |
 | Test Coverage | 54.4% (Infrastructure ✅) | 80% ⚠️ |
 | Test Infrastructure | 100% ✅ | 100% ✅ |
 | Rotation Features | 56/61 (91%) | 61/61 (100%) ✅ |
+| Release Infrastructure | 100% ✅ | 100% ✅ |
 | Documentation | 100% ✅ | 100% |
 
-Last updated: January 3, 2026
+Last updated: January 7, 2026

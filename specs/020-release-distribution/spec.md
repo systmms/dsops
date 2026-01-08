@@ -122,6 +122,22 @@ A maintainer wants version numbers and changelogs to be managed automatically ba
 
 ---
 
+### User Story 8 - macOS Code Signing & Notarization (Priority: P2)
+
+A macOS user wants to run dsops without Gatekeeper warnings or manual quarantine removal. The binary should be properly signed and notarized by Apple.
+
+**Why this priority**: Improves user experience significantly on macOS. Removes friction for enterprise users where unsigned binaries may be blocked by MDM policies.
+
+**Independent Test**: Can be tested by downloading a signed binary and running it without needing `xattr -dr com.apple.quarantine`.
+
+**Acceptance Scenarios**:
+
+1. **Given** a signed macOS binary, **When** a user downloads and runs it, **Then** no Gatekeeper warning appears
+2. **Given** a notarized binary, **When** Apple's notarization service is queried, **Then** the binary is confirmed as scanned and approved
+3. **Given** a snapshot/test build, **When** built without Apple credentials, **Then** signing is skipped gracefully (ad-hoc or unsigned)
+
+---
+
 ### Edge Cases
 
 - What happens when a user tries to install on an unsupported platform (e.g., FreeBSD)?
@@ -154,6 +170,9 @@ A maintainer wants version numbers and changelogs to be managed automatically ba
 - **FR-015**: System MUST bump minor version for breaking changes (`feat!:` or `BREAKING CHANGE:`) while version < 1.0.0 (bump-minor-pre-major)
 - **FR-016**: System MUST maintain a CHANGELOG.md file updated with each release
 - **FR-017**: System MUST create version tags automatically when Release PRs are merged
+- **FR-018**: macOS binaries MUST be code-signed with a Developer ID Application certificate
+- **FR-019**: macOS binaries MUST be notarized with Apple's notary service
+- **FR-020**: Signing MUST be skipped gracefully when Apple credentials are not configured (for snapshots/forks)
 
 ### Key Entities
 
@@ -183,7 +202,7 @@ A maintainer wants version numbers and changelogs to be managed automatically ba
 - Release-please will be used to automate version management and changelog generation
 - Maintainers will use conventional commit messages (feat:, fix:, etc.) to enable automatic versioning
 - Maintainers will follow semantic versioning (FR-009); release-please determines version from commits
-- Code signing for macOS binaries is out of scope for initial release (may cause Gatekeeper prompts)
+- Apple Developer Program membership ($99/year) is available for macOS code signing
 - Windows binaries will not be code-signed initially (may trigger SmartScreen warnings)
 
 ## Out of Scope
@@ -191,6 +210,5 @@ A maintainer wants version numbers and changelogs to be managed automatically ba
 - Nix flake publishing to nixpkgs (existing flake.nix works locally)
 - Windows package managers (Scoop, Chocolatey)
 - Linux package repositories (APT, RPM, AUR)
-- macOS code signing and notarization
 - Windows code signing
 - Automatic vulnerability scanning of Docker images (can be added later)

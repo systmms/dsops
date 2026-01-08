@@ -10,6 +10,12 @@ before:
   hooks:
     - go mod tidy
     - go generate ./...
+    # Generate shell completions before cross-compilation
+    # (must use go run since we can't execute cross-compiled binaries)
+    - mkdir -p completions
+    - go run ./cmd/dsops completion bash > completions/dsops.bash
+    - go run ./cmd/dsops completion zsh > completions/dsops.zsh
+    - go run ./cmd/dsops completion fish > completions/dsops.fish
 
 builds:
   - id: dsops
@@ -32,15 +38,6 @@ builds:
       - -X main.version={{.Version}}
       - -X main.commit={{.ShortCommit}}
       - -X main.date={{.Date}}
-    hooks:
-      post:
-        # Generate shell completions after build
-        - cmd: "{{ .Path }} completion bash > completions/dsops.bash"
-          output: true
-        - cmd: "{{ .Path }} completion zsh > completions/dsops.zsh"
-          output: true
-        - cmd: "{{ .Path }} completion fish > completions/dsops.fish"
-          output: true
 
 archives:
   - id: default
@@ -92,33 +89,60 @@ release:
   prerelease: auto
   name_template: "v{{ .Version }}"
 
-brews:
+homebrew_casks:
   - name: dsops
     repository:
       owner: systmms
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
+    directory: Casks
     homepage: "https://github.com/systmms/dsops"
     description: "Secret management for development and production environments"
-    license: "MIT"
     skip_upload: auto  # Skip for pre-releases
-    test: |
-      system "#{bin}/dsops", "--version"
-    install: |
-      bin.install "dsops"
-      bash_completion.install "completions/dsops.bash" => "dsops"
-      zsh_completion.install "completions/dsops.zsh" => "_dsops"
-      fish_completion.install "completions/dsops.fish"
+    # URL verification for homebrew audit
+    url:
+      verified: github.com/systmms/dsops
+    # Shell completions
+    completions:
+      bash: "completions/dsops.bash"
+      zsh: "completions/dsops.zsh"
+      fish: "completions/dsops.fish"
+    # Quarantine removal fallback (safety net when signing unavailable or for older macOS)
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/dsops"]
+          end
 
-dockers:
-  - image_templates:
-      - "ghcr.io/systmms/dsops:{{ .Version }}"
-      - "ghcr.io/systmms/dsops:latest"
-    dockerfile: Dockerfile
-    build_flag_templates:
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.source={{ .GitURL }}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.created={{ .Date }}"
-    skip_push: auto  # Skip :latest for pre-releases
+dockers_v2:
+  - images:
+      - "ghcr.io/systmms/dsops"
+    dockerfile: Dockerfile.goreleaser
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .IsSnapshot }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    build_args:
+      VERSION: "{{ .Version }}"
+    labels:
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.source": "{{ .GitURL }}"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.created": "{{ .Date }}"
+
+# macOS code signing and notarization
+# Requires Apple Developer credentials configured as GitHub secrets
+# Signing is automatically skipped if credentials are not set (e.g., for forks or snapshots)
+notarize:
+  macos:
+    - enabled: '{{ isEnvSet "MACOS_SIGN_P12" }}'
+      sign:
+        certificate: "{{ .Env.MACOS_SIGN_P12 }}"
+        password: "{{ .Env.MACOS_SIGN_PASSWORD }}"
+      notarize:
+        issuer_id: "{{ .Env.MACOS_NOTARY_ISSUER_ID }}"
+        key_id: "{{ .Env.MACOS_NOTARY_KEY_ID }}"
+        key: "{{ .Env.MACOS_NOTARY_KEY }}"
