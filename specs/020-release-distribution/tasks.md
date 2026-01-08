@@ -289,11 +289,12 @@ External repository:
 
 - [x] T040 [US7] Create RELEASE_PLEASE_TOKEN secret with repo scope for workflow chaining
 
-- [ ] T041 [US7] Test release-please workflow:
+- [x] T041 [US7] Test release-please workflow:
   - Push a commit with `fix:` prefix to main
   - Verify Release PR is created with patch bump
   - Merge Release PR
   - Verify tag is created and GoReleaser workflow triggers
+  - **Verified**: PR #16 (v0.2.4) created automatically by release-please
 
 **Checkpoint**: Merging a Release PR automatically creates a tag and triggers the full release workflow
 
@@ -306,15 +307,16 @@ External repository:
 - [x] T030 [P] Verify docs/content/getting-started/installation.md matches implemented methods
 - [x] T031 [P] Update CONTRIBUTING.md with release process (how to create a release)
 - [x] T032 [P] Add developer documentation for release workflow in docs/developer/
-- [ ] T036 [P] Add release example in examples/release-workflow.md showing version tagging best practices
+- [x] T036 [P] Add release example in examples/release-workflow.md showing version tagging best practices
 - [x] T033 Create first official release (v0.2.0 or appropriate version) - v0.2.3 exists
-- [ ] T034 Run full validation from quickstart.md:
+- [x] T034 Run full validation from quickstart.md:
   - Test Homebrew install
   - Test binary download
   - Test Docker run
   - Test go install
   - Test checksum verification
-- [ ] T035 Update docs/content/reference/status.md to mark SPEC-020 as implemented
+  - **All tests passed** against v0.2.3
+- [x] T035 Update docs/content/reference/status.md to mark SPEC-020 as implemented
 
 ---
 
@@ -326,25 +328,25 @@ External repository:
 
 ### Apple Developer Setup (One-time)
 
-- [ ] T042 [US8] Create Developer ID Application certificate in Apple Developer Portal:
+- [x] T042 [US8] Create Developer ID Application certificate in Apple Developer Portal:
   - Go to https://developer.apple.com → Certificates, Identifiers & Profiles
   - Create new certificate: Certificates → + → Developer ID Application
   - Download .cer file and import into Keychain.app
 
-- [ ] T043 [US8] Export certificate as .p12 file:
+- [x] T043 [US8] Export certificate as .p12 file:
   - Open Keychain Access
   - Find certificate, right-click → Export
   - Save as .p12 with strong password
   - Note: Must use 2048-bit RSA key
 
-- [ ] T044 [US8] Create App Store Connect API key:
+- [x] T044 [US8] Create App Store Connect API key:
   - Go to https://appstoreconnect.apple.com
   - Users and Access → Keys → Create new key
   - Role: Developer or App Manager
   - Download .p8 file (only available once!)
   - Note the Key ID and Issuer ID
 
-- [ ] T045 [US8] Add GitHub repository secrets:
+- [x] T045 [US8] Add GitHub repository secrets:
   ```bash
   # Encode files as base64
   base64 -i Certificates.p12 | tr -d '\n' | pbcopy  # Copy to clipboard
@@ -359,7 +361,7 @@ External repository:
 
 ### GoReleaser Configuration
 
-- [ ] T046 [US8] Add notarize section to `.goreleaser.yml`:
+- [x] T046 [US8] Add notarize section to `.goreleaser.yml`:
   ```yaml
   notarize:
     macos:
@@ -373,7 +375,7 @@ External repository:
           key: "{{ .Env.MACOS_NOTARY_KEY }}"
   ```
 
-- [ ] T047 [US8] Update `.github/workflows/release.yml` to pass Apple secrets:
+- [x] T047 [US8] Update `.github/workflows/release.yml` to pass Apple secrets:
   ```yaml
   env:
     MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
@@ -383,16 +385,16 @@ External repository:
     MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
   ```
 
-- [ ] T048 [US8] Remove quarantine removal hook from homebrew_casks config (no longer needed)
+- [x] T048 [US8] Remove quarantine removal hook from homebrew_casks config (no longer needed)
 
 ### Validation
 
-- [ ] T049 [US8] Test signed binary on macOS:
+- [x] T049 [US8] Test signed binary on macOS:
   - Download from GitHub Release
   - Run binary directly (no xattr command needed)
   - Verify no Gatekeeper warning appears
 
-- [ ] T050 [US8] Verify notarization with Apple:
+- [x] T050 [US8] Verify notarization with Apple:
   ```bash
   spctl -a -vv ./dsops
   # Expected output: source=Notarized Developer ID
