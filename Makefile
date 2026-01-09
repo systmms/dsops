@@ -139,6 +139,24 @@ vet: ## Run go vet
 	@echo "Running go vet..."
 	go vet ./...
 
+.PHONY: mod-tidy-check
+mod-tidy-check: ## Verify go.mod and go.sum are tidy
+	@echo "Checking if go.mod and go.sum are tidy..."
+	@cp go.mod go.mod.bak && cp go.sum go.sum.bak
+	@go mod tidy
+	@if ! diff -q go.mod go.mod.bak >/dev/null 2>&1 || ! diff -q go.sum go.sum.bak >/dev/null 2>&1; then \
+		echo ""; \
+		echo "go.mod or go.sum is not tidy. Run: go mod tidy"; \
+		echo ""; \
+		echo "Differences:"; \
+		diff go.mod go.mod.bak || true; \
+		diff go.sum go.sum.bak || true; \
+		mv go.mod.bak go.mod && mv go.sum.bak go.sum; \
+		exit 1; \
+	fi
+	@rm -f go.mod.bak go.sum.bak
+	@echo "go.mod and go.sum are tidy"
+
 .PHONY: clean
 clean: ## Clean build artifacts
 	@echo "Cleaning build artifacts..."
@@ -184,7 +202,7 @@ release-snapshot-docker: ## Build a snapshot release with Docker (requires build
 	@echo "Snapshot complete. Check dist/ for artifacts."
 
 .PHONY: check
-check: lint security vet test ## Run all checks (lint, security, vet, test)
+check: mod-tidy-check lint security vet test ## Run all checks (tidy, lint, security, vet, test)
 
 .PHONY: ci
 ci: check build ## Run CI pipeline (check + build)
@@ -219,3 +237,15 @@ watch: ## Watch for changes and rebuild
 	@echo "Watching for changes..."
 	@command -v entr >/dev/null 2>&1 || { echo "entr not found. Install with: brew install entr"; exit 1; }
 	find . -name '*.go' | entr -r make build
+
+.PHONY: install-hooks
+install-hooks: ## Install git hooks via Lefthook (pre-commit checks)
+	@echo "Installing git hooks via Lefthook..."
+	@npx lefthook install
+	@echo "Git hooks installed! Pre-commit hooks will now run automatically."
+
+.PHONY: uninstall-hooks
+uninstall-hooks: ## Uninstall git hooks
+	@echo "Uninstalling git hooks..."
+	@npx lefthook uninstall
+	@echo "Git hooks uninstalled."
