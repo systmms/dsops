@@ -528,6 +528,8 @@ ADRs provide decision history and rationale for future maintainers. See `docs/ad
 ## Active Technologies
 - Go 1.25+ (matches existing project) + GoReleaser (v2.x), GitHub Actions, Docker (020-release-distribution)
 - N/A (stateless release infrastructure) (020-release-distribution)
+- Go 1.25 (existing project), Bash (Makefile/CI), YAML (Lefthook config) + Lefthook (via npx - no global install required) (022-mod-tidy-check)
+- N/A (no data persistence) (022-mod-tidy-check)
 
 ## Recent Changes
 - 020-release-distribution: Added Go 1.25+ (matches existing project) + GoReleaser (v2.x), GitHub Actions, Docker

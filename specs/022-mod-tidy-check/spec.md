@@ -2,7 +2,7 @@
 
 **Feature Branch**: `022-mod-tidy-check`
 **Created**: 2026-01-09
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "Add go mod tidy check to development workflow - Add automated checks to ensure go.mod and go.sum are always tidy, preventing stale dependency files. Components: (1) Makefile mod-tidy-check target integrated into make check, (2) CI workflow step in unit-tests job to block PRs with stale deps, (3) Lefthook pre-commit hook using npx lefthook for local development. Use npx lefthook instead of raw git hooks for cross-platform support."
 
 ## Overview
