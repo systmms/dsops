@@ -1,0 +1,12 @@
+# Lefthook configuration for dsops
+# Install hooks: make install-hooks (or: npx lefthook install)
+# Uninstall hooks: make uninstall-hooks (or: npx lefthook uninstall)
+#
+# Documentation: https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: false
+  commands:
+    mod-tidy-check:
+      glob: "{**/*.go,go.mod,go.sum}"
+      run: make mod-tidy-check

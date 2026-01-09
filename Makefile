@@ -139,6 +139,12 @@ vet: ## Run go vet
 	@echo "Running go vet..."
 	go vet ./...
 
+.PHONY: mod-tidy-check
+mod-tidy-check: ## Verify go.mod and go.sum are tidy
+	@echo "Checking if go.mod and go.sum are tidy..."
+	@go mod tidy -diff > /dev/null || (echo ""; echo "go.mod or go.sum is not tidy. Run: go mod tidy"; echo ""; go mod tidy -diff; exit 1)
+	@echo "go.mod and go.sum are tidy"
+
 .PHONY: clean
 clean: ## Clean build artifacts
 	@echo "Cleaning build artifacts..."
@@ -184,7 +190,7 @@ release-snapshot-docker: ## Build a snapshot release with Docker (requires build
 	@echo "Snapshot complete. Check dist/ for artifacts."
 
 .PHONY: check
-check: lint security vet test ## Run all checks (lint, security, vet, test)
+check: mod-tidy-check lint security vet test ## Run all checks (tidy, lint, security, vet, test)
 
 .PHONY: ci
 ci: check build ## Run CI pipeline (check + build)
@@ -219,3 +225,15 @@ watch: ## Watch for changes and rebuild
 	@echo "Watching for changes..."
 	@command -v entr >/dev/null 2>&1 || { echo "entr not found. Install with: brew install entr"; exit 1; }
 	find . -name '*.go' | entr -r make build
+
+.PHONY: install-hooks
+install-hooks: ## Install git hooks via Lefthook (pre-commit checks)
+	@echo "Installing git hooks via Lefthook..."
+	@npx lefthook install
+	@echo "Git hooks installed! Pre-commit hooks will now run automatically."
+
+.PHONY: uninstall-hooks
+uninstall-hooks: ## Uninstall git hooks
+	@echo "Uninstalling git hooks..."
+	@npx lefthook uninstall
+	@echo "Git hooks uninstalled."

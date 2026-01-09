@@ -49,6 +49,18 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
+      - name: Check go.mod/go.sum are tidy
+        run: |
+          echo "Checking if go.mod and go.sum are tidy..."
+          if ! go mod tidy -diff > /dev/null; then
+            echo ""
+            echo "go.mod or go.sum is not tidy. Run: go mod tidy"
+            echo ""
+            go mod tidy -diff
+            exit 1
+          fi
+          echo "go.mod and go.sum are tidy"
+
       - name: Install and run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
