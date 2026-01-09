@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unsafe"
 
 	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/logging"
@@ -88,6 +89,10 @@ func (e *Executor) Exec(ctx context.Context, options ExecOptions) error {
 
 	e.logger.Debug("Executing command: %s", strings.Join(options.Command, " "))
 	e.logger.Debug("Environment variables set: %d", len(options.Environment))
+
+	// Zero environment variables after child process starts
+	// This is best-effort defense-in-depth to reduce secret exposure time
+	defer zeroEnvironment(options.Environment)
 
 	// Run the command
 	if err := cmd.Run(); err != nil {
@@ -189,6 +194,32 @@ func maskValue(value string) string {
 	
 	// For long values, show first 3 and last 2 with asterisks in between
 	return value[:3] + strings.Repeat("*", 8) + value[len(value)-2:]
+}
+
+// zeroString securely wipes a string's underlying bytes.
+// Note: This is best-effort as Go strings are immutable and the runtime
+// may have made copies. For maximum security, use the secure.SecureBuffer type.
+func zeroString(s *string) {
+	if s == nil || len(*s) == 0 {
+		return
+	}
+	// Get pointer to string data (unsafe but necessary for zeroing)
+	// This works because strings in Go are (pointer, length) pairs
+	// pointing to immutable byte arrays
+	bytes := unsafe.Slice(unsafe.StringData(*s), len(*s))
+	for i := range bytes {
+		bytes[i] = 0
+	}
+}
+
+// zeroEnvironment wipes all secret values from the environment map after use.
+// This provides defense-in-depth by reducing the window where secrets exist in memory.
+func zeroEnvironment(env map[string]string) {
+	for key := range env {
+		v := env[key]
+		zeroString(&v)
+		env[key] = ""
+	}
 }
 
 // ValidateCommand checks if a command is safe and accessible
