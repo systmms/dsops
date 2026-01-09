@@ -7,7 +7,7 @@
 
 > A fast, cross-platform CLI that pulls secrets from your vault(s) and renders `.env*` files or launches commands with ephemeral environment variables.
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Initialize a new project
@@ -23,7 +23,7 @@ dsops exec --env development -- npm start
 dsops render --env production --out .env.production
 ```
 
-## ✨ Features
+## Features
 
 - **Ephemeral First**: Secrets are injected into process environment, not written to disk by default
 - **Provider Agnostic**: Works with password managers (1Password, Bitwarden) and cloud secret stores (AWS, GCP, Azure)
@@ -32,7 +32,7 @@ dsops render --env production --out .env.production
 - **Transform Pipeline**: Built-in transforms for JSON extraction, base64 encoding/decoding, and more
 - **Cross Platform**: Works on macOS, Linux, and Windows
 
-## 📦 Installation
+## Installation
 
 ### Homebrew (macOS/Linux)
 ```bash
@@ -47,33 +47,36 @@ go install github.com/systmms/dsops/cmd/dsops@latest
 ### Download Binary
 Download the latest release from [GitHub Releases](https://github.com/systmms/dsops/releases).
 
-## 🏗️ Configuration
+## Configuration
 
 Create a `dsops.yaml` file in your project root:
 
 ```yaml
-version: 0
+version: 1
 
-providers:
+secretStores:
   onepassword:
     type: onepassword
-  aws_sm:
+  aws:
     type: aws.secretsmanager
     region: us-east-1
 
 envs:
   development:
     DATABASE_URL:
-      from: { provider: onepassword, key: "op://Dev/MyApp/DATABASE_URL" }
+      from: { store: onepassword, key: "op://Dev/MyApp/DATABASE_URL" }
     API_SECRET:
-      from: { provider: aws_sm, key: "myapp/dev/api" }
+      from: { store: aws, key: "myapp/dev/api" }
       transform: json_extract:.secret
     DEBUG:
       literal: "true"
 ```
 
-## 🔧 Commands
+The legacy `providers:` format is still supported for backward compatibility.
 
+## Commands
+
+### Core Commands
 | Command | Description |
 |---------|-------------|
 | `dsops init` | Initialize a new dsops configuration |
@@ -83,21 +86,52 @@ envs:
 | `dsops get --key <var>` | Get a single secret value |
 | `dsops doctor` | Check provider connectivity |
 | `dsops providers` | List available providers |
+| `dsops login <provider>` | Authenticate with a provider |
+| `dsops completion <shell>` | Generate shell completions (bash, fish, zsh) |
 
-## 🔐 Supported Providers
+### Secret Rotation Commands
+| Command | Description |
+|---------|-------------|
+| `dsops secrets rotate` | Rotate secrets with configured strategy |
+| `dsops secrets status` | Check rotation status |
+| `dsops secrets history` | View rotation history |
+| `dsops rotation rollback` | Rollback a failed rotation |
+
+### Security Commands
+| Command | Description |
+|---------|-------------|
+| `dsops guard` | Access control and security checks |
+| `dsops leak` | Detect potential secret leaks |
+| `dsops shred` | Securely wipe sensitive data |
+| `dsops install-hook` | Install Git hooks for leak prevention |
+
+## Supported Providers
 
 ### Password Managers
 - **1Password** (`onepassword`) - via `op` CLI
 - **Bitwarden** (`bitwarden`) - via `bw` CLI
+- **Pass** (`pass`) - Unix password manager (zx2c4)
+- **OS Keychain** (`keychain`) - macOS Keychain / Linux Secret Service
 
 ### Cloud Secret Stores
 - **AWS Secrets Manager** (`aws.secretsmanager`)
-- **AWS Systems Manager Parameter Store** (`aws.ssm`)
+- **AWS SSM Parameter Store** (`aws.ssm`)
+- **AWS STS** (`aws.sts`) - temporary credentials with role assumption
+- **AWS SSO** (`aws.sso`) - IAM Identity Center
+- **AWS Unified** (`aws`) - intelligent routing across all AWS services
 - **Google Cloud Secret Manager** (`gcp.secretmanager`)
+- **GCP Unified** (`gcp`) - intelligent routing
 - **Azure Key Vault** (`azure.keyvault`)
-- **HashiCorp Vault** (`hashicorp.vault`)
+- **Azure Identity** (`azure.identity`) - Managed Identity / Service Principal
+- **Azure Unified** (`azure`) - intelligent routing
+- **HashiCorp Vault** (`vault`)
 
-## 🔄 Transforms
+### Configuration Management
+- **Doppler** (`doppler`) - centralized secrets management
+- **Infisical** (`infisical`) - open-source secret management
+- **Akeyless** (`akeyless`) - enterprise zero-knowledge vault
+
+## Transforms
 
 Built-in transforms for processing secret values:
 
@@ -105,22 +139,46 @@ Built-in transforms for processing secret values:
 envs:
   production:
     DATABASE_URL:
-      from: { provider: aws_sm, key: "db-config" }
+      from: { store: aws, key: "db-config" }
       transform: json_extract:.url  # Extract JSON field
-    
+
     JWT_KEY:
-      from: { provider: onepassword, key: "op://Prod/JWT/private_key" }
+      from: { store: onepassword, key: "op://Prod/JWT/private_key" }
       transform: multiline_to_single  # Convert multiline to single line
 ```
 
 Available transforms:
 - `json_extract:.path` - Extract value from JSON
+- `yaml_extract:.path` - Extract value from YAML
 - `base64_decode` / `base64_encode` - Base64 operations
 - `trim` - Remove whitespace
 - `multiline_to_single` - Convert multiline strings
+- `join:separator` - Join array values with separator
 - Custom transform chains supported
 
-## 🛡️ Security
+## Secret Rotation
+
+dsops includes a full-featured secret rotation engine:
+
+- **Rotation Strategies**: Canary (single instance first), percentage rollout (progressive waves), service group coordination
+- **Notifications**: Slack, email (SMTP), PagerDuty, and generic webhooks for rotation events
+- **Rollback**: Automatic rollback on verification failure, manual rollback command
+- **Health Monitoring**: SQL, HTTP, and custom script health checks to validate rotations
+- **Metrics**: Prometheus metrics for success rate, duration, and health status
+
+```yaml
+services:
+  postgres-prod:
+    type: postgresql
+    rotation:
+      strategy: canary
+      schedule: "0 2 * * 0"  # Weekly at 2am Sunday
+      notifications:
+        - type: slack
+          channel: "#ops-alerts"
+```
+
+## Security
 
 dsops is designed with security as the top priority:
 
@@ -130,7 +188,7 @@ dsops is designed with security as the top priority:
 - **Crash Safety**: Panic handler prevents secrets from appearing in crash dumps
 - **Minimal Cache**: Optional encrypted keychain storage only
 
-## 🏃‍♂️ Development
+## Development
 
 ```bash
 # Set up development environment
@@ -146,14 +204,14 @@ make build
 make dev
 ```
 
-## 📄 License
+## License
 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## 📚 Documentation
+## Documentation
 
 For detailed documentation, see the [docs](docs/) directory or visit our [documentation site](https://systmms.github.io/dsops).
