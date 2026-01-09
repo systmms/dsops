@@ -14,11 +14,11 @@ weight: 30
 
 - ✅ **CLI & Architecture**: Cobra-based framework with 9 commands
 - ✅ **Provider System**: 17 providers (1Password, Bitwarden, pass, AWS, GCP, Azure, Vault, Doppler, Keychain, Infisical, Akeyless)
-- ✅ **Security Features**: Ephemeral execution, automatic redaction, process isolation
+- ✅ **Security Features**: Ephemeral execution, automatic redaction, process isolation, memory protection (memguard)
 - ✅ **Transform Pipeline**: 8 transform functions (JSON, YAML, base64, etc.)
 - ✅ **Output Formats**: dotenv, JSON, YAML, Go templates
 - ✅ **Documentation**: 100% complete for all features
-- ✅ **Release Infrastructure**: Automated releases with GoReleaser, Homebrew, Docker, macOS code signing
+- ✅ **Release Infrastructure**: Automated releases with GoReleaser, Homebrew, Docker, macOS code signing, cosign signatures, SBOM
 
 See [retrospective specs](https://github.com/systmms/dsops/tree/main/specs) (SPEC-001 through SPEC-004, SPEC-080 through SPEC-089) for detailed feature documentation.
 
@@ -35,6 +35,18 @@ See [retrospective specs](https://github.com/systmms/dsops/tree/main/specs) (SPE
 - ✅ **Checksums**: SHA256 verification for all release artifacts
 
 **See [SPEC-020: Release & Distribution](https://github.com/systmms/dsops/blob/main/specs/020-release-distribution/spec.md) for details.**
+
+### Security Trust Infrastructure (SPEC-023)
+
+**Status**: ✅ **COMPLETE** - Security trust infrastructure operational
+
+- ✅ **SECURITY.md**: Vulnerability disclosure policy with response timelines
+- ✅ **Cosign Signatures**: Keyless signing for binaries and Docker images
+- ✅ **SBOM Generation**: SPDX format Software Bill of Materials
+- ✅ **Memory Protection**: memguard-based secure memory handling
+- ✅ **Security Docs**: Threat model, architecture docs, verification guide
+
+**See [SPEC-023: Security Trust](https://github.com/systmms/dsops/blob/main/specs/023-security-trust/spec.md) for details.**
 
 ---
 
@@ -203,4 +215,4 @@ For maintainers and contributors tracking detailed progress:
 | Release Infrastructure | 100% ✅ | 100% ✅ |
 | Documentation | 100% ✅ | 100% |
 
-Last updated: January 7, 2026
+Last updated: January 9, 2026
