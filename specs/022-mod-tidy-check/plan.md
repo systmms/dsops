@@ -15,7 +15,7 @@ Add automated validation to ensure `go.mod` and `go.sum` are always tidy. This i
 **Language/Version**: Go 1.25 (existing project), Bash (Makefile/CI), YAML (Lefthook config)
 **Primary Dependencies**: Lefthook (via npx - no global install required)
 **Storage**: N/A (no data persistence)
-**Testing**: Manual verification via Makefile targets and CI runs
+**Testing**: Acceptance testing via Makefile targets and CI runs (TDD N/A - shell scripts and CI workflows are verified through integration acceptance tests per Constitution VII exception for build tooling)
 **Target Platform**: macOS, Linux, Windows (cross-platform via Lefthook)
 **Project Type**: Build tooling addition to existing Go CLI project
 **Performance Goals**: Tidy check completes in < 5 seconds

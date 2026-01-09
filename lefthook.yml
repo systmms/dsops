@@ -8,7 +8,7 @@ pre-commit:
   parallel: false
   commands:
     mod-tidy-check:
-      glob: "*.go"
+      glob: "{*.go,go.mod,go.sum}"
       run: |
         echo "Checking if go.mod and go.sum are tidy..."
         cp go.mod go.mod.bak && cp go.sum go.sum.bak

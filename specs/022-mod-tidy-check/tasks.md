@@ -88,7 +88,7 @@ This is a build tooling feature - changes are to configuration files at the repo
 
 - [x] T006 [P] [US3] Create `lefthook.yml` at repository root
   - Configure pre-commit hook for mod-tidy-check
-  - Trigger on `.go` file changes
+  - Trigger on staged `.go`, `go.mod`, or `go.sum` file changes
   - Set parallel: false for sequential execution
 - [x] T007 [P] [US3] Add `install-hooks` target to `Makefile`
   - Run `npx lefthook install`
