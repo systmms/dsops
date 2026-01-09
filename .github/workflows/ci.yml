@@ -51,16 +51,12 @@ jobs:
 
       - name: Check go.mod/go.sum are tidy
         run: |
-          cp go.mod go.mod.bak && cp go.sum go.sum.bak
-          go mod tidy
-          if ! diff -q go.mod go.mod.bak >/dev/null 2>&1 || ! diff -q go.sum go.sum.bak >/dev/null 2>&1; then
+          echo "Checking if go.mod and go.sum are tidy..."
+          if ! go mod tidy -diff > /dev/null; then
             echo ""
-            echo "go.mod or go.sum is not tidy"
-            echo "Run: go mod tidy"
+            echo "go.mod or go.sum is not tidy. Run: go mod tidy"
             echo ""
-            echo "Differences:"
-            diff go.mod go.mod.bak || true
-            diff go.sum go.sum.bak || true
+            go mod tidy -diff
             exit 1
           fi
           echo "go.mod and go.sum are tidy"

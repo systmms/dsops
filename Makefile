@@ -142,19 +142,7 @@ vet: ## Run go vet
 .PHONY: mod-tidy-check
 mod-tidy-check: ## Verify go.mod and go.sum are tidy
 	@echo "Checking if go.mod and go.sum are tidy..."
-	@cp go.mod go.mod.bak && cp go.sum go.sum.bak
-	@go mod tidy
-	@if ! diff -q go.mod go.mod.bak >/dev/null 2>&1 || ! diff -q go.sum go.sum.bak >/dev/null 2>&1; then \
-		echo ""; \
-		echo "go.mod or go.sum is not tidy. Run: go mod tidy"; \
-		echo ""; \
-		echo "Differences:"; \
-		diff go.mod go.mod.bak || true; \
-		diff go.sum go.sum.bak || true; \
-		mv go.mod.bak go.mod && mv go.sum.bak go.sum; \
-		exit 1; \
-	fi
-	@rm -f go.mod.bak go.sum.bak
+	@go mod tidy -diff > /dev/null || (echo ""; echo "go.mod or go.sum is not tidy. Run: go mod tidy"; echo ""; go mod tidy -diff; exit 1)
 	@echo "go.mod and go.sum are tidy"
 
 .PHONY: clean
