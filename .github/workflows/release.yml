@@ -89,6 +89,9 @@ jobs:
           echo "=== Auth config structure (no secrets) ==="
           cat ~/.docker/config.json | jq 'del(.auths[].auth) | del(.auths[].identitytoken)'
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
       - name: Create completions directory
         run: mkdir -p completions
 
@@ -107,6 +110,31 @@ jobs:
           MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
           MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
           MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+
+      - name: Sign checksums with cosign (keyless)
+        run: |
+          CHECKSUMS_FILE=$(ls ./dist/dsops_*_checksums.txt)
+          cosign sign-blob --yes "${CHECKSUMS_FILE}" \
+            --output-signature "${CHECKSUMS_FILE}.sig" \
+            --output-certificate "${CHECKSUMS_FILE}.pem"
+
+      - name: Sign Docker images with cosign (keyless)
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION_NO_V="${VERSION#v}"
+          # Sign both version-tagged and latest images
+          cosign sign --yes "ghcr.io/systmms/dsops:${VERSION_NO_V}"
+          # Only sign latest for non-prerelease versions
+          if [[ ! "${VERSION}" =~ (alpha|beta|rc) ]]; then
+            cosign sign --yes "ghcr.io/systmms/dsops:latest"
+          fi
+
+      - name: Upload signature artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./dist/*.sig
+            ./dist/*.pem
 
       - name: Attest build provenance (checksums)
         uses: actions/attest-build-provenance@v2
