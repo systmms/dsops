@@ -178,3 +178,43 @@ jobs:
           echo "Checking for Docker image artifacts..."
           ls -la dist/ | grep -E "docker|image" || true
           echo "GoReleaser Docker build validation successful"
+
+  homebrew-cask-audit:
+    name: Audit Generated Homebrew Cask
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Generate cask with GoReleaser snapshot
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --snapshot --clean --skip=publish,docker
+
+      - name: Verify cask was generated
+        run: |
+          echo "Checking for generated cask..."
+          ls -la dist/homebrew/Casks/
+          test -f dist/homebrew/Casks/dsops.rb || (echo "Cask not generated" && exit 1)
+          echo "Generated cask contents:"
+          cat dist/homebrew/Casks/dsops.rb
+
+      - name: Audit generated cask
+        run: |
+          # Run brew audit on the generated cask
+          # Skip checks that fail for snapshot builds (URLs don't exist yet)
+          brew audit --cask dist/homebrew/Casks/dsops.rb \
+            --except=cask_checksum_mismatch \
+            --except=cask_download_url_not_found \
+            --except=cask_download_url
+          echo "Homebrew cask audit passed!"
