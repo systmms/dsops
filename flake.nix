@@ -34,6 +34,7 @@
             # Build tools
             gnumake
             git
+            # goreleaser installed via go install for latest version (see shellHook)
 
             # Provider CLI tools for integration (install separately if needed)
             # _1password-cli
@@ -84,6 +85,11 @@
             if ! command -v govulncheck &> /dev/null; then
               echo "📦 Installing govulncheck..."
               go install golang.org/x/vuln/cmd/govulncheck@latest
+            fi
+
+            if ! command -v goreleaser &> /dev/null; then
+              echo "📦 Installing goreleaser..."
+              go install github.com/goreleaser/goreleaser/v2@latest
             fi
 
             echo "🔐 dsops development environment activated"
