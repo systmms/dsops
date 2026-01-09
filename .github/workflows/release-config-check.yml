@@ -211,9 +211,15 @@ jobs:
 
       - name: Audit generated cask
         run: |
-          # Run brew audit on the generated cask
+          # Create a local tap with the generated cask
+          # (brew audit requires a tap name, not a file path)
+          TAP_PATH="$(brew --repository)/Library/Taps/local/homebrew-dsops-test"
+          mkdir -p "$TAP_PATH/Casks"
+          cp dist/homebrew/Casks/dsops.rb "$TAP_PATH/Casks/"
+
+          # Run brew audit on the cask by tap name
           # Skip checks that fail for snapshot builds (URLs don't exist yet)
-          brew audit --cask dist/homebrew/Casks/dsops.rb \
+          brew audit --cask "local/dsops-test/dsops" \
             --except=cask_checksum_mismatch \
             --except=cask_download_url_not_found \
             --except=cask_download_url
