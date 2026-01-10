@@ -10,3 +10,7 @@ pre-commit:
     mod-tidy-check:
       glob: "{**/*.go,go.mod,go.sum}"
       run: make mod-tidy-check
+    goreleaser-check:
+      glob: ".goreleaser.yml"
+      run: goreleaser check
+      fail_text: "GoReleaser config validation failed"

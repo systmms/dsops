@@ -99,9 +99,6 @@ homebrew_casks:
     homepage: "https://github.com/systmms/dsops"
     description: "Secret management for development and production environments"
     skip_upload: auto  # Skip for pre-releases
-    # URL verification for homebrew audit
-    url:
-      verified: github.com/systmms/dsops
     # Shell completions
     completions:
       bash: "completions/dsops.bash"
