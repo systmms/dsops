@@ -206,6 +206,7 @@ func zeroString(s *string) {
 	// Get pointer to string data (unsafe but necessary for zeroing)
 	// This works because strings in Go are (pointer, length) pairs
 	// pointing to immutable byte arrays
+	// #nosec G103 -- Intentional use of unsafe for security: zeroing secret memory
 	bytes := unsafe.Slice(unsafe.StringData(*s), len(*s))
 	for i := range bytes {
 		bytes[i] = 0
