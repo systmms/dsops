@@ -123,7 +123,8 @@
 
 ### Integration for User Story 4
 
-- [X] T036 [US4] Modify internal/resolve/resolver.go to use SecureBuffer for secret values
+- [ ] T036 [US4] Modify internal/resolve/resolver.go to use SecureBuffer for secret values
+  - **Note**: SecureBuffer type implemented; resolver integration is future work (requires broader refactoring)
 - [X] T037 [US4] Modify internal/execenv/exec.go to zero secrets after child process injection
 - [X] T038 [US4] Add platform-specific notes to docs for mlock ulimit configuration
 

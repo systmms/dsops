@@ -120,6 +120,27 @@ func TestSecureBuffer_Destroy(t *testing.T) {
 	buf.Destroy()
 }
 
+func TestSecureBuffer_OpenAfterDestroy(t *testing.T) {
+	t.Parallel()
+
+	secret := []byte("secret-to-destroy")
+	buf, err := NewSecureBuffer(secret)
+	if err != nil {
+		t.Fatalf("NewSecureBuffer() error = %v", err)
+	}
+
+	buf.Destroy()
+
+	// Open after destroy should return ErrBufferDestroyed
+	locked, err := buf.Open()
+	if err != ErrBufferDestroyed {
+		t.Errorf("Open() after Destroy() error = %v, want ErrBufferDestroyed", err)
+	}
+	if locked != nil {
+		t.Error("Open() after Destroy() should return nil buffer")
+	}
+}
+
 func TestSecureBuffer_DestroyWipesMemory(t *testing.T) {
 	t.Parallel()
 

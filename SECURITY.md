@@ -104,7 +104,7 @@ If a report is determined to be invalid or out of scope:
 
 Common reasons reports may be marked invalid:
 - Vulnerability requires conditions that are outside our threat model
-- Issue is a known limitation documented in our [threat model](/docs/security/threat-model)
+- Issue is a known limitation documented in our [threat model](docs/content/security/threat-model.md)
 - Report lacks sufficient detail to reproduce
 - Issue has already been reported and is being addressed
 

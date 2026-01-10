@@ -1,10 +1,14 @@
 package secure
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/awnumar/memguard"
 )
+
+// ErrBufferDestroyed is returned when attempting to use a SecureBuffer after Destroy() was called.
+var ErrBufferDestroyed = errors.New("SecureBuffer has been destroyed")
 
 // SecureBuffer provides memory-safe storage for sensitive data.
 // It wraps memguard.Enclave to encrypt secrets at rest in memory
@@ -60,8 +64,7 @@ func (s *SecureBuffer) Open() (*memguard.LockedBuffer, error) {
 	defer s.mu.RUnlock()
 
 	if s.destroyed {
-		// Return an empty locked buffer if already destroyed
-		return memguard.NewBufferFromBytes([]byte{}), nil
+		return nil, ErrBufferDestroyed
 	}
 
 	// Open decrypts the enclave and returns a locked buffer.
@@ -78,7 +81,7 @@ func (s *SecureBuffer) Open() (*memguard.LockedBuffer, error) {
 // cannot be accidentally reused.
 //
 // This method is idempotent - calling it multiple times is safe.
-// After Destroy(), Open() will return an empty buffer.
+// After Destroy(), Open() will return ErrBufferDestroyed.
 //
 // For complete cleanup of all memguard data at application exit,
 // call memguard.Purge() in a defer statement in main().
