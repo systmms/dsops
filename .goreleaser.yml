@@ -56,6 +56,13 @@ checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
   algorithm: sha256
 
+# Software Bill of Materials (SBOM) generation
+# Generates SPDX format SBOM for supply chain transparency
+sboms:
+  - artifacts: archive
+    documents:
+      - "{{ .ProjectName }}_{{ .Version }}_sbom.spdx.json"
+
 changelog:
   use: github-native
   sort: asc

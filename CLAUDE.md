@@ -530,6 +530,8 @@ ADRs provide decision history and rationale for future maintainers. See `docs/ad
 - N/A (stateless release infrastructure) (020-release-distribution)
 - Go 1.25 (existing project), Bash (Makefile/CI), YAML (Lefthook config) + Lefthook (via npx - no global install required) (022-mod-tidy-check)
 - N/A (no data persistence) (022-mod-tidy-check)
+- Go 1.25 + GoReleaser v2, cosign (Sigstore), syft (SBOM), memguard (023-security-trust)
+- N/A (documentation + CI/CD changes + runtime memory protection) (023-security-trust)
 
 ## Recent Changes
 - 020-release-distribution: Added Go 1.25+ (matches existing project) + GoReleaser (v2.x), GitHub Actions, Docker

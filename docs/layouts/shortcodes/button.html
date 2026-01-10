@@ -1,0 +1,13 @@
+{{- $href := .Get "href" -}}
+{{- $text := .Get "text" -}}
+{{- $type := .Get "type" | default "primary" -}}
+{{- $size := .Get "size" | default "md" -}}
+
+{{- $btnClass := printf "btn btn-%s" $type -}}
+{{- if eq $size "lg" -}}
+  {{- $btnClass = printf "%s btn-lg" $btnClass -}}
+{{- else if eq $size "sm" -}}
+  {{- $btnClass = printf "%s btn-sm" $btnClass -}}
+{{- end -}}
+
+<a href="{{ $href }}" class="{{ $btnClass }}">{{ $text }}</a>

@@ -1,0 +1,24 @@
+{{- $title := .Get "title" -}}
+{{- $href := .Get "href" -}}
+{{- $icon := .Get "icon" -}}
+{{- $link := .Get "link" -}}
+{{- /* Support both href and link params */ -}}
+{{- $url := or $href $link -}}
+
+<a class="card" {{ with $url }}href="{{ . }}"{{ end }}>
+  {{- with $icon -}}
+  <span class="card-icon">
+    {{- $iconPath := printf "svgs/tabler-icons/outline/%s.svg" . -}}
+    {{- $svg := resources.Get $iconPath -}}
+    {{- with $svg -}}
+      {{- .Content | safeHTML -}}
+    {{- end -}}
+  </span>
+  {{- end -}}
+  <div class="card-content">
+    <h3 class="card-title">{{ $title }}</h3>
+    {{- with .Inner -}}
+    <p class="card-description">{{ . }}</p>
+    {{- end -}}
+  </div>
+</a>

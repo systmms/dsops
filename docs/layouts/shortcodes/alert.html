@@ -1,0 +1,15 @@
+{{- $icon := .Get "icon" -}}
+{{- $text := .Get "text" -}}
+{{- $context := .Get "context" | default "warning" -}}
+
+<div class="callout callout-{{ $context }} d-flex flex-row mt-4 mb-4 pt-4 pe-4 pb-2 ps-3">
+  {{- with $icon -}}
+  <span class="callout-icon me-2 mb-3">{{ . }}</span>
+  {{- end -}}
+  <div class="callout-content">
+    <div class="callout-body">
+      {{ with $text }}{{ . | $.Page.RenderString }}{{ end }}
+      {{ with .Inner }}{{ . | $.Page.RenderString }}{{ end }}
+    </div>
+  </div>
+</div>
