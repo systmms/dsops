@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.5](https://github.com/systmms/dsops/compare/v0.2.4...v0.2.5) (2026-01-10)
+
+
+### Bug Fixes
+
+* **build:** expand lefthook glob to trigger on go.mod/go.sum changes ([b889fe4](https://github.com/systmms/dsops/commit/b889fe4f0badbe77b01634c0946fe5c5d9ad905a))
+* **ci:** use local tap for brew audit instead of file path ([59e5121](https://github.com/systmms/dsops/commit/59e51219022e9e73dc55e681837c535550a61b67))
+* **release:** add homebrew cask audit validation ([d1c9770](https://github.com/systmms/dsops/commit/d1c977007173777301c1251d943189e85124ec06))
+* **release:** remove unnecessary verified field from homebrew cask config ([08432d5](https://github.com/systmms/dsops/commit/08432d5c65b5f93d25209fd991040514d6ae073a))
+
 ## [0.2.4](https://github.com/systmms/dsops/compare/v0.2.3...v0.2.4) (2026-01-08)
 
 
