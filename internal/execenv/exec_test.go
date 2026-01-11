@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/systmms/dsops/internal/logging"
+	"github.com/systmms/dsops/internal/secure"
 )
 
 func createTestExecutor() *Executor {
@@ -186,6 +187,178 @@ func TestExecutor_buildEnvironment(t *testing.T) {
 
 		// Should still have system environment
 		assert.Greater(t, len(env), 0)
+	})
+}
+
+func TestExecutor_buildSecureEnvironment(t *testing.T) {
+	executor := createTestExecutor()
+
+	t.Run("adds_secure_vars_to_environment", func(t *testing.T) {
+		t.Parallel()
+
+		buf1, err := secure.NewSecureBufferFromString("postgres://localhost/db")
+		require.NoError(t, err)
+		buf2, err := secure.NewSecureBufferFromString("secret123")
+		require.NoError(t, err)
+
+		secureVars := map[string]*secure.SecureBuffer{
+			"DATABASE_URL": buf1,
+			"API_KEY":      buf2,
+		}
+
+		env, err := executor.buildSecureEnvironment(secureVars, false)
+		require.NoError(t, err)
+
+		// Should contain the vars with correct values
+		found := make(map[string]string)
+		for _, e := range env {
+			if strings.HasPrefix(e, "DATABASE_URL=") {
+				found["DATABASE_URL"] = strings.TrimPrefix(e, "DATABASE_URL=")
+			}
+			if strings.HasPrefix(e, "API_KEY=") {
+				found["API_KEY"] = strings.TrimPrefix(e, "API_KEY=")
+			}
+		}
+
+		assert.Equal(t, "postgres://localhost/db", found["DATABASE_URL"])
+		assert.Equal(t, "secret123", found["API_KEY"])
+
+		// Cleanup
+		buf1.Destroy()
+		buf2.Destroy()
+	})
+
+	t.Run("secure_vars_override_existing_when_allowOverride_false", func(t *testing.T) {
+		t.Setenv("SECURE_TEST_VAR", "original")
+
+		buf, err := secure.NewSecureBufferFromString("secure_value")
+		require.NoError(t, err)
+		defer buf.Destroy()
+
+		secureVars := map[string]*secure.SecureBuffer{
+			"SECURE_TEST_VAR": buf,
+		}
+
+		executor := createTestExecutor()
+		env, err := executor.buildSecureEnvironment(secureVars, false)
+		require.NoError(t, err)
+
+		// Find the var in result
+		var foundValue string
+		for _, e := range env {
+			if strings.HasPrefix(e, "SECURE_TEST_VAR=") {
+				foundValue = strings.TrimPrefix(e, "SECURE_TEST_VAR=")
+				break
+			}
+		}
+
+		// Secure value should take precedence
+		assert.Equal(t, "secure_value", foundValue)
+	})
+
+	t.Run("existing_vars_override_when_allowOverride_true", func(t *testing.T) {
+		t.Setenv("PRESERVE_SECURE_VAR", "original")
+
+		buf, err := secure.NewSecureBufferFromString("secure_value")
+		require.NoError(t, err)
+		defer buf.Destroy()
+
+		secureVars := map[string]*secure.SecureBuffer{
+			"PRESERVE_SECURE_VAR": buf,
+		}
+
+		executor := createTestExecutor()
+		env, err := executor.buildSecureEnvironment(secureVars, true)
+		require.NoError(t, err)
+
+		// Find the var in result
+		var foundValue string
+		for _, e := range env {
+			if strings.HasPrefix(e, "PRESERVE_SECURE_VAR=") {
+				foundValue = strings.TrimPrefix(e, "PRESERVE_SECURE_VAR=")
+				break
+			}
+		}
+
+		// Original value should be preserved
+		assert.Equal(t, "original", foundValue)
+	})
+
+	t.Run("handles_destroyed_buffer", func(t *testing.T) {
+		t.Parallel()
+
+		buf, err := secure.NewSecureBufferFromString("value")
+		require.NoError(t, err)
+		buf.Destroy() // Pre-destroy the buffer
+
+		secureVars := map[string]*secure.SecureBuffer{
+			"DESTROYED_VAR": buf,
+		}
+
+		_, err = executor.buildSecureEnvironment(secureVars, false)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to open secure buffer")
+	})
+
+	t.Run("preserves_existing_environment", func(t *testing.T) {
+		t.Parallel()
+
+		buf, err := secure.NewSecureBufferFromString("new_value")
+		require.NoError(t, err)
+		defer buf.Destroy()
+
+		secureVars := map[string]*secure.SecureBuffer{
+			"NEW_SECURE_VAR": buf,
+		}
+
+		env, err := executor.buildSecureEnvironment(secureVars, false)
+		require.NoError(t, err)
+
+		// Should have more than just the secure var (includes system env vars)
+		assert.Greater(t, len(env), 1)
+
+		// Should include PATH (common env var)
+		hasPath := false
+		for _, e := range env {
+			if strings.HasPrefix(e, "PATH=") {
+				hasPath = true
+				break
+			}
+		}
+		assert.True(t, hasPath, "Should preserve PATH environment variable")
+	})
+
+	t.Run("returns_sorted_environment", func(t *testing.T) {
+		t.Parallel()
+
+		buf1, _ := secure.NewSecureBufferFromString("last")
+		buf2, _ := secure.NewSecureBufferFromString("first")
+		buf3, _ := secure.NewSecureBufferFromString("middle")
+		defer buf1.Destroy()
+		defer buf2.Destroy()
+		defer buf3.Destroy()
+
+		secureVars := map[string]*secure.SecureBuffer{
+			"ZZZ_SECURE": buf1,
+			"AAA_SECURE": buf2,
+			"MMM_SECURE": buf3,
+		}
+
+		env, err := executor.buildSecureEnvironment(secureVars, false)
+		require.NoError(t, err)
+
+		// Verify sorting
+		var prevKey string
+		for _, e := range env {
+			parts := strings.SplitN(e, "=", 2)
+			if len(parts) >= 1 {
+				currentKey := parts[0]
+				if prevKey != "" {
+					assert.LessOrEqual(t, prevKey, currentKey, "Environment should be sorted")
+				}
+				prevKey = currentKey
+			}
+		}
 	})
 }
 

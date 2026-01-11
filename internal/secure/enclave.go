@@ -30,9 +30,8 @@ type SecureBuffer struct {
 // The input data is immediately copied into a protected memory region
 // and the original data remains unchanged (caller should zero it).
 //
-// If mlock is unavailable (e.g., due to RLIMIT_MEMLOCK), the function
-// logs a warning and continues with standard memory allocation.
-// This provides graceful degradation on systems with limited resources.
+// If mlock is unavailable (e.g., due to RLIMIT_MEMLOCK), memguard
+// handles this gracefully and continues with standard memory allocation.
 func NewSecureBuffer(data []byte) (*SecureBuffer, error) {
 	// memguard.NewEnclave creates an encrypted enclave from the data.
 	// The enclave:
@@ -99,4 +98,16 @@ func (s *SecureBuffer) Destroy() {
 	// at application exit.
 	s.enclave = nil
 	s.destroyed = true
+}
+
+// NewSecureBufferFromString creates a SecureBuffer from a string.
+// This is a convenience wrapper for NewSecureBuffer that handles the
+// string-to-bytes conversion.
+//
+// Note: Go strings are immutable, so the original string cannot be zeroed
+// after this call. For maximum security, prefer working with []byte from
+// the start and avoid string intermediates. However, wrapping in SecureBuffer
+// still provides encrypted storage for subsequent operations.
+func NewSecureBufferFromString(s string) (*SecureBuffer, error) {
+	return NewSecureBuffer([]byte(s))
 }

@@ -51,6 +51,66 @@ func TestNewSecureBuffer(t *testing.T) {
 	}
 }
 
+func TestNewSecureBufferFromString(t *testing.T) {
+	t.Parallel()
+
+	t.Run("creates buffer from string", func(t *testing.T) {
+		t.Parallel()
+
+		input := "my-secret-password"
+		buf, err := NewSecureBufferFromString(input)
+		if err != nil {
+			t.Fatalf("NewSecureBufferFromString() error = %v", err)
+		}
+		defer buf.Destroy()
+
+		// Verify we can retrieve the original string
+		locked, err := buf.Open()
+		if err != nil {
+			t.Fatalf("Open() error = %v", err)
+		}
+		defer locked.Destroy()
+
+		if string(locked.Bytes()) != input {
+			t.Errorf("Retrieved value = %q, want %q", string(locked.Bytes()), input)
+		}
+	})
+
+	t.Run("handles empty string", func(t *testing.T) {
+		t.Parallel()
+
+		// Empty strings can be created but should not be opened
+		// (memguard returns nil enclave for empty data)
+		buf, err := NewSecureBufferFromString("")
+		if err != nil {
+			t.Fatalf("NewSecureBufferFromString() error = %v", err)
+		}
+		// Just verify creation works; don't call Open() on empty buffer
+		buf.Destroy()
+	})
+
+	t.Run("handles unicode string", func(t *testing.T) {
+		t.Parallel()
+
+		input := "секрет-пароль-密码"
+		buf, err := NewSecureBufferFromString(input)
+		if err != nil {
+			t.Fatalf("NewSecureBufferFromString() error = %v", err)
+		}
+		defer buf.Destroy()
+
+		locked, err := buf.Open()
+		if err != nil {
+			t.Fatalf("Open() error = %v", err)
+		}
+		defer locked.Destroy()
+
+		if string(locked.Bytes()) != input {
+			t.Errorf("Retrieved value = %q, want %q", string(locked.Bytes()), input)
+		}
+	})
+}
+
 func TestSecureBuffer_Open(t *testing.T) {
 	t.Parallel()
 

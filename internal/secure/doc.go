@@ -36,8 +36,10 @@
 //   - macOS: Works out of the box
 //   - Windows: Uses VirtualLock
 //
-// If mlock is unavailable or fails, the package logs a warning and
-// continues with standard Go memory (graceful degradation).
+// If mlock is unavailable or fails (e.g., due to RLIMIT_MEMLOCK), memguard
+// handles this gracefully and continues with standard Go memory allocation.
+// Note: memguard may log warnings internally; this package does not add
+// additional logging.
 //
 // # Security Guarantees
 //
