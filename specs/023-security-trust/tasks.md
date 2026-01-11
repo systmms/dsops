@@ -125,7 +125,11 @@
 
 - [ ] T036 [US4] Modify internal/resolve/resolver.go to use SecureBuffer for secret values
   - **Note**: SecureBuffer type implemented; resolver integration is future work (requires broader refactoring)
-- [X] T037 [US4] Modify internal/execenv/exec.go to zero secrets after child process injection
+- [X] T037 [US4] Implement SecureBuffer-based secret handling in internal/execenv/exec.go
+  - Added SecureEnvironment field to ExecOptions for SecureBuffer map
+  - Added buildSecureEnvironment() to open buffers, build env, destroy immediately
+  - Secrets destroyed BEFORE child process starts (not after)
+  - Removed broken zeroString/zeroEnvironment functions
 - [X] T038 [US4] Add platform-specific notes to docs for mlock ulimit configuration
 
 **Checkpoint**: Memory protection implemented - secrets protected from dumps
