@@ -171,4 +171,4 @@ cosign download signature ghcr.io/systmms/dsops:latest > signature.json
 - **Always verify before deploying to production**: Even if you trust the source, verification catches supply chain attacks
 - **Pin to specific versions**: Use exact version tags instead of `latest` for reproducibility
 - **Automate verification**: Include cosign verification in your CI/CD pipeline
-- **Report suspicious artifacts**: If verification fails unexpectedly, report it via our [security policy](/SECURITY.md)
+- **Report suspicious artifacts**: If verification fails unexpectedly, report it via our [security policy](https://github.com/systmms/dsops/blob/main/SECURITY.md)

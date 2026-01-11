@@ -195,6 +195,6 @@ dsops is not a complete security solution. The following threats require additio
 
 ## See Also
 
-- [Threat Model](/security/threat-model/) - Detailed threat analysis
-- [Verify Releases](/security/verify-releases/) - How to verify release authenticity
+- [Threat Model](../threat-model/) - Detailed threat analysis
+- [Verify Releases](../verify-releases/) - How to verify release authenticity
 - [SECURITY.md](https://github.com/systmms/dsops/blob/main/SECURITY.md) - Vulnerability disclosure policy
