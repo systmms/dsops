@@ -116,7 +116,15 @@ jobs:
 
       - name: Sign checksums with cosign (keyless)
         run: |
-          CHECKSUMS_FILE=$(ls ./dist/dsops_*_checksums.txt)
+          VERSION="${{ github.ref_name }}"
+          VERSION_NO_V="${VERSION#v}"
+          CHECKSUMS_FILE="./dist/dsops_${VERSION_NO_V}_checksums.txt"
+          if [ ! -f "${CHECKSUMS_FILE}" ]; then
+            echo "Error: Checksums file not found: ${CHECKSUMS_FILE}"
+            echo "Available files in ./dist:"
+            ls -la ./dist/*.txt 2>/dev/null || echo "No .txt files found"
+            exit 1
+          fi
           cosign sign-blob --yes "${CHECKSUMS_FILE}" \
             --output-signature "${CHECKSUMS_FILE}.sig" \
             --output-certificate "${CHECKSUMS_FILE}.pem"
