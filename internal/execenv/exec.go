@@ -12,6 +12,7 @@ import (
 
 	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/logging"
+	"github.com/systmms/dsops/internal/secure"
 )
 
 // Executor handles running commands with ephemeral environment variables
@@ -28,12 +29,13 @@ func New(logger *logging.Logger) *Executor {
 
 // ExecOptions configures command execution
 type ExecOptions struct {
-	Command         []string          // Command and arguments to run
-	Environment     map[string]string // Environment variables to set
-	AllowOverride   bool              // Allow existing env vars to override dsops values
-	PrintVars       bool              // Print resolved variables (names only, values masked)
-	WorkingDir      string            // Working directory for the command
-	Timeout         int               // Timeout in seconds (0 for no timeout)
+	Command           []string                       // Command and arguments to run
+	Environment       map[string]string              // Plaintext environment (for backward compat + display)
+	SecureEnvironment map[string]*secure.SecureBuffer // Secure environment (preferred for execution)
+	AllowOverride     bool                           // Allow existing env vars to override dsops values
+	PrintVars         bool                           // Print resolved variables (names only, values masked)
+	WorkingDir        string                         // Working directory for the command
+	Timeout           int                            // Timeout in seconds (0 for no timeout)
 }
 
 // Exec runs a command with the provided environment variables
@@ -58,19 +60,48 @@ func (e *Executor) Exec(ctx context.Context, options ExecOptions) error {
 		return dserrors.WrapCommandNotFound(cmdName, err)
 	}
 
-	// Build environment
-	env, err := e.buildEnvironment(options.Environment, options.AllowOverride)
-	if err != nil {
-		return dserrors.UserError{
-			Message:    "Failed to build environment",
-			Details:    err.Error(),
-			Suggestion: "Check your dsops.yaml configuration for errors",
-			Err:        err,
+	var env []string
+	var err error
+
+	// Prefer SecureEnvironment if provided (more secure)
+	if len(options.SecureEnvironment) > 0 {
+		env, err = e.buildSecureEnvironment(options.SecureEnvironment, options.AllowOverride)
+		if err != nil {
+			// Cleanup all buffers on error
+			for _, buf := range options.SecureEnvironment {
+				buf.Destroy()
+			}
+			return dserrors.UserError{
+				Message:    "Failed to build secure environment",
+				Details:    err.Error(),
+				Suggestion: "Check your dsops.yaml configuration for errors",
+				Err:        err,
+			}
 		}
+		// Note: buildSecureEnvironment already destroyed the LockedBuffers
+		// after extracting values. We destroy the SecureBuffers here before
+		// running the command, so secrets are not held in parent memory.
+		for _, buf := range options.SecureEnvironment {
+			buf.Destroy()
+		}
+	} else if len(options.Environment) > 0 {
+		// Legacy path: use plaintext environment
+		env, err = e.buildEnvironment(options.Environment, options.AllowOverride)
+		if err != nil {
+			return dserrors.UserError{
+				Message:    "Failed to build environment",
+				Details:    err.Error(),
+				Suggestion: "Check your dsops.yaml configuration for errors",
+				Err:        err,
+			}
+		}
+	} else {
+		// No dsops variables, just use current environment
+		env = os.Environ()
 	}
 
-	// Print variables if requested
-	if options.PrintVars {
+	// Print variables if requested (uses Environment for display with masked values)
+	if options.PrintVars && len(options.Environment) > 0 {
 		e.printEnvironment(options.Environment)
 	}
 
@@ -86,10 +117,18 @@ func (e *Executor) Exec(ctx context.Context, options ExecOptions) error {
 		cmd.Dir = options.WorkingDir
 	}
 
+	// Count dsops-provided variables for logging
+	dsopsVarCount := len(options.SecureEnvironment)
+	if dsopsVarCount == 0 {
+		dsopsVarCount = len(options.Environment)
+	}
+
 	e.logger.Debug("Executing command: %s", strings.Join(options.Command, " "))
-	e.logger.Debug("Environment variables set: %d", len(options.Environment))
+	e.logger.Debug("Environment variables set: %d", dsopsVarCount)
 
 	// Run the command
+	// Note: SecureBuffers are already destroyed above, so secrets are not
+	// held in parent memory during child execution.
 	if err := cmd.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			// Preserve the exit code from the child process
@@ -142,6 +181,58 @@ func (e *Executor) buildEnvironment(dsopsVars map[string]string, allowOverride b
 	}
 
 	// Sort for consistent ordering (helps with debugging)
+	sort.Strings(result)
+
+	return result, nil
+}
+
+// buildSecureEnvironment creates the environment slice from SecureBuffer values.
+// It opens each buffer, extracts the plaintext, builds the env string, and
+// destroys the LockedBuffer. The SecureBuffers themselves remain valid until
+// the caller destroys them.
+func (e *Executor) buildSecureEnvironment(secureVars map[string]*secure.SecureBuffer, allowOverride bool) ([]string, error) {
+	// Start with current environment
+	currentEnv := os.Environ()
+	envMap := make(map[string]string)
+
+	// Parse current environment into map
+	for _, env := range currentEnv {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) == 2 {
+			envMap[parts[0]] = parts[1]
+		}
+	}
+
+	// Process each secure variable
+	for key, buf := range secureVars {
+		// Open the buffer to get plaintext
+		locked, err := buf.Open()
+		if err != nil {
+			return nil, fmt.Errorf("failed to open secure buffer for %s: %w", key, err)
+		}
+
+		// Convert to string and add to map
+		value := string(locked.Bytes())
+		locked.Destroy() // Zero the locked buffer immediately after use
+
+		if allowOverride {
+			// Only set if not already present in OS environment
+			if _, exists := envMap[key]; !exists {
+				envMap[key] = value
+			}
+		} else {
+			// dsops values take precedence
+			envMap[key] = value
+		}
+	}
+
+	// Convert back to environment slice
+	result := make([]string, 0, len(envMap))
+	for key, value := range envMap {
+		result = append(result, fmt.Sprintf("%s=%s", key, value))
+	}
+
+	// Sort for consistent ordering
 	sort.Strings(result)
 
 	return result, nil

@@ -89,6 +89,12 @@ jobs:
           echo "=== Auth config structure (no secrets) ==="
           cat ~/.docker/config.json | jq 'del(.auths[].auth) | del(.auths[].identitytoken)'
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Install syft for SBOM generation
+        uses: anchore/sbom-action/download-syft@v0
+
       - name: Create completions directory
         run: mkdir -p completions
 
@@ -107,6 +113,39 @@ jobs:
           MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
           MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
           MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+
+      - name: Sign checksums with cosign (keyless)
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION_NO_V="${VERSION#v}"
+          CHECKSUMS_FILE="./dist/dsops_${VERSION_NO_V}_checksums.txt"
+          if [ ! -f "${CHECKSUMS_FILE}" ]; then
+            echo "Error: Checksums file not found: ${CHECKSUMS_FILE}"
+            echo "Available files in ./dist:"
+            ls -la ./dist/*.txt 2>/dev/null || echo "No .txt files found"
+            exit 1
+          fi
+          cosign sign-blob --yes "${CHECKSUMS_FILE}" \
+            --output-signature "${CHECKSUMS_FILE}.sig" \
+            --output-certificate "${CHECKSUMS_FILE}.pem"
+
+      - name: Sign Docker images with cosign (keyless)
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION_NO_V="${VERSION#v}"
+          # Sign both version-tagged and latest images
+          cosign sign --yes "ghcr.io/systmms/dsops:${VERSION_NO_V}"
+          # Only sign latest for non-prerelease versions
+          if [[ ! "${VERSION}" =~ (alpha|beta|rc) ]]; then
+            cosign sign --yes "ghcr.io/systmms/dsops:latest"
+          fi
+
+      - name: Upload signature artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./dist/*.sig
+            ./dist/*.pem
 
       - name: Attest build provenance (checksums)
         uses: actions/attest-build-provenance@v2

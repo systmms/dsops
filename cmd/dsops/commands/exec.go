@@ -9,6 +9,7 @@ import (
 	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/execenv"
 	"github.com/systmms/dsops/internal/resolve"
+	"github.com/systmms/dsops/internal/secure"
 )
 
 func NewExecCommand(cfg *config.Config) *cobra.Command {
@@ -105,17 +106,49 @@ Examples:
 
 			cfg.Logger.Info("Successfully resolved %d environment variables", len(environment))
 
+			// Wrap secrets in SecureBuffers for secure handling
+			// This ensures secrets are encrypted in memory until needed
+			secureEnv := make(map[string]*secure.SecureBuffer)
+			var wrapErrors []string
+
+			for name, value := range environment {
+				buf, err := secure.NewSecureBufferFromString(value)
+				if err != nil {
+					wrapErrors = append(wrapErrors, fmt.Sprintf("%s: %s", name, err))
+					continue
+				}
+				secureEnv[name] = buf
+			}
+
+			// Check for wrapping errors
+			if len(wrapErrors) > 0 {
+				// Cleanup any buffers created before error
+				for _, buf := range secureEnv {
+					buf.Destroy()
+				}
+				cfg.Logger.Error("Failed to secure %d variables:", len(wrapErrors))
+				for _, err := range wrapErrors {
+					cfg.Logger.Error("  %s", err)
+				}
+				return dserrors.UserError{
+					Message:    fmt.Sprintf("Failed to secure %d variables", len(wrapErrors)),
+					Details:    "This may indicate a memory protection issue",
+					Suggestion: "Try running with --debug for more information",
+				}
+			}
+
 			// Create executor
 			executor := execenv.New(cfg.Logger)
 
-			// Execute command
+			// Execute command with both Environment (for display) and SecureEnvironment (for execution)
 			options := execenv.ExecOptions{
-				Command:       args,
-				Environment:   environment,
-				AllowOverride: allowOverride,
-				PrintVars:     printVars,
-				WorkingDir:    workingDir,
-				Timeout:       timeout,
+				Command:           args,
+				Environment:       environment,  // Kept for --print display (masked)
+				SecureEnvironment: secureEnv,    // Used for secure execution
+				AllowOverride:     allowOverride,
+				PrintVars:         printVars,
+				WorkingDir:        workingDir,
+				Timeout:           timeout,
 			}
 
 			return executor.Exec(ctx, options)

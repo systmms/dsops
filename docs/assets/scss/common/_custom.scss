@@ -1,1 +1,64 @@
 // Put your custom SCSS code here
+
+// Custom cards shortcode styles (Hextra-compatible)
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: var(--bs-primary, #0d6efd);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+.card-icon {
+  margin-bottom: 0.75rem;
+
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: var(--bs-primary, #0d6efd);
+  }
+}
+
+.card-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.card-description {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--bs-secondary-color, #6c757d);
+}
+
+// Custom hero shortcode styles
+.hero {
+  text-align: center;
+  padding: 3rem 1rem;
+  margin-bottom: 2rem;
+}
+
+.hero-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
