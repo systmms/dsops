@@ -59,11 +59,11 @@ As a developer with multiple psst environments (dev, staging), I want to specify
 
 ### Edge Cases
 
-- What happens when psst CLI is not installed?
-- What happens when the specified vault path doesn't exist?
-- What happens when psst vault is encrypted and requires password?
-- How does the provider handle psst's environment fallback behavior?
-- What happens when the secret name contains special characters?
+- **psst CLI not installed**: FR-005 validates CLI availability during provider init, returns clear error
+- **Vault doesn't exist**: FR-006 validates vault existence during provider init
+- **Vault requires authentication**: FR-008 surfaces psst's auth errors directly (keychain failure, locked vault)
+- **Environment fallback behavior**: FR-011 surfaces resolution source in doctor output; documented that psst checks local vault → global vault → env vars
+- **Special characters in secret names**: FR-012 requires shell-escaping for safe CLI invocation
 
 ## Requirements *(mandatory)*
 
@@ -71,19 +71,21 @@ As a developer with multiple psst environments (dev, staging), I want to specify
 
 - **FR-001**: System MUST support `psst` as a provider type in secretStores configuration
 - **FR-002**: System MUST resolve secrets from psst vaults using `store://` reference syntax
-- **FR-003**: System MUST support optional `vault` configuration to specify custom vault path (default: `.psst`)
+- **FR-003**: System MUST use psst's default vault precedence (local `.psst/` → global `~/.psst/`) without exposing custom path configuration
 - **FR-004**: System MUST support optional `env` configuration to specify psst environment
 - **FR-005**: System MUST validate psst CLI availability during provider initialization
 - **FR-006**: System MUST validate vault existence during provider initialization
 - **FR-007**: System MUST return `NotFoundError` when requested secret doesn't exist in vault
-- **FR-008**: System MUST return `AuthError` when vault access requires authentication
+- **FR-008**: System MUST surface psst CLI auth errors (keychain access failure, locked vault) without pre-validation - delegate authentication entirely to psst
 - **FR-009**: System MUST support the `Describe()` method returning secret metadata where available
 - **FR-010**: System MUST report accurate capabilities (no versioning, no rotation, requires auth)
+- **FR-011**: System MUST surface resolution source (vault vs env var fallback) in `dsops doctor` output to aid debugging
+- **FR-012**: System MUST shell-escape secret names when invoking psst CLI to prevent command injection and handle special characters safely
 
 ### Key Entities
 
 - **PsstProvider**: The provider implementation that wraps psst CLI interaction
-- **PsstConfig**: Configuration options including vault path and environment selection
+- **PsstConfig**: Configuration options (only `env` for environment selection; vault path uses psst defaults)
 - **SecretReference**: The `store://provider/secret-name` format for referencing psst secrets
 
 ## Success Criteria *(mandatory)*
@@ -100,6 +102,16 @@ As a developer with multiple psst environments (dev, staging), I want to specify
 
 - psst CLI is installed separately by the user (dsops doesn't bundle or install psst)
 - psst vaults use the standard `.psst` directory structure
-- psst's `--json` output format is stable and can be parsed reliably
+- `psst get <name>` returns plain secret value; `--json` flag used only for list/metadata operations
 - Users have already authenticated with psst (vault unlocked) before running dsops
 - psst's environment concept maps cleanly to dsops's multi-environment model
+
+## Clarifications
+
+### Session 2026-01-11
+
+- Q: Should dsops pre-validate psst auth state or delegate fully to psst CLI? → A: Delegate fully to psst CLI - invoke commands and surface any auth errors as-is. psst handles its own authentication via OS keychain (or PSST_PASSWORD env var for CI).
+- Q: How should the provider retrieve secrets - JSON parsing or plain output? → A: Use `psst get <name>` (plain output) for retrieval, `--json` only for list/metadata operations. Simpler and less brittle than parsing JSON for every secret.
+- Q: How should dsops handle psst's automatic env var fallback behavior? → A: Document behavior AND show resolution source in `dsops doctor` output. Users should understand the resolution chain (local vault → global vault → env var fallback).
+- Q: Should dsops expose vault path configuration or use psst's default precedence? → A: Use psst's default precedence (local → global), only expose `env` option. Keeps configuration simple and matches developer expectations.
+- Q: How should dsops handle secret names with special characters? → A: Shell-escape secret names when invoking `psst get <name>`. Essential for security (command injection prevention) and correctness.
