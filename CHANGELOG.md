@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.2.5](https://github.com/systmms/dsops/compare/v0.2.4...v0.2.5) (2026-01-11)
+
+
+### Features
+
+* **docs:** add Hextra-compatible shortcodes for Hugo theme ([495a48d](https://github.com/systmms/dsops/commit/495a48d502c251e06b896b5c191684dda420d3a0))
+* **release:** add cosign signing and SBOM generation ([a120620](https://github.com/systmms/dsops/commit/a120620d47d9f9b751499c96f22cad254a35ad8a))
+* **secure:** add memguard-based memory protection ([e588ab0](https://github.com/systmms/dsops/commit/e588ab048a3529be7cc75fd71432a2f57a9c11f9))
+* **security:** add security trust infrastructure (SPEC-023) ([2d7e767](https://github.com/systmms/dsops/commit/2d7e76702f6cc5c4af61c486428ecd20c397e6b4))
+* **security:** add SECURITY.md vulnerability disclosure policy ([8c43b9b](https://github.com/systmms/dsops/commit/8c43b9be50c16b552c04fbed9dd5e5bb29e606a6))
+
+
+### Bug Fixes
+
+* **build:** expand lefthook glob to trigger on go.mod/go.sum changes ([b889fe4](https://github.com/systmms/dsops/commit/b889fe4f0badbe77b01634c0946fe5c5d9ad905a))
+* **ci:** add syft to homebrew-cask-audit job ([4af4c9c](https://github.com/systmms/dsops/commit/4af4c9cb24aeccb97095c3f8b55536f6652537a4))
+* **ci:** resolve gosec and syft CI failures ([c41a9e0](https://github.com/systmms/dsops/commit/c41a9e0762bd3627b34623d07e6a3c340dc428a1))
+* **ci:** use explicit filename for checksums signing ([dbd107b](https://github.com/systmms/dsops/commit/dbd107bd170a519b45380eebb661b2dc7b50fb00))
+* **ci:** use local tap for brew audit instead of file path ([59e5121](https://github.com/systmms/dsops/commit/59e51219022e9e73dc55e681837c535550a61b67))
+* **docs:** use absolute GitHub URL for threat model link ([38b2f73](https://github.com/systmms/dsops/commit/38b2f7344214ca82967bacdd48d74dd082e97409))
+* **docs:** use relative paths for Hugo internal links ([4dde7b2](https://github.com/systmms/dsops/commit/4dde7b264be752ba12a9c3601c8ae013d15ac9ee))
+* **release:** add homebrew cask audit validation ([d1c9770](https://github.com/systmms/dsops/commit/d1c977007173777301c1251d943189e85124ec06))
+* **release:** remove unnecessary verified field from homebrew cask config ([08432d5](https://github.com/systmms/dsops/commit/08432d5c65b5f93d25209fd991040514d6ae073a))
+* **security:** address PR review feedback (P1/P2 issues) ([40b3f5e](https://github.com/systmms/dsops/commit/40b3f5e2cf7e769bcbf62f252f622d091b1bf8b5))
+* **security:** integrate SecureBuffer for memory-safe secret handling ([a3f7b0c](https://github.com/systmms/dsops/commit/a3f7b0c57605d70fcbe4b1138b51bcceb95f9679))
+
 ## [0.2.4](https://github.com/systmms/dsops/compare/v0.2.3...v0.2.4) (2026-01-08)
 
 
