@@ -10,9 +10,9 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/logging"
 	"github.com/systmms/dsops/pkg/provider"
-	dserrors "github.com/systmms/dsops/internal/errors"
 )
 
 // AzureIdentityProvider implements the Provider interface for Azure Managed Identity and Service Principal authentication
@@ -37,7 +37,7 @@ type AzureIdentityConfig struct {
 // NewAzureIdentityProvider creates a new Azure Identity provider
 func NewAzureIdentityProvider(name string, configMap map[string]interface{}) (*AzureIdentityProvider, error) {
 	logger := logging.New(false, false)
-	
+
 	config := AzureIdentityConfig{
 		UseManagedIdentity: true,                                    // Default to managed identity
 		Scope:              "https://management.azure.com/.default", // Default Azure Management scope
@@ -131,7 +131,7 @@ func (p *AzureIdentityProvider) Name() string {
 // Resolve fetches an access token or credential information from Azure Identity
 func (p *AzureIdentityProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
 	scope, requestedField := p.parseReference(ref.Key)
-	
+
 	// Use configured scope if not specified in reference
 	if scope == "" {
 		scope = p.config.Scope
@@ -177,7 +177,7 @@ func (p *AzureIdentityProvider) Resolve(ctx context.Context, ref provider.Refere
 func (p *AzureIdentityProvider) parseReference(ref string) (scope, field string) {
 	// Default field is the access token itself
 	field = "access_token"
-	
+
 	// Check for field specification (scope:field)
 	if strings.Contains(ref, ":") {
 		parts := strings.SplitN(ref, ":", 2)
@@ -186,7 +186,7 @@ func (p *AzureIdentityProvider) parseReference(ref string) (scope, field string)
 	} else {
 		scope = ref
 	}
-	
+
 	return scope, field
 }
 

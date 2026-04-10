@@ -10,30 +10,30 @@
 // The secretstore package sits at the foundation of dsops's layered architecture,
 // providing the storage abstraction upon which all other operations are built:
 //
-//     ┌─────────────────────────────────────────────────────────────┐
-//     │                    Application Layer                        │
-//     │               (CLI, Config, Templates)                      │
-//     └─────────────────────────┬───────────────────────────────────┘
-//                               │
-//     ┌─────────────────────────▼───────────────────────────────────┐
-//     │                  Resolution Engine                          │
-//     │               (internal/resolve/)                           │
-//     └─────────────────────────┬───────────────────────────────────┘
-//                               │
-//     ┌─────────────────────────▼───────────────────────────────────┐
-//     │                Secret Store Interface                       │
-//     │                 (pkg/secretstore/)             ◄────────────┤
-//     └─────────────────────────┬───────────────────────────────────┘
-//                               │
-//     ┌─────────────────────────▼───────────────────────────────────┐
-//     │              Secret Store Implementations                   │
-//     │              (internal/secretstores/)                       │
-//     │                                                             │
-//     │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
-//     │  │     AWS     │  │    Vault    │  │ 1Password   │  ...     │
-//     │  │   Secrets   │  │   Store     │  │   Store     │          │
-//     │  └─────────────┘  └─────────────┘  └─────────────┘          │
-//     └─────────────────────────────────────────────────────────────┘
+//	┌─────────────────────────────────────────────────────────────┐
+//	│                    Application Layer                        │
+//	│               (CLI, Config, Templates)                      │
+//	└─────────────────────────┬───────────────────────────────────┘
+//	                          │
+//	┌─────────────────────────▼───────────────────────────────────┐
+//	│                  Resolution Engine                          │
+//	│               (internal/resolve/)                           │
+//	└─────────────────────────┬───────────────────────────────────┘
+//	                          │
+//	┌─────────────────────────▼───────────────────────────────────┐
+//	│                Secret Store Interface                       │
+//	│                 (pkg/secretstore/)             ◄────────────┤
+//	└─────────────────────────┬───────────────────────────────────┘
+//	                          │
+//	┌─────────────────────────▼───────────────────────────────────┐
+//	│              Secret Store Implementations                   │
+//	│              (internal/secretstores/)                       │
+//	│                                                             │
+//	│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
+//	│  │     AWS     │  │    Vault    │  │ 1Password   │  ...     │
+//	│  │   Secrets   │  │   Store     │  │   Store     │          │
+//	│  └─────────────┘  └─────────────┘  └─────────────┘          │
+//	└─────────────────────────────────────────────────────────────┘
 //
 // # Design Philosophy
 //
@@ -43,14 +43,20 @@
 // separating secret storage from secret consumption:
 //
 //   - **Secret Stores**: Systems that store and retrieve secret values
-//     - AWS Secrets Manager, HashiCorp Vault, 1Password, Azure Key Vault
-//     - Focus: Storage, versioning, access control, retrieval
-//     - This package's domain
+//
+//   - AWS Secrets Manager, HashiCorp Vault, 1Password, Azure Key Vault
+//
+//   - Focus: Storage, versioning, access control, retrieval
+//
+//   - This package's domain
 //
 //   - **Services**: Systems that consume secrets for operations
-//     - PostgreSQL, Stripe API, GitHub, Kubernetes clusters
-//     - Focus: Service configuration, rotation, lifecycle management
-//     - Handled by pkg/service and pkg/rotation
+//
+//   - PostgreSQL, Stripe API, GitHub, Kubernetes clusters
+//
+//   - Focus: Service configuration, rotation, lifecycle management
+//
+//   - Handled by pkg/service and pkg/rotation
 //
 // This separation enables:
 //   - Clear architectural boundaries
@@ -63,12 +69,12 @@
 // The package introduces a modern URI-based reference system that replaces
 // the legacy provider+key approach:
 //
-//     Legacy:  provider: "aws", key: "database/password"
-//     Modern:  store://aws-prod/database/password#password?version=current
+//	Legacy:  provider: "aws", key: "database/password"
+//	Modern:  store://aws-prod/database/password#password?version=current
 //
 // Benefits of the new system:
 //   - **Hierarchical addressing**: Natural path-based organization
-//   - **Field extraction**: Direct access to specific JSON fields  
+//   - **Field extraction**: Direct access to specific JSON fields
 //   - **Version selection**: Native support for versioned secrets
 //   - **Extensible options**: Store-specific parameters via query strings
 //   - **URL-like familiarity**: Intuitive for developers
@@ -105,33 +111,33 @@
 //
 // The SecretRef type provides structured access to URI components:
 //
-//     type SecretRef struct {
-//         Store   string            // Store instance name
-//         Path    string            // Path within the store
-//         Field   string            // Optional field extraction
-//         Version string            // Optional version selection  
-//         Options map[string]string // Store-specific parameters
-//     }
+//	type SecretRef struct {
+//	    Store   string            // Store instance name
+//	    Path    string            // Path within the store
+//	    Field   string            // Optional field extraction
+//	    Version string            // Optional version selection
+//	    Options map[string]string // Store-specific parameters
+//	}
 //
 // ## URI Format
 //
 // The complete URI format supports rich addressing:
 //
-//     store://store-name/path/to/secret#field?version=v&option=value
+//	store://store-name/path/to/secret#field?version=v&option=value
 //
 // Examples across different stores:
 //
-//     # AWS Secrets Manager
-//     store://aws-prod/database/credentials#password?version=AWSCURRENT
-//     
-//     # HashiCorp Vault KV v2
-//     store://vault/secret/data/app#api_key?version=2
-//     
-//     # 1Password
-//     store://onepassword/Production/Database#password?vault=Private
-//     
-//     # Azure Key Vault
-//     store://azure/app-secrets#connection-string?version=latest
+//	# AWS Secrets Manager
+//	store://aws-prod/database/credentials#password?version=AWSCURRENT
+//
+//	# HashiCorp Vault KV v2
+//	store://vault/secret/data/app#api_key?version=2
+//
+//	# 1Password
+//	store://onepassword/Production/Database#password?vault=Private
+//
+//	# Azure Key Vault
+//	store://azure/app-secrets#connection-string?version=latest
 //
 // ## Parsing and Validation
 //

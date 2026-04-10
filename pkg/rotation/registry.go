@@ -21,7 +21,7 @@ func NewStrategyRegistry(logger *logging.Logger) *StrategyRegistry {
 
 	// Register built-in strategies
 	registry.registerBuiltinStrategies()
-	
+
 	return registry
 }
 
@@ -31,12 +31,12 @@ func (r *StrategyRegistry) registerBuiltinStrategies() {
 	r.strategies["random"] = func(logger *logging.Logger) SecretValueRotator {
 		return NewRandomRotator(logger)
 	}
-	
+
 	// Webhook strategy for external rotation
 	r.strategies["webhook"] = func(logger *logging.Logger) SecretValueRotator {
 		return NewWebhookRotator(logger)
 	}
-	
+
 	// Custom script strategy
 	r.strategies["script"] = func(logger *logging.Logger) SecretValueRotator {
 		return NewScriptRotator(logger)
@@ -44,7 +44,7 @@ func (r *StrategyRegistry) registerBuiltinStrategies() {
 
 	// NOTE: Database and service-specific rotation strategies are now
 	// implemented in the dsops-data repository as data-driven configurations.
-	// Only generic, reusable strategies (random, webhook, script) are 
+	// Only generic, reusable strategies (random, webhook, script) are
 	// implemented here in the core codebase.
 
 	r.logger.Debug("Registered %d built-in rotation strategies", len(r.strategies))

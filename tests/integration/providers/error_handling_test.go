@@ -190,8 +190,8 @@ func TestProviderErrorHandling_TimeoutScenarios(t *testing.T) {
 		// Error should be context-related
 		assert.True(t,
 			errors.Is(err, context.DeadlineExceeded) ||
-			errors.Is(err, context.Canceled) ||
-			containsAny(err.Error(), []string{"context", "deadline", "timeout", "canceled"}),
+				errors.Is(err, context.Canceled) ||
+				containsAny(err.Error(), []string{"context", "deadline", "timeout", "canceled"}),
 			"Error should be context-related: %v", err)
 	})
 
@@ -237,7 +237,7 @@ func TestProviderErrorHandling_TimeoutScenarios(t *testing.T) {
 		// Should indicate cancellation
 		assert.True(t,
 			errors.Is(err, context.Canceled) ||
-			containsAny(err.Error(), []string{"context", "canceled", "cancelled"}),
+				containsAny(err.Error(), []string{"context", "canceled", "cancelled"}),
 			"Error should indicate context cancellation: %v", err)
 	})
 }

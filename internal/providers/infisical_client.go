@@ -115,10 +115,10 @@ func (c *infisicalHTTPClient) authenticateMachineIdentity(ctx context.Context) (
 	}
 
 	var authResp struct {
-		AccessToken          string `json:"accessToken"`
-		ExpiresIn            int    `json:"expiresIn"`
-		AccessTokenMaxTTL    int    `json:"accessTokenMaxTTL"`
-		TokenType            string `json:"tokenType"`
+		AccessToken       string `json:"accessToken"`
+		ExpiresIn         int    `json:"expiresIn"`
+		AccessTokenMaxTTL int    `json:"accessTokenMaxTTL"`
+		TokenType         string `json:"tokenType"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&authResp); err != nil {

@@ -49,19 +49,19 @@ type FakeSecretsManagerClient struct {
 
 // SecretData holds the data for a mock secret
 type SecretData struct {
-	SecretString  *string
-	SecretBinary  []byte
-	VersionId     *string
-	VersionStages []string
-	CreatedDate   *time.Time
-	Description   *string
-	KmsKeyId      *string
-	RotationEnabled *bool
-	RotationLambdaARN *string
-	RotationRules *types.RotationRulesType
-	LastChangedDate *time.Time
+	SecretString       *string
+	SecretBinary       []byte
+	VersionId          *string
+	VersionStages      []string
+	CreatedDate        *time.Time
+	Description        *string
+	KmsKeyId           *string
+	RotationEnabled    *bool
+	RotationLambdaARN  *string
+	RotationRules      *types.RotationRulesType
+	LastChangedDate    *time.Time
 	VersionIdsToStages map[string][]string
-	ReplicationStatus []types.ReplicationStatusType
+	ReplicationStatus  []types.ReplicationStatusType
 }
 
 // NewFakeSecretsManagerClient creates a new mock Secrets Manager client
@@ -82,10 +82,10 @@ func (f *FakeSecretsManagerClient) AddSecretString(name, value string) {
 	now := time.Now()
 	versionId := "v1-abc123"
 	f.Secrets[name] = &SecretData{
-		SecretString:  aws.String(value),
-		VersionId:     aws.String(versionId),
-		VersionStages: []string{"AWSCURRENT"},
-		CreatedDate:   &now,
+		SecretString:    aws.String(value),
+		VersionId:       aws.String(versionId),
+		VersionStages:   []string{"AWSCURRENT"},
+		CreatedDate:     &now,
 		LastChangedDate: &now,
 		VersionIdsToStages: map[string][]string{
 			versionId: {"AWSCURRENT"},
@@ -98,10 +98,10 @@ func (f *FakeSecretsManagerClient) AddSecretBinary(name string, value []byte) {
 	now := time.Now()
 	versionId := "v1-abc123"
 	f.Secrets[name] = &SecretData{
-		SecretBinary:  value,
-		VersionId:     aws.String(versionId),
-		VersionStages: []string{"AWSCURRENT"},
-		CreatedDate:   &now,
+		SecretBinary:    value,
+		VersionId:       aws.String(versionId),
+		VersionStages:   []string{"AWSCURRENT"},
+		CreatedDate:     &now,
 		LastChangedDate: &now,
 		VersionIdsToStages: map[string][]string{
 			versionId: {"AWSCURRENT"},
@@ -168,17 +168,17 @@ func (f *FakeSecretsManagerClient) DescribeSecret(ctx context.Context, params *s
 	}
 
 	output := &secretsmanager.DescribeSecretOutput{
-		ARN:          aws.String(fmt.Sprintf("arn:aws:secretsmanager:us-east-1:123456789012:secret:%s", secretName)),
-		Name:         params.SecretId,
-		Description:  data.Description,
-		KmsKeyId:     data.KmsKeyId,
-		RotationEnabled: data.RotationEnabled,
-		RotationLambdaARN: data.RotationLambdaARN,
-		RotationRules: data.RotationRules,
-		LastChangedDate: data.LastChangedDate,
-		CreatedDate:  data.CreatedDate,
+		ARN:                aws.String(fmt.Sprintf("arn:aws:secretsmanager:us-east-1:123456789012:secret:%s", secretName)),
+		Name:               params.SecretId,
+		Description:        data.Description,
+		KmsKeyId:           data.KmsKeyId,
+		RotationEnabled:    data.RotationEnabled,
+		RotationLambdaARN:  data.RotationLambdaARN,
+		RotationRules:      data.RotationRules,
+		LastChangedDate:    data.LastChangedDate,
+		CreatedDate:        data.CreatedDate,
 		VersionIdsToStages: data.VersionIdsToStages,
-		ReplicationStatus: data.ReplicationStatus,
+		ReplicationStatus:  data.ReplicationStatus,
 	}
 
 	return output, nil

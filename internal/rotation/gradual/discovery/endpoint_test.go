@@ -97,7 +97,7 @@ func TestEndpointProvider_Discover(t *testing.T) {
 			response := EndpointResponse{
 				Instances: []EndpointInstance{
 					{ID: "instance-1", Endpoint: "http://instance1.example.com"},
-					{ID: "", Endpoint: "http://no-id.example.com"},       // Should be skipped
+					{ID: "", Endpoint: "http://no-id.example.com"}, // Should be skipped
 					{ID: "instance-2", Endpoint: "http://instance2.example.com"},
 				},
 			}

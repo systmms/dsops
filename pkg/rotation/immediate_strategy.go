@@ -56,7 +56,7 @@ func (s *ImmediateRotationStrategy) Rotate(ctx context.Context, request Rotation
 	if request.DryRun {
 		auditTrail = append(auditTrail, createAuditEntry("dry_run_complete", "immediate_strategy", "info",
 			"Would perform immediate rotation", nil))
-		
+
 		return &RotationResult{
 			Secret:     request.Secret,
 			Status:     StatusPending,
@@ -66,12 +66,12 @@ func (s *ImmediateRotationStrategy) Rotate(ctx context.Context, request Rotation
 
 	// Step 3: Perform rotation through base rotator
 	s.logger.Debug("Delegating to base rotator for immediate update")
-	
+
 	result, err := s.baseRotator.Rotate(ctx, request)
 	if err != nil {
 		auditTrail = append(auditTrail, createAuditEntry("rotation_failed", "immediate_strategy", "error",
 			"Immediate rotation failed", map[string]interface{}{"error": err.Error()}))
-		
+
 		return &RotationResult{
 			Secret:     request.Secret,
 			Status:     StatusFailed,
@@ -88,7 +88,7 @@ func (s *ImmediateRotationStrategy) Rotate(ctx context.Context, request Rotation
 	if result.Warnings == nil {
 		result.Warnings = []string{}
 	}
-	result.Warnings = append(result.Warnings, 
+	result.Warnings = append(result.Warnings,
 		"Immediate rotation may have caused brief downtime. Consider using two-key strategy if provider supports it.")
 
 	// Merge audit trails
@@ -113,10 +113,10 @@ func (s *ImmediateRotationStrategy) Verify(ctx context.Context, request Verifica
 // Rollback attempts to restore the previous value
 func (s *ImmediateRotationStrategy) Rollback(ctx context.Context, request RollbackRequest) error {
 	s.logger.Info("Attempting rollback for immediate rotation of %s", logging.Secret(request.Secret.Key))
-	
+
 	// In immediate rotation, rollback is challenging since old value is already gone
 	// This would need to restore from backup if available
-	
+
 	return s.baseRotator.Rollback(ctx, request)
 }
 

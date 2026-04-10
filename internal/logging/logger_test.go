@@ -41,11 +41,11 @@ func TestLoggerSecretRedaction(t *testing.T) {
 	// Test that secrets are properly redacted when logged
 	secret := "super-secret-password"
 	redactedValue := Secret(secret).String()
-	
+
 	if redactedValue != "[REDACTED]" {
 		t.Errorf("Expected [REDACTED], got %s", redactedValue)
 	}
-	
+
 	// Test GoString interface for %#v formatting
 	goStringValue := Secret(secret).GoString()
 	if goStringValue != "[REDACTED]" {
@@ -56,10 +56,10 @@ func TestLoggerSecretRedaction(t *testing.T) {
 func TestLoggerDebugMode(t *testing.T) {
 	// Test that debug mode can be toggled
 	logger := New(false, true) // debug=false, noColor=true
-	
+
 	// Test debug logger creation
 	debugLogger := New(true, true) // debug=true, noColor=true
-	
+
 	// Since we can't easily capture stderr in tests, just verify the loggers were created
 	if logger == nil {
 		t.Error("Failed to create non-debug logger")
@@ -72,13 +72,13 @@ func TestLoggerDebugMode(t *testing.T) {
 func TestLoggerLevels(t *testing.T) {
 	// Test that logger methods exist and can be called
 	logger := New(true, true)
-	
+
 	// Test that all logging methods exist and don't panic
 	logger.Info("info message")
-	logger.Warn("warn message") 
+	logger.Warn("warn message")
 	logger.Error("error message")
 	logger.Debug("debug message")
-	
+
 	// Test with formatted strings
 	logger.Info("formatted %s message", "info")
 	logger.Warn("formatted %s message", "warn")

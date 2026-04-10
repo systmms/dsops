@@ -727,18 +727,18 @@ func TestReport_Marshaling(t *testing.T) {
 	resolvedAt := now.Add(time.Hour)
 
 	report := &Report{
-		ID:               "INC-test",
-		Timestamp:        now,
-		Type:             "test",
-		Severity:         "high",
-		Title:            "Test",
-		Description:      "Test description",
-		Details:          map[string]string{"key": "value"},
-		AffectedFiles:    []string{"file1.txt"},
-		AffectedSecrets:  []string{"secret1"},
-		AffectedCommits:  []string{"abc123"},
-		ActionsRequired:  []string{"action1"},
-		ActionsTaken:     []string{"taken1"},
+		ID:              "INC-test",
+		Timestamp:       now,
+		Type:            "test",
+		Severity:        "high",
+		Title:           "Test",
+		Description:     "Test description",
+		Details:         map[string]string{"key": "value"},
+		AffectedFiles:   []string{"file1.txt"},
+		AffectedSecrets: []string{"secret1"},
+		AffectedCommits: []string{"abc123"},
+		ActionsRequired: []string{"action1"},
+		ActionsTaken:    []string{"taken1"},
 		NotificationsSent: []NotificationRecord{
 			{
 				Channel:   "slack",
@@ -768,4 +768,3 @@ func TestReport_Marshaling(t *testing.T) {
 	assert.Equal(t, report.Status, loaded.Status)
 	assert.Equal(t, report.ResolutionNotes, loaded.ResolutionNotes)
 }
-

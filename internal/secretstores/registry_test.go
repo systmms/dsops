@@ -3,9 +3,9 @@ package secretstores
 import (
 	"testing"
 
-	"github.com/systmms/dsops/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/systmms/dsops/internal/config"
 )
 
 func TestSecretStoreRegistry(t *testing.T) {
@@ -17,7 +17,7 @@ func TestSecretStoreRegistry(t *testing.T) {
 		assert.Contains(t, types, "vault")
 		assert.Contains(t, types, "aws.secretsmanager")
 		assert.Contains(t, types, "onepassword")
-		
+
 		// Should not contain service types
 		assert.NotContains(t, types, "postgres")
 		assert.NotContains(t, types, "mysql")
@@ -28,12 +28,12 @@ func TestSecretStoreRegistry(t *testing.T) {
 		assert.True(t, registry.IsSupported("bitwarden"))
 		assert.True(t, registry.IsSupported("vault"))
 		assert.True(t, registry.IsSupported("aws.secretsmanager"))
-		
+
 		// Service types should not be supported
 		assert.False(t, registry.IsSupported("postgres"))
 		assert.False(t, registry.IsSupported("mysql"))
 		assert.False(t, registry.IsSupported("github"))
-		
+
 		// Unknown types should not be supported
 		assert.False(t, registry.IsSupported("unknown"))
 	})

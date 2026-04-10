@@ -481,7 +481,7 @@ func TestPagerDutyProvider_AutoResolveDisabled(t *testing.T) {
 
 	provider := NewPagerDutyProvider(PagerDutyConfig{
 		IntegrationKey: "test-key",
-		AutoResolve:    false, // Disabled
+		AutoResolve:    false,                 // Disabled
 		Events:         []string{"completed"}, // Still configured to receive completed events
 	})
 	provider.apiURL = server.URL

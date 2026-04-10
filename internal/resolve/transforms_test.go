@@ -230,18 +230,18 @@ func TestTransformYAMLExtract(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		yamlInput  string
-		path       string
-		want       string
-		wantErr    bool
-		errMsg     string
+		name      string
+		yamlInput string
+		path      string
+		want      string
+		wantErr   bool
+		errMsg    string
 	}{
 		{
-			name:       "simple string field",
-			yamlInput:  "key: value",
-			path:       ".key",
-			want:       "value",
+			name:      "simple string field",
+			yamlInput: "key: value",
+			path:      ".key",
+			want:      "value",
 		},
 		{
 			name: "nested field",
@@ -259,22 +259,22 @@ func TestTransformYAMLExtract(t *testing.T) {
 			want: "deep-value",
 		},
 		{
-			name:       "number field",
-			yamlInput:  "port: 5432",
-			path:       ".port",
-			want:       "5432",
+			name:      "number field",
+			yamlInput: "port: 5432",
+			path:      ".port",
+			want:      "5432",
 		},
 		{
-			name:       "boolean field",
-			yamlInput:  "enabled: true",
-			path:       ".enabled",
-			want:       "true",
+			name:      "boolean field",
+			yamlInput: "enabled: true",
+			path:      ".enabled",
+			want:      "true",
 		},
 		{
-			name:       "null field",
-			yamlInput:  "value: null",
-			path:       ".value",
-			want:       "",
+			name:      "null field",
+			yamlInput: "value: null",
+			path:      ".value",
+			want:      "",
 		},
 		{
 			name: "complex object as YAML",
@@ -285,32 +285,32 @@ func TestTransformYAMLExtract(t *testing.T) {
 			want: "field1: val1\nfield2: val2",
 		},
 		{
-			name:       "invalid YAML",
-			yamlInput:  "not: valid: yaml: structure",
-			path:       ".key",
-			wantErr:    true,
-			errMsg:     "invalid YAML",
+			name:      "invalid YAML",
+			yamlInput: "not: valid: yaml: structure",
+			path:      ".key",
+			wantErr:   true,
+			errMsg:    "invalid YAML",
 		},
 		{
-			name:       "missing path prefix",
-			yamlInput:  "key: value",
-			path:       "key",
-			wantErr:    true,
-			errMsg:     "YAML path must start with '.'",
+			name:      "missing path prefix",
+			yamlInput: "key: value",
+			path:      "key",
+			wantErr:   true,
+			errMsg:    "YAML path must start with '.'",
 		},
 		{
-			name:       "field not found",
-			yamlInput:  "key: value",
-			path:       ".missing",
-			wantErr:    true,
-			errMsg:     "field 'missing' not found in YAML",
+			name:      "field not found",
+			yamlInput: "key: value",
+			path:      ".missing",
+			wantErr:   true,
+			errMsg:    "field 'missing' not found in YAML",
 		},
 		{
-			name:       "navigate into non-object",
-			yamlInput:  "key: value",
-			path:       ".key.nested",
-			wantErr:    true,
-			errMsg:     "cannot navigate into non-object",
+			name:      "navigate into non-object",
+			yamlInput: "key: value",
+			path:      ".key.nested",
+			wantErr:   true,
+			errMsg:    "cannot navigate into non-object",
 		},
 		{
 			name: "array indexing not supported",

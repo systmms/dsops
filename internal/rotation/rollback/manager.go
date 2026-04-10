@@ -239,13 +239,13 @@ func (m *Manager) sendRollbackNotification(req RollbackRequest, result *Rollback
 
 	// Build enhanced metadata
 	metadata := map[string]string{
-		"reason":          req.Reason,
-		"attempts":        fmt.Sprintf("%d", result.Attempts),
-		"trigger":         trigger,
-		"target_version":  req.PreviousVersion,
-		"failed_version":  req.FailedVersion,
-		"final_state":     string(result.State),
-		"duration_ms":     fmt.Sprintf("%d", result.Duration.Milliseconds()),
+		"reason":         req.Reason,
+		"attempts":       fmt.Sprintf("%d", result.Attempts),
+		"trigger":        trigger,
+		"target_version": req.PreviousVersion,
+		"failed_version": req.FailedVersion,
+		"final_state":    string(result.State),
+		"duration_ms":    fmt.Sprintf("%d", result.Duration.Milliseconds()),
 	}
 
 	// Add user info for manual rollbacks

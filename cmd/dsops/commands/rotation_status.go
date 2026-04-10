@@ -19,7 +19,7 @@ func NewRotationStatusCmd(cfg *config.Config) *cobra.Command {
 		statusVerbose bool
 		statusFormat  string
 	)
-	
+
 	cmd := &cobra.Command{
 		Use:   "status [service-name]",
 		Short: "Show rotation status for services",
@@ -45,10 +45,10 @@ Shows information including:
 			if err := cfg.Load(); err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
-			
+
 			// Initialize storage
 			store := storage.NewFileStorage(storage.DefaultStorageDir())
-			
+
 			// Get specific service or all services
 			var servicesToShow []string
 			if len(args) > 0 {
@@ -67,7 +67,7 @@ Shows information including:
 					}
 				}
 			}
-			
+
 			// Handle different output formats
 			switch statusFormat {
 			case "json":
@@ -79,10 +79,10 @@ Shows information including:
 			}
 		},
 	}
-	
+
 	cmd.Flags().BoolVarP(&statusVerbose, "verbose", "v", false, "Show detailed status information")
 	cmd.Flags().StringVar(&statusFormat, "format", "table", "Output format: table, json, yaml")
-	
+
 	return cmd
 }
 
@@ -93,9 +93,9 @@ func outputRotationStatusTable(store storage.Storage, services []string, verbose
 	// Print header
 	_, _ = fmt.Fprintln(w, "SERVICE\tSTATUS\tLAST ROTATION\tNEXT ROTATION\tRESULT")
 	_, _ = fmt.Fprintln(w, "-------\t------\t-------------\t-------------\t------")
-	
+
 	now := time.Now()
-	
+
 	for _, serviceName := range services {
 		// Get rotation status from storage
 		status, err := store.GetStatus(serviceName)
@@ -106,16 +106,16 @@ func outputRotationStatusTable(store storage.Storage, services []string, verbose
 				Status:      "never_rotated",
 			}
 		}
-		
+
 		// Format status
 		statusStr := formatRotationStatus(status.Status)
-		
+
 		// Format last rotation
 		lastRotationStr := "Never"
 		if !status.LastRotation.IsZero() {
 			lastRotationStr = formatTimestamp(status.LastRotation, now)
 		}
-		
+
 		// Calculate next rotation
 		nextRotationStr := "Not scheduled"
 		if status.NextRotation != nil && !status.NextRotation.IsZero() {
@@ -124,13 +124,13 @@ func outputRotationStatusTable(store storage.Storage, services []string, verbose
 			nextRotation := status.LastRotation.Add(status.RotationInterval)
 			nextRotationStr = formatTimestamp(nextRotation, now)
 		}
-		
+
 		// Format last result
 		resultStr := "-"
 		if status.LastResult != "" {
 			resultStr = formatResult(status.LastResult)
 		}
-		
+
 		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 			serviceName,
 			statusStr,
@@ -144,7 +144,7 @@ func outputRotationStatusTable(store storage.Storage, services []string, verbose
 			_, _ = fmt.Fprintf(w, "  └─ Error: %s\n", status.LastError)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -167,7 +167,7 @@ func formatRotationStatus(status string) string {
 
 func formatTimestamp(t time.Time, now time.Time) string {
 	diff := now.Sub(t)
-	
+
 	// Future time
 	if diff < 0 {
 		diff = -diff
@@ -179,7 +179,7 @@ func formatTimestamp(t time.Time, now time.Time) string {
 			return fmt.Sprintf("in %d days", int(diff.Hours()/24))
 		}
 	}
-	
+
 	// Past time
 	if diff < time.Minute {
 		return "Just now"
@@ -212,7 +212,7 @@ func formatResult(result string) string {
 func outputRotationStatusJSON(store storage.Storage, services []string) error {
 	// Collect status for all services
 	statuses := make(map[string]interface{})
-	
+
 	for _, serviceName := range services {
 		status, err := store.GetStatus(serviceName)
 		if err != nil {
@@ -221,30 +221,30 @@ func outputRotationStatusJSON(store storage.Storage, services []string) error {
 				Status:      "never_rotated",
 			}
 		}
-		
+
 		// Convert to JSON-friendly format
 		statusData := map[string]interface{}{
-			"service_name":      status.ServiceName,
-			"status":           status.Status,
-			"last_rotation":    status.LastRotation,
-			"next_rotation":    status.NextRotation,
-			"last_result":      status.LastResult,
-			"last_error":       status.LastError,
-			"rotation_count":   status.RotationCount,
-			"success_count":    status.SuccessCount,
-			"failure_count":    status.FailureCount,
+			"service_name":   status.ServiceName,
+			"status":         status.Status,
+			"last_rotation":  status.LastRotation,
+			"next_rotation":  status.NextRotation,
+			"last_result":    status.LastResult,
+			"last_error":     status.LastError,
+			"rotation_count": status.RotationCount,
+			"success_count":  status.SuccessCount,
+			"failure_count":  status.FailureCount,
 		}
-		
+
 		statuses[serviceName] = statusData
 	}
-	
+
 	return outputRotJSON(statuses)
 }
 
 func outputRotationStatusYAML(store storage.Storage, services []string) error {
 	// Similar to JSON but with YAML output
 	statuses := make(map[string]interface{})
-	
+
 	for _, serviceName := range services {
 		status, err := store.GetStatus(serviceName)
 		if err != nil {
@@ -253,25 +253,25 @@ func outputRotationStatusYAML(store storage.Storage, services []string) error {
 				Status:      "never_rotated",
 			}
 		}
-		
+
 		statusData := map[string]interface{}{
-			"service_name":      status.ServiceName,
-			"status":           status.Status,
-			"last_rotation":    status.LastRotation,
-			"next_rotation":    status.NextRotation,
-			"last_result":      status.LastResult,
-			"rotation_count":   status.RotationCount,
-			"success_count":    status.SuccessCount,
-			"failure_count":    status.FailureCount,
+			"service_name":   status.ServiceName,
+			"status":         status.Status,
+			"last_rotation":  status.LastRotation,
+			"next_rotation":  status.NextRotation,
+			"last_result":    status.LastResult,
+			"rotation_count": status.RotationCount,
+			"success_count":  status.SuccessCount,
+			"failure_count":  status.FailureCount,
 		}
-		
+
 		if status.LastError != "" {
 			statusData["last_error"] = status.LastError
 		}
-		
+
 		statuses[serviceName] = statusData
 	}
-	
+
 	return outputRotYAML(statuses)
 }
 

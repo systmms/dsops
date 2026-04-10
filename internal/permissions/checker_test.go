@@ -12,7 +12,7 @@ import (
 
 func TestPermissionCheckerBasics(t *testing.T) {
 	logger := logging.New(false, true)
-	
+
 	// Test with nil repository (should allow all)
 	checker := NewPermissionChecker(nil, logger)
 	request := RotationRequest{
@@ -22,7 +22,7 @@ func TestPermissionCheckerBasics(t *testing.T) {
 		Environment:    "any-env",
 		SecretKey:      "any-key",
 	}
-	
+
 	result := checker.CheckRotationPermission(context.Background(), request)
 	if !result.Allowed {
 		t.Error("Expected permission to be allowed when no repository configured")
@@ -34,19 +34,19 @@ func TestPermissionCheckerBasics(t *testing.T) {
 
 func TestPermissionCheckerWithSimpleRepo(t *testing.T) {
 	logger := logging.New(false, true)
-	
+
 	// Create minimal repository for testing
 	repo := &dsopsdata.Repository{
 		Principals: map[string]*dsopsdata.Principal{
 			"test-principal": {
 				Spec: struct {
-					Type        string                        `yaml:"type" json:"type"`
-					Email       string                        `yaml:"email,omitempty" json:"email,omitempty"`
-					Team        string                        `yaml:"team,omitempty" json:"team,omitempty"`
-					Environment string                        `yaml:"environment,omitempty" json:"environment,omitempty"`
+					Type        string                          `yaml:"type" json:"type"`
+					Email       string                          `yaml:"email,omitempty" json:"email,omitempty"`
+					Team        string                          `yaml:"team,omitempty" json:"team,omitempty"`
+					Environment string                          `yaml:"environment,omitempty" json:"environment,omitempty"`
 					Permissions *dsopsdata.PrincipalPermissions `yaml:"permissions,omitempty" json:"permissions,omitempty"`
 					Contact     *dsopsdata.PrincipalContact     `yaml:"contact,omitempty" json:"contact,omitempty"`
-					Metadata    map[string]interface{}        `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+					Metadata    map[string]interface{}          `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 				}{
 					Type: "user",
 					Permissions: &dsopsdata.PrincipalPermissions{
@@ -58,9 +58,9 @@ func TestPermissionCheckerWithSimpleRepo(t *testing.T) {
 			},
 		},
 	}
-	
+
 	checker := NewPermissionChecker(repo, logger)
-	
+
 	// Test allowed request
 	allowedRequest := RotationRequest{
 		Principal:      "test-principal",
@@ -69,12 +69,12 @@ func TestPermissionCheckerWithSimpleRepo(t *testing.T) {
 		Environment:    "test",
 		SecretKey:      "DB_PASSWORD",
 	}
-	
+
 	result := checker.CheckRotationPermission(context.Background(), allowedRequest)
 	if !result.Allowed {
 		t.Errorf("Expected permission to be allowed, got denied: %s", result.Reason)
 	}
-	
+
 	// Test denied request (wrong service)
 	deniedRequest := RotationRequest{
 		Principal:      "test-principal",
@@ -83,12 +83,12 @@ func TestPermissionCheckerWithSimpleRepo(t *testing.T) {
 		Environment:    "test",
 		SecretKey:      "MYSQL_PASSWORD",
 	}
-	
+
 	result = checker.CheckRotationPermission(context.Background(), deniedRequest)
 	if result.Allowed {
 		t.Error("Expected permission to be denied for wrong service type")
 	}
-	
+
 	// Test unknown principal
 	unknownRequest := RotationRequest{
 		Principal:      "unknown-user",
@@ -97,7 +97,7 @@ func TestPermissionCheckerWithSimpleRepo(t *testing.T) {
 		Environment:    "test",
 		SecretKey:      "DB_PASSWORD",
 	}
-	
+
 	result = checker.CheckRotationPermission(context.Background(), unknownRequest)
 	if result.Allowed {
 		t.Error("Expected permission to be denied for unknown principal")
@@ -109,19 +109,19 @@ func TestPermissionCheckerWithSimpleRepo(t *testing.T) {
 
 func TestTTLValidation(t *testing.T) {
 	logger := logging.New(false, true)
-	
+
 	// Create repository with TTL limits
 	repo := &dsopsdata.Repository{
 		Principals: map[string]*dsopsdata.Principal{
 			"limited-user": {
 				Spec: struct {
-					Type        string                        `yaml:"type" json:"type"`
-					Email       string                        `yaml:"email,omitempty" json:"email,omitempty"`
-					Team        string                        `yaml:"team,omitempty" json:"team,omitempty"`
-					Environment string                        `yaml:"environment,omitempty" json:"environment,omitempty"`
+					Type        string                          `yaml:"type" json:"type"`
+					Email       string                          `yaml:"email,omitempty" json:"email,omitempty"`
+					Team        string                          `yaml:"team,omitempty" json:"team,omitempty"`
+					Environment string                          `yaml:"environment,omitempty" json:"environment,omitempty"`
 					Permissions *dsopsdata.PrincipalPermissions `yaml:"permissions,omitempty" json:"permissions,omitempty"`
 					Contact     *dsopsdata.PrincipalContact     `yaml:"contact,omitempty" json:"contact,omitempty"`
-					Metadata    map[string]interface{}        `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+					Metadata    map[string]interface{}          `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 				}{
 					Type: "user",
 					Permissions: &dsopsdata.PrincipalPermissions{
@@ -133,9 +133,9 @@ func TestTTLValidation(t *testing.T) {
 			},
 		},
 	}
-	
+
 	checker := NewPermissionChecker(repo, logger)
-	
+
 	// Test within TTL limit
 	validRequest := RotationRequest{
 		Principal:      "limited-user",
@@ -145,12 +145,12 @@ func TestTTLValidation(t *testing.T) {
 		SecretKey:      "API_KEY",
 		RequestedTTL:   30 * time.Minute, // Under 1h limit
 	}
-	
+
 	result := checker.CheckRotationPermission(context.Background(), validRequest)
 	if !result.Allowed {
 		t.Errorf("Expected permission within TTL limit to be allowed: %s", result.Reason)
 	}
-	
+
 	// Test exceeding TTL limit
 	invalidRequest := RotationRequest{
 		Principal:      "limited-user",
@@ -160,7 +160,7 @@ func TestTTLValidation(t *testing.T) {
 		SecretKey:      "API_KEY",
 		RequestedTTL:   2 * time.Hour, // Over 1h limit
 	}
-	
+
 	result = checker.CheckRotationPermission(context.Background(), invalidRequest)
 	if result.Allowed {
 		t.Error("Expected permission exceeding TTL limit to be denied")
@@ -172,19 +172,19 @@ func TestTTLValidation(t *testing.T) {
 
 func TestPrincipalWithoutPermissions(t *testing.T) {
 	logger := logging.New(false, true)
-	
+
 	// Create repository with principal that has no specific permissions
 	repo := &dsopsdata.Repository{
 		Principals: map[string]*dsopsdata.Principal{
 			"no-permissions": {
 				Spec: struct {
-					Type        string                        `yaml:"type" json:"type"`
-					Email       string                        `yaml:"email,omitempty" json:"email,omitempty"`
-					Team        string                        `yaml:"team,omitempty" json:"team,omitempty"`
-					Environment string                        `yaml:"environment,omitempty" json:"environment,omitempty"`
+					Type        string                          `yaml:"type" json:"type"`
+					Email       string                          `yaml:"email,omitempty" json:"email,omitempty"`
+					Team        string                          `yaml:"team,omitempty" json:"team,omitempty"`
+					Environment string                          `yaml:"environment,omitempty" json:"environment,omitempty"`
 					Permissions *dsopsdata.PrincipalPermissions `yaml:"permissions,omitempty" json:"permissions,omitempty"`
 					Contact     *dsopsdata.PrincipalContact     `yaml:"contact,omitempty" json:"contact,omitempty"`
-					Metadata    map[string]interface{}        `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+					Metadata    map[string]interface{}          `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 				}{
 					Type: "user",
 					// No permissions specified - should allow all
@@ -192,9 +192,9 @@ func TestPrincipalWithoutPermissions(t *testing.T) {
 			},
 		},
 	}
-	
+
 	checker := NewPermissionChecker(repo, logger)
-	
+
 	request := RotationRequest{
 		Principal:      "no-permissions",
 		ServiceType:    "any-service",
@@ -202,7 +202,7 @@ func TestPrincipalWithoutPermissions(t *testing.T) {
 		Environment:    "any",
 		SecretKey:      "ANY_KEY",
 	}
-	
+
 	result := checker.CheckRotationPermission(context.Background(), request)
 	if !result.Allowed {
 		t.Errorf("Expected principal without permissions to be allowed: %s", result.Reason)
@@ -504,7 +504,7 @@ func findSubstring(s, substr string) bool {
 	if len(s) < len(substr) {
 		return false
 	}
-	
+
 	for i := 0; i <= len(s)-len(substr); i++ {
 		match := true
 		for j := 0; j < len(substr); j++ {

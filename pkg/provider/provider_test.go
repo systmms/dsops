@@ -471,11 +471,11 @@ func TestRotationMetadataJSONMarshal(t *testing.T) {
 
 // MockRotator implements the Rotator interface for testing
 type MockRotator struct {
-	name         string
-	values       map[string][]byte
-	versions     map[string][]string // key -> list of version IDs
-	metadata     map[string]RotationMetadata
-	failOnCreate bool
+	name            string
+	values          map[string][]byte
+	versions        map[string][]string // key -> list of version IDs
+	metadata        map[string]RotationMetadata
+	failOnCreate    bool
 	failOnDeprecate bool
 }
 

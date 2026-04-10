@@ -15,15 +15,15 @@ import (
 
 // FakeRotationStrategy implements SecretValueRotator for testing
 type FakeRotationStrategy struct {
-	name         string
+	name           string
 	supportedTypes []rotation.SecretType
-	rotateFunc   func(ctx context.Context, req rotation.RotationRequest) (*rotation.RotationResult, error)
-	callCount    int64 // Use int64 for atomic operations
+	rotateFunc     func(ctx context.Context, req rotation.RotationRequest) (*rotation.RotationResult, error)
+	callCount      int64 // Use int64 for atomic operations
 }
 
 func NewFakeRotationStrategy(name string, supportedTypes []rotation.SecretType) *FakeRotationStrategy {
 	return &FakeRotationStrategy{
-		name:         name,
+		name:           name,
 		supportedTypes: supportedTypes,
 	}
 }
@@ -55,14 +55,14 @@ func (f *FakeRotationStrategy) Rotate(ctx context.Context, request rotation.Rota
 	// Default successful rotation
 	now := time.Now()
 	return &rotation.RotationResult{
-		Secret:     request.Secret,
-		Status:     rotation.StatusCompleted,
+		Secret: request.Secret,
+		Status: rotation.StatusCompleted,
 		NewSecretRef: &rotation.SecretReference{
 			Provider:   request.Secret.Provider,
 			Key:        request.Secret.Key,
 			Identifier: "v2",
 		},
-		RotatedAt:  &now,
+		RotatedAt: &now,
 		AuditTrail: []rotation.AuditEntry{
 			{
 				Timestamp: time.Now(),

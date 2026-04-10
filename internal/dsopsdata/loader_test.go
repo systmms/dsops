@@ -516,7 +516,7 @@ func TestRepository_ListServiceInstancesByType(t *testing.T) {
 
 	repo := &Repository{
 		ServiceInstances: map[string]*ServiceInstance{
-			"postgresql/prod-db":   {Metadata: struct {
+			"postgresql/prod-db": {Metadata: struct {
 				Type        string   `yaml:"type" json:"type"`
 				ID          string   `yaml:"id" json:"id"`
 				Name        string   `yaml:"name,omitempty" json:"name,omitempty"`
@@ -530,7 +530,7 @@ func TestRepository_ListServiceInstancesByType(t *testing.T) {
 				Description string   `yaml:"description,omitempty" json:"description,omitempty"`
 				Tags        []string `yaml:"tags,omitempty" json:"tags,omitempty"`
 			}{Type: "postgresql", ID: "staging-db"}},
-			"mysql/prod-db":         {Metadata: struct {
+			"mysql/prod-db": {Metadata: struct {
 				Type        string   `yaml:"type" json:"type"`
 				ID          string   `yaml:"id" json:"id"`
 				Name        string   `yaml:"name,omitempty" json:"name,omitempty"`

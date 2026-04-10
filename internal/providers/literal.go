@@ -19,7 +19,7 @@ func NewLiteralProvider(name string, values map[string]string) *LiteralProvider 
 	if values == nil {
 		values = make(map[string]string)
 	}
-	
+
 	return &LiteralProvider{
 		name:   name,
 		values: values,
@@ -216,11 +216,11 @@ type JSONProvider struct {
 // NewJSONProvider creates a provider with JSON test data
 func NewJSONProvider(name string) *JSONProvider {
 	mock := NewMockProvider(name)
-	
+
 	// Add some test JSON data
 	mock.SetValue("user-config", `{"name": "john", "email": "john@example.com", "settings": {"theme": "dark"}}`)
 	mock.SetValue("db-config", `{"url": "postgresql://user:pass@localhost:5432/db", "max_connections": 100}`)
 	mock.SetValue("api-keys", `{"primary": "api-key-123", "secondary": "api-key-456"}`)
-	
+
 	return &JSONProvider{MockProvider: mock}
 }

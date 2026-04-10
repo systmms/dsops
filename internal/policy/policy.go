@@ -11,32 +11,32 @@ import (
 // PolicyConfig defines security policies for dsops operations
 type PolicyConfig struct {
 	// Global policies
-	AllowedProviders   []string          `yaml:"allowed_providers,omitempty"`   // Whitelist of allowed provider types
-	BlockedProviders   []string          `yaml:"blocked_providers,omitempty"`   // Blacklist of blocked provider types
-	RequireEncryption  bool              `yaml:"require_encryption,omitempty"`  // Require encrypted provider configs
-	
+	AllowedProviders  []string `yaml:"allowed_providers,omitempty"`  // Whitelist of allowed provider types
+	BlockedProviders  []string `yaml:"blocked_providers,omitempty"`  // Blacklist of blocked provider types
+	RequireEncryption bool     `yaml:"require_encryption,omitempty"` // Require encrypted provider configs
+
 	// Secret policies
-	SecretComplexity   *ComplexityPolicy `yaml:"secret_complexity,omitempty"`   // Secret value complexity requirements
-	ForbiddenPatterns  []string          `yaml:"forbidden_patterns,omitempty"`  // Regex patterns that secrets must not match
-	RequiredPatterns   []string          `yaml:"required_patterns,omitempty"`   // Regex patterns that secrets must match
-	
+	SecretComplexity  *ComplexityPolicy `yaml:"secret_complexity,omitempty"`  // Secret value complexity requirements
+	ForbiddenPatterns []string          `yaml:"forbidden_patterns,omitempty"` // Regex patterns that secrets must not match
+	RequiredPatterns  []string          `yaml:"required_patterns,omitempty"`  // Regex patterns that secrets must match
+
 	// Environment policies
-	EnvironmentRules   map[string]*EnvironmentPolicy `yaml:"environment_rules,omitempty"` // Per-environment restrictions
-	
+	EnvironmentRules map[string]*EnvironmentPolicy `yaml:"environment_rules,omitempty"` // Per-environment restrictions
+
 	// File policies
-	OutputRestrictions *OutputPolicy     `yaml:"output_restrictions,omitempty"` // File output restrictions
-	
+	OutputRestrictions *OutputPolicy `yaml:"output_restrictions,omitempty"` // File output restrictions
+
 	// Audit policies
-	AuditLogging       *AuditPolicy      `yaml:"audit_logging,omitempty"`       // Audit and compliance logging
+	AuditLogging *AuditPolicy `yaml:"audit_logging,omitempty"` // Audit and compliance logging
 }
 
 // ComplexityPolicy defines requirements for secret values
 type ComplexityPolicy struct {
-	MinLength    int  `yaml:"min_length,omitempty"`     // Minimum secret length
-	MaxLength    int  `yaml:"max_length,omitempty"`     // Maximum secret length  
-	RequireUpper bool `yaml:"require_upper,omitempty"`  // Require uppercase letters
-	RequireLower bool `yaml:"require_lower,omitempty"`  // Require lowercase letters
-	RequireDigit bool `yaml:"require_digit,omitempty"`  // Require digits
+	MinLength     int  `yaml:"min_length,omitempty"`     // Minimum secret length
+	MaxLength     int  `yaml:"max_length,omitempty"`     // Maximum secret length
+	RequireUpper  bool `yaml:"require_upper,omitempty"`  // Require uppercase letters
+	RequireLower  bool `yaml:"require_lower,omitempty"`  // Require lowercase letters
+	RequireDigit  bool `yaml:"require_digit,omitempty"`  // Require digits
 	RequireSymbol bool `yaml:"require_symbol,omitempty"` // Require symbols
 }
 
@@ -58,10 +58,10 @@ type OutputPolicy struct {
 
 // AuditPolicy defines audit logging requirements
 type AuditPolicy struct {
-	Enabled      bool   `yaml:"enabled,omitempty"`       // Enable audit logging
-	LogPath      string `yaml:"log_path,omitempty"`      // Path to audit log file
-	LogLevel     string `yaml:"log_level,omitempty"`     // Audit log level (info, warn, error)
-	IncludeValues bool  `yaml:"include_values,omitempty"` // Include secret values in audit log (NOT RECOMMENDED)
+	Enabled       bool   `yaml:"enabled,omitempty"`        // Enable audit logging
+	LogPath       string `yaml:"log_path,omitempty"`       // Path to audit log file
+	LogLevel      string `yaml:"log_level,omitempty"`      // Audit log level (info, warn, error)
+	IncludeValues bool   `yaml:"include_values,omitempty"` // Include secret values in audit log (NOT RECOMMENDED)
 }
 
 // PolicyEnforcer validates operations against configured policies
@@ -88,7 +88,7 @@ func (pe *PolicyEnforcer) ValidateProviderType(providerType string) error {
 			}
 		}
 	}
-	
+
 	// Check allowed providers (if specified)
 	if len(pe.config.AllowedProviders) > 0 {
 		allowed := false
@@ -105,7 +105,7 @@ func (pe *PolicyEnforcer) ValidateProviderType(providerType string) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -115,7 +115,7 @@ func (pe *PolicyEnforcer) ValidateEnvironmentProvider(envName, providerType stri
 	if !exists {
 		return nil // No specific rules for this environment
 	}
-	
+
 	// Check environment-specific blocked providers
 	for _, blocked := range envPolicy.BlockedProviders {
 		if strings.EqualFold(blocked, providerType) {
@@ -125,7 +125,7 @@ func (pe *PolicyEnforcer) ValidateEnvironmentProvider(envName, providerType stri
 			}
 		}
 	}
-	
+
 	// Check environment-specific allowed providers
 	if len(envPolicy.AllowedProviders) > 0 {
 		allowed := false
@@ -142,7 +142,7 @@ func (pe *PolicyEnforcer) ValidateEnvironmentProvider(envName, providerType stri
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -153,7 +153,7 @@ func (pe *PolicyEnforcer) ValidateSecretValue(secretValue string) error {
 			return err
 		}
 	}
-	
+
 	// Check forbidden patterns
 	for _, pattern := range pe.config.ForbiddenPatterns {
 		if matched, _ := regexp.MatchString(pattern, secretValue); matched {
@@ -163,7 +163,7 @@ func (pe *PolicyEnforcer) ValidateSecretValue(secretValue string) error {
 			}
 		}
 	}
-	
+
 	// Check required patterns
 	for _, pattern := range pe.config.RequiredPatterns {
 		if matched, _ := regexp.MatchString(pattern, secretValue); !matched {
@@ -173,7 +173,7 @@ func (pe *PolicyEnforcer) ValidateSecretValue(secretValue string) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -182,9 +182,9 @@ func (pe *PolicyEnforcer) ValidateOutputPath(outputPath string) error {
 	if pe.config.OutputRestrictions == nil {
 		return nil
 	}
-	
+
 	restrictions := pe.config.OutputRestrictions
-	
+
 	// Check blocked paths
 	for _, blocked := range restrictions.BlockedPaths {
 		if matched, _ := regexp.MatchString(blocked, outputPath); matched {
@@ -194,7 +194,7 @@ func (pe *PolicyEnforcer) ValidateOutputPath(outputPath string) error {
 			}
 		}
 	}
-	
+
 	// Check allowed paths
 	if len(restrictions.AllowedPaths) > 0 {
 		allowed := false
@@ -211,7 +211,7 @@ func (pe *PolicyEnforcer) ValidateOutputPath(outputPath string) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -221,14 +221,14 @@ func (pe *PolicyEnforcer) ValidateEnvironmentSecretCount(envName string, secretC
 	if !exists || envPolicy.MaxSecrets == 0 {
 		return nil
 	}
-	
+
 	if secretCount > envPolicy.MaxSecrets {
 		return dserrors.UserError{
 			Message:    fmt.Sprintf("Environment '%s' has %d secrets, exceeding limit of %d", envName, secretCount, envPolicy.MaxSecrets),
 			Suggestion: "Reduce the number of secrets or increase the limit in policy configuration",
 		}
 	}
-	
+
 	return nil
 }
 
@@ -244,48 +244,48 @@ func (pe *PolicyEnforcer) GetAuditConfig() *AuditPolicy {
 
 func (pe *PolicyEnforcer) validateComplexity(value string) error {
 	complexity := pe.config.SecretComplexity
-	
+
 	if complexity.MinLength > 0 && len(value) < complexity.MinLength {
 		return dserrors.UserError{
 			Message:    fmt.Sprintf("Secret must be at least %d characters", complexity.MinLength),
 			Suggestion: "Use a longer secret value",
 		}
 	}
-	
+
 	if complexity.MaxLength > 0 && len(value) > complexity.MaxLength {
 		return dserrors.UserError{
 			Message:    fmt.Sprintf("Secret must not exceed %d characters", complexity.MaxLength),
 			Suggestion: "Use a shorter secret value",
 		}
 	}
-	
+
 	if complexity.RequireUpper && !regexp.MustCompile(`[A-Z]`).MatchString(value) {
 		return dserrors.UserError{
 			Message:    "Secret must contain uppercase letters",
 			Suggestion: "Include at least one uppercase letter in the secret",
 		}
 	}
-	
+
 	if complexity.RequireLower && !regexp.MustCompile(`[a-z]`).MatchString(value) {
 		return dserrors.UserError{
-			Message:    "Secret must contain lowercase letters", 
+			Message:    "Secret must contain lowercase letters",
 			Suggestion: "Include at least one lowercase letter in the secret",
 		}
 	}
-	
+
 	if complexity.RequireDigit && !regexp.MustCompile(`[0-9]`).MatchString(value) {
 		return dserrors.UserError{
 			Message:    "Secret must contain digits",
 			Suggestion: "Include at least one digit in the secret",
 		}
 	}
-	
+
 	if complexity.RequireSymbol && !regexp.MustCompile(`[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]`).MatchString(value) {
 		return dserrors.UserError{
 			Message:    "Secret must contain symbols",
 			Suggestion: "Include at least one symbol in the secret",
 		}
 	}
-	
+
 	return nil
 }

@@ -55,9 +55,9 @@ type ServiceInstance struct {
 		Tags        []string `yaml:"tags,omitempty" json:"tags,omitempty"`
 	} `yaml:"metadata" json:"metadata"`
 	Spec struct {
-		Endpoint        string                `yaml:"endpoint" json:"endpoint"`
-		Auth            string                `yaml:"auth" json:"auth"`
-		CredentialKinds []InstanceCredential  `yaml:"credentialKinds" json:"credentialKinds"`
+		Endpoint        string                 `yaml:"endpoint" json:"endpoint"`
+		Auth            string                 `yaml:"auth" json:"auth"`
+		CredentialKinds []InstanceCredential   `yaml:"credentialKinds" json:"credentialKinds"`
 		Config          map[string]interface{} `yaml:"config,omitempty" json:"config,omitempty"`
 	} `yaml:"spec" json:"spec"`
 }
@@ -79,12 +79,12 @@ type RotationPolicy struct {
 		Description string `yaml:"description,omitempty" json:"description,omitempty"`
 	} `yaml:"metadata" json:"metadata"`
 	Spec struct {
-		Strategy     string         `yaml:"strategy" json:"strategy"`
-		Schedule     string         `yaml:"schedule,omitempty" json:"schedule,omitempty"`
-		Verification *Verification  `yaml:"verification,omitempty" json:"verification,omitempty"`
-		Cutover      *Cutover       `yaml:"cutover,omitempty" json:"cutover,omitempty"`
+		Strategy      string         `yaml:"strategy" json:"strategy"`
+		Schedule      string         `yaml:"schedule,omitempty" json:"schedule,omitempty"`
+		Verification  *Verification  `yaml:"verification,omitempty" json:"verification,omitempty"`
+		Cutover       *Cutover       `yaml:"cutover,omitempty" json:"cutover,omitempty"`
 		Notifications *Notifications `yaml:"notifications,omitempty" json:"notifications,omitempty"`
-		Constraints  *Constraints   `yaml:"constraints,omitempty" json:"constraints,omitempty"`
+		Constraints   *Constraints   `yaml:"constraints,omitempty" json:"constraints,omitempty"`
 	} `yaml:"spec" json:"spec"`
 }
 
@@ -98,16 +98,16 @@ type Verification struct {
 
 // Cutover defines how to handle the cutover from old to new credentials
 type Cutover struct {
-	RequireCheck    bool   `yaml:"requireCheck,omitempty" json:"requireCheck,omitempty"`
-	GracePeriod     string `yaml:"gracePeriod,omitempty" json:"gracePeriod,omitempty"`
-	RollbackWindow  string `yaml:"rollbackWindow,omitempty" json:"rollbackWindow,omitempty"`
+	RequireCheck   bool   `yaml:"requireCheck,omitempty" json:"requireCheck,omitempty"`
+	GracePeriod    string `yaml:"gracePeriod,omitempty" json:"gracePeriod,omitempty"`
+	RollbackWindow string `yaml:"rollbackWindow,omitempty" json:"rollbackWindow,omitempty"`
 }
 
 // Notifications defines notification settings for rotation events
 type Notifications struct {
-	OnSuccess     []string         `yaml:"onSuccess,omitempty" json:"onSuccess,omitempty"`
-	OnFailure     []string         `yaml:"onFailure,omitempty" json:"onFailure,omitempty"`
-	BeforeExpiry  *BeforeExpiry    `yaml:"beforeExpiry,omitempty" json:"beforeExpiry,omitempty"`
+	OnSuccess    []string      `yaml:"onSuccess,omitempty" json:"onSuccess,omitempty"`
+	OnFailure    []string      `yaml:"onFailure,omitempty" json:"onFailure,omitempty"`
+	BeforeExpiry *BeforeExpiry `yaml:"beforeExpiry,omitempty" json:"beforeExpiry,omitempty"`
 }
 
 // BeforeExpiry defines notifications before credential expiration
@@ -118,9 +118,9 @@ type BeforeExpiry struct {
 
 // Constraints defines additional constraints and requirements
 type Constraints struct {
-	RequireApproval      bool                   `yaml:"requireApproval,omitempty" json:"requireApproval,omitempty"`
-	MaintenanceWindows   []MaintenanceWindow    `yaml:"maintenanceWindows,omitempty" json:"maintenanceWindows,omitempty"`
-	ExcludeEnvironments  []string               `yaml:"excludeEnvironments,omitempty" json:"excludeEnvironments,omitempty"`
+	RequireApproval     bool                `yaml:"requireApproval,omitempty" json:"requireApproval,omitempty"`
+	MaintenanceWindows  []MaintenanceWindow `yaml:"maintenanceWindows,omitempty" json:"maintenanceWindows,omitempty"`
+	ExcludeEnvironments []string            `yaml:"excludeEnvironments,omitempty" json:"excludeEnvironments,omitempty"`
 }
 
 // MaintenanceWindow defines when rotation is allowed
@@ -152,9 +152,9 @@ type Principal struct {
 
 // PrincipalPermissions defines permission settings for a principal
 type PrincipalPermissions struct {
-	AllowedServices         []string `yaml:"allowedServices,omitempty" json:"allowedServices,omitempty"`
-	AllowedCredentialKinds  []string `yaml:"allowedCredentialKinds,omitempty" json:"allowedCredentialKinds,omitempty"`
-	MaxCredentialTTL        string   `yaml:"maxCredentialTTL,omitempty" json:"maxCredentialTTL,omitempty"`
+	AllowedServices        []string `yaml:"allowedServices,omitempty" json:"allowedServices,omitempty"`
+	AllowedCredentialKinds []string `yaml:"allowedCredentialKinds,omitempty" json:"allowedCredentialKinds,omitempty"`
+	MaxCredentialTTL       string   `yaml:"maxCredentialTTL,omitempty" json:"maxCredentialTTL,omitempty"`
 }
 
 // PrincipalContact defines contact information for a principal
@@ -166,8 +166,8 @@ type PrincipalContact struct {
 
 // Loader loads dsops-data definitions from a local directory
 type Loader struct {
-	dataDir     string
-	schemasDir  string
+	dataDir          string
+	schemasDir       string
 	enableValidation bool
 }
 
@@ -204,15 +204,15 @@ func (l *Loader) validateWithSchema(data interface{}, schemaFile string) error {
 
 	// Load schema
 	schemaLoader := gojsonschema.NewReferenceLoader("file://" + schemaPath)
-	
+
 	// Convert data to JSON for validation
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("failed to marshal data for validation: %w", err)
 	}
-	
+
 	documentLoader := gojsonschema.NewBytesLoader(jsonData)
-	
+
 	// Perform validation
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
@@ -235,7 +235,14 @@ func (l *Loader) LoadServiceTypes(ctx context.Context) (map[string]*ServiceType,
 	serviceTypes := make(map[string]*ServiceType)
 	serviceTypesDir := filepath.Join(l.dataDir, "service-types")
 
-	err := filepath.WalkDir(serviceTypesDir, func(path string, d fs.DirEntry, err error) error {
+	// Use os.Root to scope reads and prevent symlink TOCTOU in WalkDir
+	root, err := os.OpenRoot(serviceTypesDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open service types directory: %w", err)
+	}
+	defer func() { _ = root.Close() }()
+
+	err = filepath.WalkDir(serviceTypesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -244,7 +251,11 @@ func (l *Loader) LoadServiceTypes(ctx context.Context) (map[string]*ServiceType,
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		relPath, relErr := filepath.Rel(serviceTypesDir, path)
+		if relErr != nil {
+			return fmt.Errorf("failed to compute relative path for %s: %w", path, relErr)
+		}
+		data, err := root.ReadFile(relPath)
 		if err != nil {
 			return fmt.Errorf("failed to read service type file %s: %w", path, err)
 		}
@@ -279,7 +290,14 @@ func (l *Loader) LoadServiceInstances(ctx context.Context) (map[string]*ServiceI
 	instances := make(map[string]*ServiceInstance)
 	instancesDir := filepath.Join(l.dataDir, "service-instances")
 
-	err := filepath.WalkDir(instancesDir, func(path string, d fs.DirEntry, err error) error {
+	// Use os.Root to scope reads and prevent symlink TOCTOU in WalkDir
+	root, err := os.OpenRoot(instancesDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open service instances directory: %w", err)
+	}
+	defer func() { _ = root.Close() }()
+
+	err = filepath.WalkDir(instancesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -288,7 +306,11 @@ func (l *Loader) LoadServiceInstances(ctx context.Context) (map[string]*ServiceI
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		relPath, relErr := filepath.Rel(instancesDir, path)
+		if relErr != nil {
+			return fmt.Errorf("failed to compute relative path for %s: %w", path, relErr)
+		}
+		data, err := root.ReadFile(relPath)
 		if err != nil {
 			return fmt.Errorf("failed to read service instance file %s: %w", path, err)
 		}
@@ -324,7 +346,14 @@ func (l *Loader) LoadRotationPolicies(ctx context.Context) (map[string]*Rotation
 	policies := make(map[string]*RotationPolicy)
 	policiesDir := filepath.Join(l.dataDir, "rotation-policies")
 
-	err := filepath.WalkDir(policiesDir, func(path string, d fs.DirEntry, err error) error {
+	// Use os.Root to scope reads and prevent symlink TOCTOU in WalkDir
+	root, err := os.OpenRoot(policiesDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open rotation policies directory: %w", err)
+	}
+	defer func() { _ = root.Close() }()
+
+	err = filepath.WalkDir(policiesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -333,7 +362,11 @@ func (l *Loader) LoadRotationPolicies(ctx context.Context) (map[string]*Rotation
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		relPath, relErr := filepath.Rel(policiesDir, path)
+		if relErr != nil {
+			return fmt.Errorf("failed to compute relative path for %s: %w", path, relErr)
+		}
+		data, err := root.ReadFile(relPath)
 		if err != nil {
 			return fmt.Errorf("failed to read rotation policy file %s: %w", path, err)
 		}
@@ -368,7 +401,14 @@ func (l *Loader) LoadPrincipals(ctx context.Context) (map[string]*Principal, err
 	principals := make(map[string]*Principal)
 	principalsDir := filepath.Join(l.dataDir, "principals")
 
-	err := filepath.WalkDir(principalsDir, func(path string, d fs.DirEntry, err error) error {
+	// Use os.Root to scope reads and prevent symlink TOCTOU in WalkDir
+	root, err := os.OpenRoot(principalsDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open principals directory: %w", err)
+	}
+	defer func() { _ = root.Close() }()
+
+	err = filepath.WalkDir(principalsDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -377,7 +417,11 @@ func (l *Loader) LoadPrincipals(ctx context.Context) (map[string]*Principal, err
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		relPath, relErr := filepath.Rel(principalsDir, path)
+		if relErr != nil {
+			return fmt.Errorf("failed to compute relative path for %s: %w", path, relErr)
+		}
+		data, err := root.ReadFile(relPath)
 		if err != nil {
 			return fmt.Errorf("failed to read principal file %s: %w", path, err)
 		}
@@ -483,13 +527,13 @@ func (r *Repository) ListServiceTypes() []string {
 func (r *Repository) ListServiceInstancesByType(serviceType string) []*ServiceInstance {
 	var instances []*ServiceInstance
 	prefix := serviceType + "/"
-	
+
 	for key, instance := range r.ServiceInstances {
 		if strings.HasPrefix(key, prefix) {
 			instances = append(instances, instance)
 		}
 	}
-	
+
 	return instances
 }
 
@@ -500,7 +544,7 @@ func (r *Repository) ListServiceInstancesByTag(tags []string) []*ServiceInstance
 	for _, tag := range tags {
 		tagSet[tag] = true
 	}
-	
+
 	for _, instance := range r.ServiceInstances {
 		for _, instanceTag := range instance.Metadata.Tags {
 			if tagSet[instanceTag] {
@@ -509,7 +553,7 @@ func (r *Repository) ListServiceInstancesByTag(tags []string) []*ServiceInstance
 			}
 		}
 	}
-	
+
 	return instances
 }
 

@@ -315,10 +315,10 @@ func TestAWSSecretsManagerHandleError(t *testing.T) {
 // TestAWSSecretsManagerGetVersionString tests version string extraction.
 func TestAWSSecretsManagerGetVersionString(t *testing.T) {
 	tests := []struct {
-		name        string
-		versionID   *string
-		stages      []string
-		expected    string
+		name      string
+		versionID *string
+		stages    []string
+		expected  string
 	}{
 		{
 			name:      "with version ID",

@@ -25,14 +25,14 @@ Shows both built-in provider types and configured provider instances.`,
 
 			fmt.Println("Built-in Provider Types:")
 			fmt.Println("=======================")
-			
+
 			supportedTypes := registry.GetSupportedTypes()
 			sort.Strings(supportedTypes)
-			
+
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 			_, _ = fmt.Fprintf(w, "TYPE\tDESCRIPTION\n")
 			_, _ = fmt.Fprintf(w, "----\t-----------\n")
-			
+
 			for _, providerType := range supportedTypes {
 				description := getProviderDescription(providerType)
 				_, _ = fmt.Fprintf(w, "%s\t%s\n", providerType, description)
@@ -43,7 +43,7 @@ Shows both built-in provider types and configured provider instances.`,
 			if err := cfg.Load(); err == nil && cfg.Definition != nil {
 				fmt.Println("\nConfigured Providers:")
 				fmt.Println("====================")
-				
+
 				providers := cfg.ListAllProviders()
 				if len(providers) == 0 {
 					fmt.Println("No providers configured")
@@ -51,13 +51,13 @@ Shows both built-in provider types and configured provider instances.`,
 					w2 := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 					_, _ = fmt.Fprintf(w2, "NAME\tTYPE\tSTATUS\n")
 					_, _ = fmt.Fprintf(w2, "----\t----\t------\n")
-					
+
 					for name, providerCfg := range providers {
 						status := "configured"
 						if !registry.IsSupported(providerCfg.Type) {
 							status = "unsupported"
 						}
-						
+
 						_, _ = fmt.Fprintf(w2, "%s\t%s\t%s\n", name, providerCfg.Type, status)
 					}
 					_ = w2.Flush()
@@ -88,29 +88,29 @@ Shows both built-in provider types and configured provider instances.`,
 // getProviderDescription returns a description for a provider type
 func getProviderDescription(providerType string) string {
 	descriptions := map[string]string{
-		"literal":             "Static literal values for testing",
-		"mock":                "Mock provider for testing and development",
-		"json":                "JSON provider with test data for transforms",
-		"bitwarden":           "Bitwarden password manager via CLI",
-		"aws.secretsmanager":  "AWS Secrets Manager via SDK",
-		"aws.ssm":             "AWS Systems Manager Parameter Store",
-		"aws.sts":             "AWS STS for temporary credentials",
-		"aws.sso":             "AWS IAM Identity Center (SSO)",
-		"aws":                 "AWS unified provider (intelligent routing)",
-		"gcp.secretmanager":   "Google Cloud Secret Manager",
-		"gcp":                 "GCP unified provider (intelligent routing)",
-		"azure.keyvault":      "Azure Key Vault",
-		"azure.identity":      "Azure Managed Identity / Service Principal",
-		"azure":               "Azure unified provider (intelligent routing)",
-		"onepassword":         "1Password password manager via CLI",
-		"vault":               "HashiCorp Vault",
-		"doppler":             "Doppler centralized secrets management",
-		"pass":                "pass (zx2c4) Unix password manager",
-		"keychain":            "OS native keychain (macOS Keychain, Linux Secret Service)",
-		"infisical":           "Infisical open-source secret management platform",
-		"akeyless":            "Akeyless enterprise zero-knowledge secret management",
+		"literal":            "Static literal values for testing",
+		"mock":               "Mock provider for testing and development",
+		"json":               "JSON provider with test data for transforms",
+		"bitwarden":          "Bitwarden password manager via CLI",
+		"aws.secretsmanager": "AWS Secrets Manager via SDK",
+		"aws.ssm":            "AWS Systems Manager Parameter Store",
+		"aws.sts":            "AWS STS for temporary credentials",
+		"aws.sso":            "AWS IAM Identity Center (SSO)",
+		"aws":                "AWS unified provider (intelligent routing)",
+		"gcp.secretmanager":  "Google Cloud Secret Manager",
+		"gcp":                "GCP unified provider (intelligent routing)",
+		"azure.keyvault":     "Azure Key Vault",
+		"azure.identity":     "Azure Managed Identity / Service Principal",
+		"azure":              "Azure unified provider (intelligent routing)",
+		"onepassword":        "1Password password manager via CLI",
+		"vault":              "HashiCorp Vault",
+		"doppler":            "Doppler centralized secrets management",
+		"pass":               "pass (zx2c4) Unix password manager",
+		"keychain":           "OS native keychain (macOS Keychain, Linux Secret Service)",
+		"infisical":          "Infisical open-source secret management platform",
+		"akeyless":           "Akeyless enterprise zero-knowledge secret management",
 	}
-	
+
 	if desc, exists := descriptions[providerType]; exists {
 		return desc
 	}
@@ -264,7 +264,7 @@ func getProviderDetails(providerType string) []string {
 			"Self-hosted or cloud-hosted gateway",
 		},
 	}
-	
+
 	if detail, exists := details[providerType]; exists {
 		return detail
 	}

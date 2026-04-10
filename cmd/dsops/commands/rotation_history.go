@@ -323,7 +323,7 @@ func outputRotHistYAML(data interface{}) error {
 
 // getHistorySince is a helper function to access the flag value
 func getHistorySince() string {
-	// This is a placeholder - in real implementation, 
+	// This is a placeholder - in real implementation,
 	// the flag value would be passed through the command context
 	return ""
 }

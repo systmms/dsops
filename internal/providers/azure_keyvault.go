@@ -12,9 +12,9 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/logging"
 	"github.com/systmms/dsops/pkg/provider"
-	dserrors "github.com/systmms/dsops/internal/errors"
 )
 
 // AzureKeyVaultClientAPI defines the interface for Azure Key Vault operations
@@ -28,11 +28,11 @@ type AzureKeyVaultClientAPI interface {
 
 // AzureKeyVaultProvider implements the Provider interface for Azure Key Vault
 type AzureKeyVaultProvider struct {
-	name       string
-	client     AzureKeyVaultClientAPI
-	logger     *logging.Logger
-	config     AzureKeyVaultConfig
-	vaultURL   string
+	name     string
+	client   AzureKeyVaultClientAPI
+	logger   *logging.Logger
+	config   AzureKeyVaultConfig
+	vaultURL string
 }
 
 // AzureKeyVaultConfig holds Azure Key Vault-specific configuration
@@ -183,7 +183,7 @@ func (p *AzureKeyVaultProvider) Name() string {
 // Resolve fetches a secret from Azure Key Vault
 func (p *AzureKeyVaultProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
 	secretName, version, jsonPath := p.parseReference(ref.Key)
-	
+
 	p.logger.Debug("Accessing Azure Key Vault secret: %s", logging.Secret(secretName))
 
 	// Get secret from Key Vault
@@ -209,7 +209,7 @@ func (p *AzureKeyVaultProvider) Resolve(ctx context.Context, ref provider.Refere
 	}
 
 	secretData := *resp.Value
-	
+
 	// Extract JSON field if specified
 	if jsonPath != "" {
 		extractedValue, err := extractJSONPathAzure(secretData, jsonPath)
@@ -256,7 +256,7 @@ func (p *AzureKeyVaultProvider) parseReference(ref string) (secretName, version,
 		ref = parts[0]
 		jsonPath = parts[1]
 	}
-	
+
 	// Check for version specification (secret-name/version)
 	if strings.Contains(ref, "/") {
 		parts := strings.SplitN(ref, "/", 2)
@@ -265,7 +265,7 @@ func (p *AzureKeyVaultProvider) parseReference(ref string) (secretName, version,
 	} else {
 		secretName = ref
 	}
-	
+
 	return secretName, version, jsonPath
 }
 
@@ -275,17 +275,17 @@ func extractJSONPathAzure(jsonStr, path string) (string, error) {
 	if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
 		return "", fmt.Errorf("invalid JSON: %w", err)
 	}
-	
+
 	// Simple path extraction (e.g., .field.subfield)
 	path = strings.TrimPrefix(path, ".")
 	parts := strings.Split(path, ".")
-	
+
 	current := data
 	for _, part := range parts {
 		if part == "" {
 			continue
 		}
-		
+
 		switch v := current.(type) {
 		case map[string]interface{}:
 			var exists bool
@@ -304,7 +304,7 @@ func extractJSONPathAzure(jsonStr, path string) (string, error) {
 			return "", fmt.Errorf("cannot traverse path at: %s", part)
 		}
 	}
-	
+
 	// Convert result to string
 	switch v := current.(type) {
 	case string:
@@ -324,7 +324,7 @@ func extractJSONPathAzure(jsonStr, path string) (string, error) {
 // Describe returns metadata about a secret without fetching its value
 func (p *AzureKeyVaultProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
 	secretName, version, _ := p.parseReference(ref.Key)
-	
+
 	var resp azsecrets.GetSecretResponse
 	var err error
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
-	
+
 	"github.com/systmms/dsops/internal/dsopsdata"
 	"github.com/systmms/dsops/internal/logging"
 	"github.com/systmms/dsops/pkg/rotation"
@@ -26,20 +26,20 @@ func NewPermissionChecker(repository *dsopsdata.Repository, logger *logging.Logg
 
 // RotationRequest represents a rotation permission check request
 type RotationRequest struct {
-	Principal       string                 // Principal name making the request
-	ServiceType     string                 // Service type being rotated
-	CredentialKind  string                 // Credential kind being rotated
-	RequestedTTL    time.Duration          // Requested TTL for the credential
-	Environment     string                 // Environment context
-	SecretKey       string                 // Secret key for logging
+	Principal      string        // Principal name making the request
+	ServiceType    string        // Service type being rotated
+	CredentialKind string        // Credential kind being rotated
+	RequestedTTL   time.Duration // Requested TTL for the credential
+	Environment    string        // Environment context
+	SecretKey      string        // Secret key for logging
 }
 
 // PermissionResult represents the result of a permission check
 type PermissionResult struct {
-	Allowed       bool   `json:"allowed"`
-	Reason        string `json:"reason"`
-	Principal     *dsopsdata.Principal `json:"principal,omitempty"`
-	Constraints   []string `json:"constraints,omitempty"`
+	Allowed     bool                 `json:"allowed"`
+	Reason      string               `json:"reason"`
+	Principal   *dsopsdata.Principal `json:"principal,omitempty"`
+	Constraints []string             `json:"constraints,omitempty"`
 }
 
 // CheckRotationPermission checks if a principal can perform a rotation

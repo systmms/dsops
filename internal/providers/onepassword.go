@@ -199,7 +199,7 @@ func (op *OnePasswordProvider) extractField(item *OnePasswordItem, fieldName str
 	case "username":
 		// Look for username field
 		for _, field := range item.Fields {
-			if field.Type == "TEXT" && (strings.ToLower(field.Label) == "username" || 
+			if field.Type == "TEXT" && (strings.ToLower(field.Label) == "username" ||
 				strings.ToLower(field.Label) == "email") {
 				return field.Value, nil
 			}
@@ -222,10 +222,10 @@ func (op *OnePasswordProvider) extractField(item *OnePasswordItem, fieldName str
 
 // OnePasswordItem represents the structure returned by 1Password CLI
 type OnePasswordItem struct {
-	ID       string `json:"id"`
-	Title    string `json:"title"`
-	Category string `json:"category"`
-	Notes    string `json:"notes"`
+	ID       string   `json:"id"`
+	Title    string   `json:"title"`
+	Category string   `json:"category"`
+	Notes    string   `json:"notes"`
 	Tags     []string `json:"tags"`
 	Vault    struct {
 		ID   string `json:"id"`

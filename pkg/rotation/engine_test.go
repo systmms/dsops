@@ -29,11 +29,11 @@ func (m *MockRotator) SupportsSecret(ctx context.Context, secret SecretInfo) boo
 	if !m.supportsSecret && len(m.supportedTypes) == 0 {
 		return m.supportsSecret
 	}
-	
+
 	if len(m.supportedTypes) == 0 {
 		return true // Support all types if none specified
 	}
-	
+
 	for _, supportedType := range m.supportedTypes {
 		if string(secret.SecretType) == supportedType {
 			return true
@@ -46,7 +46,7 @@ func (m *MockRotator) Rotate(ctx context.Context, request RotationRequest) (*Rot
 	if m.rotateFunc != nil {
 		return m.rotateFunc(ctx, request)
 	}
-	
+
 	rotatedAt := time.Now()
 	return &RotationResult{
 		Secret:    request.Secret,
@@ -80,20 +80,20 @@ func (m *MockRotator) GetStatus(ctx context.Context, secret SecretInfo) (*Rotati
 func TestEngineRegistration(t *testing.T) {
 	logger := logging.New(false, true)
 	engine := NewRotationEngine(logger)
-	
+
 	// Test registering a strategy
 	strategy := &MockRotator{name: "test-strategy", supportsSecret: true}
 	err := engine.RegisterStrategy(strategy)
 	if err != nil {
 		t.Errorf("Failed to register strategy: %v", err)
 	}
-	
+
 	// Test duplicate registration
 	err = engine.RegisterStrategy(strategy)
 	if err == nil {
 		t.Error("Expected error when registering duplicate strategy")
 	}
-	
+
 	// Test getting registered strategy
 	retrieved, err := engine.GetStrategy("test-strategy")
 	if err != nil {
@@ -102,13 +102,13 @@ func TestEngineRegistration(t *testing.T) {
 	if retrieved.Name() != "test-strategy" {
 		t.Errorf("Retrieved wrong strategy: %s", retrieved.Name())
 	}
-	
+
 	// Test getting non-existent strategy
 	_, err = engine.GetStrategy("non-existent")
 	if err == nil {
 		t.Error("Expected error when getting non-existent strategy")
 	}
-	
+
 	// Test listing strategies
 	strategies := engine.ListStrategies()
 	if len(strategies) != 1 || strategies[0] != "test-strategy" {
@@ -120,27 +120,27 @@ func TestEngineAutoSelectStrategy(t *testing.T) {
 	logger := logging.New(false, true)
 	engine := NewRotationEngine(logger)
 	ctx := context.Background()
-	
+
 	// Register multiple strategies with different capabilities
 	passwordStrategy := &MockRotator{
-		name: "password-rotator",
+		name:           "password-rotator",
 		supportsSecret: true,
 	}
 	apiKeyStrategy := &MockRotator{
-		name: "apikey-rotator",
+		name:           "apikey-rotator",
 		supportsSecret: false, // This strategy doesn't support the test secret
 	}
-	
+
 	_ = engine.RegisterStrategy(passwordStrategy)
 	_ = engine.RegisterStrategy(apiKeyStrategy)
-	
+
 	// Test auto-selection
 	secret := SecretInfo{
 		Key:        "TEST_PASSWORD",
 		SecretType: SecretTypePassword,
 		Provider:   "aws",
 	}
-	
+
 	selected, err := engine.AutoSelectStrategy(ctx, secret)
 	if err != nil {
 		t.Errorf("Failed to auto-select strategy: %v", err)
@@ -148,18 +148,18 @@ func TestEngineAutoSelectStrategy(t *testing.T) {
 	if selected != "password-rotator" {
 		t.Errorf("Expected password-rotator, got %s", selected)
 	}
-	
+
 	// Test when no strategy supports the secret
 	// Make both strategies not support this specific secret
 	passwordStrategy.supportsSecret = false
 	apiKeyStrategy.supportsSecret = false
-	
+
 	unsupportedSecret := SecretInfo{
 		Key:        "UNSUPPORTED",
 		SecretType: "unsupported-type",
 		Provider:   "unknown",
 	}
-	
+
 	_, err = engine.AutoSelectStrategy(ctx, unsupportedSecret)
 	if err == nil {
 		t.Error("Expected error when no strategy supports the secret")
@@ -170,14 +170,14 @@ func TestEngineRotation(t *testing.T) {
 	logger := logging.New(false, true)
 	engine := NewRotationEngine(logger)
 	ctx := context.Background()
-	
+
 	// Test successful rotation
 	successStrategy := &MockRotator{
 		name:           "success-strategy",
 		supportsSecret: true,
 	}
 	_ = engine.RegisterStrategy(successStrategy)
-	
+
 	secret := SecretInfo{
 		Key:        "TEST_SECRET",
 		SecretType: SecretTypePassword,
@@ -186,12 +186,12 @@ func TestEngineRotation(t *testing.T) {
 			MinRotationInterval: 24 * time.Hour,
 		},
 	}
-	
+
 	request := RotationRequest{
 		Secret:   secret,
 		Strategy: "success-strategy",
 	}
-	
+
 	result, err := engine.Rotate(ctx, request)
 	if err != nil {
 		t.Errorf("Rotation failed: %v", err)
@@ -202,14 +202,14 @@ func TestEngineRotation(t *testing.T) {
 	if result.NewSecretRef == nil {
 		t.Error("Expected new secret reference")
 	}
-	
+
 	// Test rotation with unsupported secret
 	unsupportedStrategy := &MockRotator{
 		name:           "unsupported-strategy",
 		supportsSecret: false,
 	}
 	_ = engine.RegisterStrategy(unsupportedStrategy)
-	
+
 	request.Strategy = "unsupported-strategy"
 	result, err = engine.Rotate(ctx, request)
 	if err != nil {
@@ -221,7 +221,7 @@ func TestEngineRotation(t *testing.T) {
 	if !strings.Contains(result.Error, "does not support") {
 		t.Errorf("Expected unsupported error message, got: %s", result.Error)
 	}
-	
+
 	// Test rotation with strategy error
 	errorStrategy := &MockRotator{
 		name:           "error-strategy",
@@ -231,7 +231,7 @@ func TestEngineRotation(t *testing.T) {
 		},
 	}
 	_ = engine.RegisterStrategy(errorStrategy)
-	
+
 	request.Strategy = "error-strategy"
 	result, err = engine.Rotate(ctx, request)
 	if err == nil {
@@ -246,14 +246,14 @@ func TestEngineBatchRotation(t *testing.T) {
 	logger := logging.New(false, true)
 	engine := NewRotationEngine(logger)
 	ctx := context.Background()
-	
+
 	// Register a strategy
 	strategy := &MockRotator{
 		name:           "batch-strategy",
 		supportsSecret: true,
 	}
 	_ = engine.RegisterStrategy(strategy)
-	
+
 	// Create multiple rotation requests
 	requests := []RotationRequest{
 		{
@@ -278,17 +278,17 @@ func TestEngineBatchRotation(t *testing.T) {
 			Strategy: "batch-strategy",
 		},
 	}
-	
+
 	// Test batch rotation
 	results, err := engine.BatchRotate(ctx, requests)
 	if err != nil {
 		t.Errorf("Batch rotation failed: %v", err)
 	}
-	
+
 	if len(results) != len(requests) {
 		t.Errorf("Expected %d results, got %d", len(requests), len(results))
 	}
-	
+
 	// Verify all rotations completed
 	for i, result := range results {
 		if result.Status != StatusCompleted {
@@ -304,7 +304,7 @@ func TestEngineAuditTrail(t *testing.T) {
 	logger := logging.New(false, true)
 	engine := NewRotationEngine(logger)
 	ctx := context.Background()
-	
+
 	// Register strategy that adds audit entries
 	strategy := &MockRotator{
 		name:           "audit-strategy",
@@ -328,7 +328,7 @@ func TestEngineAuditTrail(t *testing.T) {
 		},
 	}
 	_ = engine.RegisterStrategy(strategy)
-	
+
 	request := RotationRequest{
 		Secret: SecretInfo{
 			Key:        "AUDIT_TEST",
@@ -336,21 +336,21 @@ func TestEngineAuditTrail(t *testing.T) {
 		},
 		Strategy: "audit-strategy",
 	}
-	
+
 	result, err := engine.Rotate(ctx, request)
 	if err != nil {
 		t.Errorf("Rotation failed: %v", err)
 	}
-	
+
 	// Check audit trail
 	if len(result.AuditTrail) < 2 {
 		t.Error("Expected at least 2 audit entries")
 	}
-	
+
 	// Should have rotation_started from engine
 	hasStarted := false
 	hasGenerated := false
-	
+
 	for _, entry := range result.AuditTrail {
 		if entry.Action == "rotation_started" {
 			hasStarted = true
@@ -365,7 +365,7 @@ func TestEngineAuditTrail(t *testing.T) {
 			}
 		}
 	}
-	
+
 	if !hasStarted {
 		t.Error("Missing rotation_started audit entry")
 	}
@@ -377,36 +377,36 @@ func TestEngineAuditTrail(t *testing.T) {
 func TestEngineWithRepository(t *testing.T) {
 	logger := logging.New(false, true)
 	engine := NewRotationEngine(logger)
-	
+
 	// Create simple repository for testing
 	repo := &dsopsdata.Repository{
 		ServiceTypes: make(map[string]*dsopsdata.ServiceType),
 	}
-	
+
 	// Create a test service type
 	serviceType := &dsopsdata.ServiceType{}
 	serviceType.Metadata.Name = "postgresql"
 	serviceType.Spec.Defaults.RotationStrategy = "database-rotator"
-	
+
 	repo.ServiceTypes["postgresql"] = serviceType
-	
+
 	// Set repository on engine
 	engine.SetRepository(repo)
-	
+
 	// Register matching strategy
 	dbStrategy := &MockRotator{
 		name:           "database-rotator",
 		supportsSecret: true,
 	}
 	_ = engine.RegisterStrategy(dbStrategy)
-	
+
 	// Test auto-selection with schema
 	secret := SecretInfo{
 		Key:        "DB_PASSWORD",
 		SecretType: "postgresql",
 		Provider:   "aws",
 	}
-	
+
 	ctx := context.Background()
 	selected, err := engine.AutoSelectStrategy(ctx, secret)
 	if err != nil {

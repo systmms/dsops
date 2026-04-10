@@ -293,9 +293,9 @@ func TestTwoSecretStrategyRotate(t *testing.T) {
 
 		request := RotationRequest{
 			Secret: SecretInfo{
-				Key:        "test-secret",
-				Provider:   "test-provider",
-				SecretType: SecretTypePassword,
+				Key:         "test-secret",
+				Provider:    "test-provider",
+				SecretType:  SecretTypePassword,
 				Constraints: &RotationConstraints{},
 			},
 			DryRun: true,
@@ -314,9 +314,9 @@ func TestTwoSecretStrategyRotate(t *testing.T) {
 
 		request := RotationRequest{
 			Secret: SecretInfo{
-				Key:        "test-secret",
-				Provider:   "test-provider",
-				SecretType: SecretTypePassword,
+				Key:         "test-secret",
+				Provider:    "test-provider",
+				SecretType:  SecretTypePassword,
 				Constraints: &RotationConstraints{},
 			},
 		}
@@ -393,8 +393,8 @@ func TestTwoSecretStrategyRotate(t *testing.T) {
 
 		request := RotationRequest{
 			Secret: SecretInfo{
-				Key:        "test-secret",
-				SecretType: SecretTypePassword,
+				Key:         "test-secret",
+				SecretType:  SecretTypePassword,
 				Constraints: &RotationConstraints{},
 			},
 		}
@@ -415,8 +415,8 @@ func TestTwoSecretStrategyRotate(t *testing.T) {
 
 		request := RotationRequest{
 			Secret: SecretInfo{
-				Key:        "test-secret",
-				SecretType: SecretTypePassword,
+				Key:         "test-secret",
+				SecretType:  SecretTypePassword,
 				Constraints: &RotationConstraints{},
 			},
 		}
@@ -439,8 +439,8 @@ func TestTwoSecretStrategyRotate(t *testing.T) {
 
 		request := RotationRequest{
 			Secret: SecretInfo{
-				Key:        "test-secret",
-				SecretType: SecretTypePassword,
+				Key:         "test-secret",
+				SecretType:  SecretTypePassword,
 				Constraints: &RotationConstraints{},
 			},
 		}

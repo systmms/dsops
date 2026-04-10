@@ -166,17 +166,17 @@ func (r *RandomRotator) generateRandomValue(newValue *NewSecretValue) ([]byte, e
 // generateRandomBytes creates cryptographically secure random bytes
 func (r *RandomRotator) generateRandomBytes(length int) ([]byte, error) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	
+
 	randomBytes := make([]byte, length)
 	charsetBytes := make([]byte, length)
-	
+
 	if _, err := rand.Read(randomBytes); err != nil {
 		return nil, fmt.Errorf("failed to generate random bytes: %w", err)
 	}
-	
+
 	for i := 0; i < length; i++ {
 		charsetBytes[i] = charset[randomBytes[i]%byte(len(charset))]
 	}
-	
+
 	return charsetBytes, nil
 }

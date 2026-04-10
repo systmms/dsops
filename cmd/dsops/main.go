@@ -26,10 +26,10 @@ func main() {
 func run() error {
 	// Global flags
 	var (
-		configFile      string
-		noColor         bool
-		debug           bool
-		nonInteractive  bool
+		configFile     string
+		noColor        bool
+		debug          bool
+		nonInteractive bool
 	)
 
 	// Create config placeholder
@@ -44,7 +44,7 @@ launches commands with ephemeral environment variables.`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// Initialize logger with parsed flags
 			logger := logging.New(debug, noColor)
-			
+
 			// Update config with parsed values
 			cfg.Path = configFile
 			cfg.Logger = logger
@@ -56,7 +56,6 @@ launches commands with ephemeral environment variables.`,
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().BoolVar(&nonInteractive, "non-interactive", false, "Non-interactive mode")
-
 
 	// Add commands
 	rootCmd.AddCommand(
@@ -72,9 +71,9 @@ launches commands with ephemeral environment variables.`,
 		commands.NewGuardCommand(cfg),
 		commands.NewInstallHookCommand(cfg),
 		commands.NewLeakCommand(cfg),
-		commands.NewSecretsCommand(cfg),           // Secrets subcommand with rotation
-		commands.NewRotationCommand(cfg),          // Rotation metadata commands
-		commands.NewCompletionCommand(cfg),        // Shell completion generation
+		commands.NewSecretsCommand(cfg),    // Secrets subcommand with rotation
+		commands.NewRotationCommand(cfg),   // Rotation metadata commands
+		commands.NewCompletionCommand(cfg), // Shell completion generation
 	)
 
 	return rootCmd.Execute()

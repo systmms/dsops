@@ -8,29 +8,29 @@ import (
 
 // UserError represents an error that should be shown to the user with helpful context
 type UserError struct {
-	Message     string
-	Suggestion  string
-	Details     string
-	Err         error
+	Message    string
+	Suggestion string
+	Details    string
+	Err        error
 }
 
 func (e UserError) Error() string {
 	var parts []string
-	
+
 	if e.Message != "" {
 		parts = append(parts, e.Message)
 	} else if e.Err != nil {
 		parts = append(parts, e.Err.Error())
 	}
-	
+
 	if e.Details != "" {
 		parts = append(parts, "\n  Details: "+e.Details)
 	}
-	
+
 	if e.Suggestion != "" {
 		parts = append(parts, "\n  💡 Try: "+e.Suggestion)
 	}
-	
+
 	return strings.Join(parts, "")
 }
 
@@ -55,11 +55,11 @@ func (e ConfigError) Error() string {
 		msg += fmt.Sprintf(" (value: %v)", e.Value)
 	}
 	msg += ": " + e.Message
-	
+
 	if e.Suggestion != "" {
 		msg += "\n  💡 " + e.Suggestion
 	}
-	
+
 	return msg
 }
 
@@ -79,11 +79,11 @@ func (e CommandError) Error() string {
 	if e.Message != "" {
 		msg += ": " + e.Message
 	}
-	
+
 	if e.Suggestion != "" {
 		msg += "\n  💡 " + e.Suggestion
 	}
-	
+
 	return msg
 }
 
@@ -91,7 +91,7 @@ func (e CommandError) Error() string {
 func ProviderError(provider string, operation string, err error) error {
 	// Check for common provider errors and add helpful context
 	suggestion := getProviderSuggestion(provider, err)
-	
+
 	return UserError{
 		Message:    fmt.Sprintf("%s provider error during %s", provider, operation),
 		Suggestion: suggestion,
@@ -102,7 +102,7 @@ func ProviderError(provider string, operation string, err error) error {
 // getProviderSuggestion returns helpful suggestions based on provider and error
 func getProviderSuggestion(provider string, err error) string {
 	errStr := err.Error()
-	
+
 	switch provider {
 	case "bitwarden":
 		if strings.Contains(errStr, "not logged in") {
@@ -117,7 +117,7 @@ func getProviderSuggestion(provider string, err error) string {
 		if strings.Contains(errStr, "command not found") {
 			return "Install Bitwarden CLI: https://bitwarden.com/help/cli/"
 		}
-		
+
 	case "1password", "onepassword":
 		if strings.Contains(errStr, "not signed in") {
 			return "Run 'op signin' to authenticate with 1Password"
@@ -131,7 +131,7 @@ func getProviderSuggestion(provider string, err error) string {
 		if strings.Contains(errStr, "command not found") {
 			return "Install 1Password CLI: https://developer.1password.com/docs/cli/get-started/"
 		}
-		
+
 	case "aws", "aws-secretsmanager":
 		if strings.Contains(errStr, "credentials") || strings.Contains(errStr, "authorization") {
 			return "Configure AWS credentials: 'aws configure' or set AWS_PROFILE"
@@ -146,7 +146,7 @@ func getProviderSuggestion(provider string, err error) string {
 			return "AWS rate limit exceeded. Wait a moment and try again"
 		}
 	}
-	
+
 	// Generic suggestions
 	if strings.Contains(errStr, "timeout") {
 		return "The operation timed out. Check your network connection and try again"
@@ -154,7 +154,7 @@ func getProviderSuggestion(provider string, err error) string {
 	if strings.Contains(errStr, "connection refused") || strings.Contains(errStr, "no such host") {
 		return "Unable to connect. Check your network and provider configuration"
 	}
-	
+
 	return ""
 }
 
@@ -171,12 +171,12 @@ func WrapCommandNotFound(command string, err error) error {
 		"git":    "Install Git from https://git-scm.com/",
 		"make":   "Install Make (usually comes with build tools)",
 	}
-	
+
 	suggestion := suggestions[command]
 	if suggestion == "" {
 		suggestion = fmt.Sprintf("Make sure '%s' is installed and in your PATH", command)
 	}
-	
+
 	return CommandError{
 		Command:    command,
 		Message:    "command not found",
@@ -189,7 +189,7 @@ func IsRetryable(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := err.Error()
 	retryablePatterns := []string{
 		"timeout",
@@ -200,13 +200,13 @@ func IsRetryable(err error) bool {
 		"throttling",
 		"too many requests",
 	}
-	
+
 	for _, pattern := range retryablePatterns {
 		if strings.Contains(strings.ToLower(errStr), pattern) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -215,7 +215,7 @@ func SimplifyError(err error) error {
 	if err == nil {
 		return nil
 	}
-	
+
 	// Unwrap to get the root cause
 	rootErr := err
 	for {
@@ -225,7 +225,7 @@ func SimplifyError(err error) error {
 		}
 		rootErr = unwrapped
 	}
-	
+
 	// Already a user-friendly error
 	if _, ok := err.(UserError); ok {
 		return err
@@ -236,24 +236,24 @@ func SimplifyError(err error) error {
 	if _, ok := err.(CommandError); ok {
 		return err
 	}
-	
+
 	// Simplify common technical errors
 	errStr := rootErr.Error()
-	
+
 	if strings.Contains(errStr, "yaml:") {
 		return ConfigError{
 			Message:    "Invalid YAML format",
 			Suggestion: "Check for indentation errors and missing quotes",
 		}
 	}
-	
+
 	if strings.Contains(errStr, "json:") {
 		return ConfigError{
 			Message:    "Invalid JSON format",
 			Suggestion: "Validate your JSON at https://jsonlint.com/",
 		}
 	}
-	
+
 	if strings.Contains(errStr, "permission denied") {
 		return UserError{
 			Message:    "Permission denied",
@@ -261,7 +261,7 @@ func SimplifyError(err error) error {
 			Err:        err,
 		}
 	}
-	
+
 	if strings.Contains(errStr, "no such file or directory") {
 		return UserError{
 			Message:    "File or directory not found",
@@ -269,7 +269,7 @@ func SimplifyError(err error) error {
 			Err:        err,
 		}
 	}
-	
+
 	// Return original error if we can't simplify it
 	return err
 }

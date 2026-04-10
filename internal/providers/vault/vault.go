@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/logging"
 	"github.com/systmms/dsops/pkg/provider"
-	dserrors "github.com/systmms/dsops/internal/errors"
 )
 
 const (
@@ -22,10 +22,10 @@ const (
 
 // VaultProvider implements the Provider interface for HashiCorp Vault
 type VaultProvider struct {
-	name     string
-	config   Config
-	logger   *logging.Logger
-	client   VaultClient
+	name   string
+	config Config
+	logger *logging.Logger
+	client VaultClient
 }
 
 // Config holds Vault-specific configuration
@@ -34,7 +34,7 @@ type Config struct {
 	Token      string `yaml:"token"`       // Vault token (discouraged, use env var)
 	AuthMethod string `yaml:"auth_method"` // Authentication method: token, userpass, ldap, aws, k8s
 	Namespace  string `yaml:"namespace"`   // Vault namespace (Vault Enterprise)
-	
+
 	// Auth method specific configs
 	UserpassUsername string `yaml:"userpass_username"` // For userpass auth
 	UserpassPassword string `yaml:"userpass_password"` // For userpass auth (discouraged)
@@ -42,7 +42,7 @@ type Config struct {
 	LDAPPassword     string `yaml:"ldap_password"`     // For LDAP auth (discouraged)
 	AWSRole          string `yaml:"aws_role"`          // For AWS auth
 	K8SRole          string `yaml:"k8s_role"`          // For Kubernetes auth
-	
+
 	// Optional settings
 	CACert     string `yaml:"ca_cert"`     // Path to CA certificate
 	ClientCert string `yaml:"client_cert"` // Path to client certificate
@@ -76,11 +76,11 @@ func NewVaultProvider(name string, configMap map[string]interface{}) (provider.P
 	// Create a default logger if none provided
 	logger := logging.New(false, false)
 	var config Config
-	
+
 	// Set defaults
 	config.Address = DefaultVaultAddr
 	config.AuthMethod = "token"
-	
+
 	// Parse configuration
 	if addr, ok := configMap["address"].(string); ok {
 		config.Address = addr
@@ -262,7 +262,7 @@ func (v *VaultProvider) Describe(ctx context.Context, ref provider.Reference) (p
 	}
 
 	return provider.Metadata{
-		Type:   "vault-secret",
+		Type: "vault-secret",
 		Tags: map[string]string{
 			"source":      fmt.Sprintf("vault:%s", path),
 			"path":        path,
@@ -277,7 +277,7 @@ func (v *VaultProvider) Describe(ctx context.Context, ref provider.Reference) (p
 // Capabilities returns the provider's capabilities
 func (v *VaultProvider) Capabilities() provider.Capabilities {
 	return provider.Capabilities{
-		SupportsVersioning: true,  // Vault supports versioning in KV v2
+		SupportsVersioning: true, // Vault supports versioning in KV v2
 		SupportsMetadata:   true,
 		SupportsWatching:   false, // Future feature
 		SupportsBinary:     true,  // Vault can store binary data
@@ -320,7 +320,7 @@ func (v *VaultProvider) Validate(ctx context.Context) error {
 	case "ldap":
 		if v.config.LDAPUsername == "" {
 			return dserrors.ConfigError{
-				Field:      "ldap_username", 
+				Field:      "ldap_username",
 				Message:    "Username is required for LDAP auth",
 				Suggestion: "Set 'ldap_username' in provider config",
 			}
@@ -379,20 +379,20 @@ func (v *VaultProvider) parseReference(key string) (string, string, error) {
 	parts := strings.Split(key, "#")
 	path := parts[0]
 	field := ""
-	
+
 	if len(parts) > 2 {
 		return "", "", dserrors.UserError{
 			Message:    "Invalid vault key format",
 			Suggestion: "Use format: 'path' or 'path#field'",
 		}
 	}
-	
+
 	if len(parts) == 2 {
 		field = parts[1]
 	}
 
 	// TODO: Handle versioning (@v2 syntax) in future version
-	
+
 	if path == "" {
 		return "", "", dserrors.UserError{
 			Message:    "Empty vault path",
@@ -406,7 +406,7 @@ func (v *VaultProvider) parseReference(key string) (string, string, error) {
 // getVaultErrorSuggestion provides helpful suggestions based on Vault errors
 func (v *VaultProvider) getVaultErrorSuggestion(err error) string {
 	errStr := strings.ToLower(err.Error())
-	
+
 	switch {
 	case strings.Contains(errStr, "connection refused"):
 		return "Check that Vault server is running and accessible at " + v.config.Address

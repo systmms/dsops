@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/logging"
 	"github.com/systmms/dsops/pkg/provider"
-	dserrors "github.com/systmms/dsops/internal/errors"
 )
 
 // AWSUnifiedProvider provides intelligent routing to different AWS secret providers
@@ -25,7 +25,7 @@ type UnifiedAWSConfig struct {
 	Profile        string
 	AssumeRole     string
 	DefaultService string // Default service if not specified in reference
-	
+
 	// Service-specific configs
 	SecretsManager map[string]interface{}
 	SSM            map[string]interface{}
@@ -36,7 +36,7 @@ type UnifiedAWSConfig struct {
 // NewAWSUnifiedProvider creates a new unified AWS provider
 func NewAWSUnifiedProvider(name string, configMap map[string]interface{}) (*AWSUnifiedProvider, error) {
 	logger := logging.New(false, false)
-	
+
 	config := UnifiedAWSConfig{
 		DefaultService: "secretsmanager", // Default to Secrets Manager
 		SecretsManager: make(map[string]interface{}),
@@ -75,7 +75,7 @@ func NewAWSUnifiedProvider(name string, configMap map[string]interface{}) (*AWSU
 
 	// Create sub-providers
 	providers := make(map[string]provider.Provider)
-	
+
 	// Create Secrets Manager provider
 	smConfig := mergeConfigs(getCommonConfig(config), config.SecretsManager)
 	smProvider, err := NewAWSSecretsManagerProvider(name+"-sm", smConfig)
@@ -141,17 +141,17 @@ func getCommonConfig(config UnifiedAWSConfig) map[string]interface{} {
 // mergeConfigs merges two configuration maps
 func mergeConfigs(base, override map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
-	
+
 	// Copy base config
 	for k, v := range base {
 		result[k] = v
 	}
-	
+
 	// Override with specific config
 	for k, v := range override {
 		result[k] = v
 	}
-	
+
 	return result
 }
 
@@ -163,7 +163,7 @@ func (p *AWSUnifiedProvider) Name() string {
 // Resolve intelligently routes to the appropriate AWS provider
 func (p *AWSUnifiedProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
 	service, key := p.parseReference(ref.Key)
-	
+
 	// Get the appropriate provider
 	subProvider, exists := p.providers[service]
 	if !exists {
@@ -181,7 +181,7 @@ func (p *AWSUnifiedProvider) Resolve(ctx context.Context, ref provider.Reference
 	}
 
 	p.logger.Debug("Routing to %s provider with key: %s", service, logging.Secret(key))
-	
+
 	// Delegate to sub-provider
 	return subProvider.Resolve(ctx, subRef)
 }
@@ -193,28 +193,28 @@ func (p *AWSUnifiedProvider) parseReference(ref string) (service, key string) {
 		parts := strings.SplitN(ref, ":", 2)
 		return "secretsmanager", parts[1]
 	}
-	
+
 	if strings.HasPrefix(ref, "ssm:") || strings.HasPrefix(ref, "parameter:") {
 		parts := strings.SplitN(ref, ":", 2)
 		return "ssm", parts[1]
 	}
-	
+
 	if strings.HasPrefix(ref, "sts:") || strings.HasPrefix(ref, "credentials:") {
 		parts := strings.SplitN(ref, ":", 2)
 		return "sts", parts[1]
 	}
-	
+
 	if strings.HasPrefix(ref, "sso:") {
 		parts := strings.SplitN(ref, ":", 2)
 		return "sso", parts[1]
 	}
-	
+
 	// Auto-detect based on format
 	if strings.HasPrefix(ref, "/") {
 		// Path format suggests SSM Parameter Store
 		return "ssm", ref
 	}
-	
+
 	if strings.Contains(ref, "arn:aws:") {
 		// ARN format - could be various services
 		if strings.Contains(ref, ":secretsmanager:") {
@@ -227,11 +227,11 @@ func (p *AWSUnifiedProvider) parseReference(ref string) (service, key string) {
 			return "sts", ref
 		}
 	}
-	
+
 	// Credential-specific keys suggest STS/SSO
 	lowerRef := strings.ToLower(ref)
-	if lowerRef == "access_key_id" || lowerRef == "secret_access_key" || 
-	   lowerRef == "session_token" || lowerRef == "credentials" {
+	if lowerRef == "access_key_id" || lowerRef == "secret_access_key" ||
+		lowerRef == "session_token" || lowerRef == "credentials" {
 		if _, exists := p.providers["sts"]; exists {
 			return "sts", ref
 		}
@@ -239,7 +239,7 @@ func (p *AWSUnifiedProvider) parseReference(ref string) (service, key string) {
 			return "sso", ref
 		}
 	}
-	
+
 	// Default to configured service
 	return p.defaultService, ref
 }
@@ -256,7 +256,7 @@ func (p *AWSUnifiedProvider) getAvailableServices() string {
 // Describe returns metadata about the secret
 func (p *AWSUnifiedProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
 	service, key := p.parseReference(ref.Key)
-	
+
 	subProvider, exists := p.providers[service]
 	if !exists {
 		return provider.Metadata{
@@ -283,20 +283,20 @@ func (p *AWSUnifiedProvider) Capabilities() provider.Capabilities {
 		RequiresAuth:       true,  // All require authentication
 		AuthMethods:        []string{"iam", "profile", "role", "sso", "mfa"},
 	}
-	
+
 	return caps
 }
 
 // Validate checks if all sub-providers are properly configured
 func (p *AWSUnifiedProvider) Validate(ctx context.Context) error {
 	var errors []string
-	
+
 	for service, subProvider := range p.providers {
 		if err := subProvider.Validate(ctx); err != nil {
 			errors = append(errors, fmt.Sprintf("%s: %v", service, err))
 		}
 	}
-	
+
 	if len(errors) > 0 {
 		return dserrors.UserError{
 			Message:    "One or more AWS services failed validation",
@@ -304,7 +304,7 @@ func (p *AWSUnifiedProvider) Validate(ctx context.Context) error {
 			Suggestion: "Check AWS credentials and permissions for each service",
 		}
 	}
-	
+
 	return nil
 }
 

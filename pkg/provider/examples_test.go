@@ -78,7 +78,7 @@ func ExampleProvider_errorHandling() {
 		// Check for specific error types
 		var notFoundErr provider.NotFoundError
 		if errors.As(err, &notFoundErr) {
-			fmt.Printf("Secret not found: %s in provider %s\n", 
+			fmt.Printf("Secret not found: %s in provider %s\n",
 				notFoundErr.Key, notFoundErr.Provider)
 		} else {
 			fmt.Printf("Other error: %v\n", err)
@@ -136,11 +136,11 @@ func ExampleProvider_describe() {
 		name: "example-provider",
 		metadata: map[string]provider.Metadata{
 			"database/config": {
-				Exists:    true,
-				Version:   "v2.1",
-				UpdatedAt: time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
-				Size:      1024,
-				Type:      "json",
+				Exists:      true,
+				Version:     "v2.1",
+				UpdatedAt:   time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
+				Size:        1024,
+				Type:        "json",
 				Permissions: []string{"read", "list"},
 				Tags: map[string]string{
 					"environment": "production",

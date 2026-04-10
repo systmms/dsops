@@ -30,10 +30,10 @@ type FakeAzureKeyVaultClient struct {
 
 // AzureSecretData holds the data for a mock Azure Key Vault secret
 type AzureSecretData struct {
-	Value      *string
-	ID         *string
-	Attributes *azsecrets.SecretAttributes
-	Tags       map[string]*string
+	Value       *string
+	ID          *string
+	Attributes  *azsecrets.SecretAttributes
+	Tags        map[string]*string
 	ContentType *string
 	// Version-specific data
 	Versions map[string]*AzureSecretVersion
@@ -65,9 +65,9 @@ func (f *FakeAzureKeyVaultClient) AddSecretString(name, value string) {
 		Value: to.Ptr(value),
 		ID:    to.Ptr(fmt.Sprintf("https://test-vault.vault.azure.net/secrets/%s", name)),
 		Attributes: &azsecrets.SecretAttributes{
-			Enabled:   to.Ptr(true),
-			Created:   &now,
-			Updated:   &now,
+			Enabled:       to.Ptr(true),
+			Created:       &now,
+			Updated:       &now,
 			RecoveryLevel: to.Ptr("Recoverable+Purgeable"),
 		},
 		Versions: make(map[string]*AzureSecretVersion),
@@ -84,9 +84,9 @@ func (f *FakeAzureKeyVaultClient) AddSecretWithVersion(name, value, version stri
 			Value: to.Ptr(value),
 			ID:    to.Ptr(fmt.Sprintf("https://test-vault.vault.azure.net/secrets/%s/%s", name, version)),
 			Attributes: &azsecrets.SecretAttributes{
-				Enabled:   to.Ptr(true),
-				Created:   &now,
-				Updated:   &now,
+				Enabled:       to.Ptr(true),
+				Created:       &now,
+				Updated:       &now,
 				RecoveryLevel: to.Ptr("Recoverable+Purgeable"),
 			},
 			Versions: make(map[string]*AzureSecretVersion),
@@ -97,9 +97,9 @@ func (f *FakeAzureKeyVaultClient) AddSecretWithVersion(name, value, version stri
 	f.Secrets[name].Versions[version] = &AzureSecretVersion{
 		Value: to.Ptr(value),
 		Attributes: &azsecrets.SecretAttributes{
-			Enabled:   to.Ptr(true),
-			Created:   &now,
-			Updated:   &now,
+			Enabled:       to.Ptr(true),
+			Created:       &now,
+			Updated:       &now,
 			RecoveryLevel: to.Ptr("Recoverable+Purgeable"),
 		},
 	}
@@ -112,9 +112,9 @@ func (f *FakeAzureKeyVaultClient) AddSecretWithTags(name, value string, tags map
 		Value: to.Ptr(value),
 		ID:    to.Ptr(fmt.Sprintf("https://test-vault.vault.azure.net/secrets/%s", name)),
 		Attributes: &azsecrets.SecretAttributes{
-			Enabled:   to.Ptr(true),
-			Created:   &now,
-			Updated:   &now,
+			Enabled:       to.Ptr(true),
+			Created:       &now,
+			Updated:       &now,
 			RecoveryLevel: to.Ptr("Recoverable+Purgeable"),
 		},
 		Tags:     tags,
@@ -142,8 +142,8 @@ func (f *FakeAzureKeyVaultClient) GetSecret(ctx context.Context, name string, ve
 	data, exists := f.Secrets[name]
 	if !exists {
 		return azsecrets.GetSecretResponse{}, &azcore.ResponseError{
-			StatusCode: 404,
-			ErrorCode:  "SecretNotFound",
+			StatusCode:  404,
+			ErrorCode:   "SecretNotFound",
 			RawResponse: nil,
 		}
 	}
@@ -153,8 +153,8 @@ func (f *FakeAzureKeyVaultClient) GetSecret(ctx context.Context, name string, ve
 		versionData, versionExists := data.Versions[version]
 		if !versionExists {
 			return azsecrets.GetSecretResponse{}, &azcore.ResponseError{
-				StatusCode: 404,
-				ErrorCode:  "SecretNotFound",
+				StatusCode:  404,
+				ErrorCode:   "SecretNotFound",
 				RawResponse: nil,
 			}
 		}
@@ -232,8 +232,8 @@ func (p *FakeAzureKeyVaultPager) More() bool {
 // AzureNotFoundError creates a mock Azure not found error
 func AzureNotFoundError(secretName string) error {
 	return &azcore.ResponseError{
-		StatusCode: 404,
-		ErrorCode:  "SecretNotFound",
+		StatusCode:  404,
+		ErrorCode:   "SecretNotFound",
 		RawResponse: nil,
 	}
 }
@@ -241,8 +241,8 @@ func AzureNotFoundError(secretName string) error {
 // AzureForbiddenError creates a mock Azure forbidden error
 func AzureForbiddenError(message string) error {
 	return &azcore.ResponseError{
-		StatusCode: 403,
-		ErrorCode:  "Forbidden",
+		StatusCode:  403,
+		ErrorCode:   "Forbidden",
 		RawResponse: nil,
 	}
 }
@@ -250,8 +250,8 @@ func AzureForbiddenError(message string) error {
 // AzureUnauthorizedError creates a mock Azure unauthorized error
 func AzureUnauthorizedError(message string) error {
 	return &azcore.ResponseError{
-		StatusCode: 401,
-		ErrorCode:  "Unauthorized",
+		StatusCode:  401,
+		ErrorCode:   "Unauthorized",
 		RawResponse: nil,
 	}
 }
@@ -259,8 +259,8 @@ func AzureUnauthorizedError(message string) error {
 // AzureThrottledError creates a mock Azure throttled error
 func AzureThrottledError() error {
 	return &azcore.ResponseError{
-		StatusCode: 429,
-		ErrorCode:  "TooManyRequests",
+		StatusCode:  429,
+		ErrorCode:   "TooManyRequests",
 		RawResponse: nil,
 	}
 }

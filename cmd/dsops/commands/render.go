@@ -121,7 +121,7 @@ Examples:
 				if templatePath == "" {
 					return fmt.Errorf("--template flag is required when using template format")
 				}
-				
+
 				content, err := os.ReadFile(templatePath)
 				if err != nil {
 					return fmt.Errorf("failed to read template file: %w", err)

@@ -11,12 +11,12 @@ import (
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+	dserrors "github.com/systmms/dsops/internal/errors"
+	"github.com/systmms/dsops/internal/logging"
+	"github.com/systmms/dsops/pkg/provider"
 	"google.golang.org/api/impersonate"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
-	"github.com/systmms/dsops/internal/logging"
-	"github.com/systmms/dsops/pkg/provider"
-	dserrors "github.com/systmms/dsops/internal/errors"
 )
 
 // GCPSecretManagerClientAPI defines the interface for GCP Secret Manager operations
@@ -31,20 +31,20 @@ type GCPSecretManagerClientAPI interface {
 
 // GCPSecretManagerProvider implements the Provider interface for Google Cloud Secret Manager
 type GCPSecretManagerProvider struct {
-	name       string
-	client     GCPSecretManagerClientAPI
-	logger     *logging.Logger
-	config     GCPSecretManagerConfig
-	projectID  string
+	name      string
+	client    GCPSecretManagerClientAPI
+	logger    *logging.Logger
+	config    GCPSecretManagerConfig
+	projectID string
 }
 
 // GCPSecretManagerConfig holds GCP Secret Manager-specific configuration
 type GCPSecretManagerConfig struct {
-	ProjectID              string
-	ServiceAccountKeyPath  string
-	ImpersonateAccount     string
-	Location               string // For regional secrets
-	UsePlaintextNames      bool   // Use plaintext names instead of resource names
+	ProjectID             string
+	ServiceAccountKeyPath string
+	ImpersonateAccount    string
+	Location              string // For regional secrets
+	UsePlaintextNames     bool   // Use plaintext names instead of resource names
 }
 
 // GCPProviderOption is a functional option for configuring GCP providers
@@ -151,7 +151,7 @@ func (w *gcpClientWrapper) DisableSecretVersion(ctx context.Context, req *secret
 // createGCPSecretManagerClient creates a GCP Secret Manager client
 func createGCPSecretManagerClient(config GCPSecretManagerConfig) (*secretmanager.Client, error) {
 	ctx := context.Background()
-	
+
 	var clientOptions []option.ClientOption
 
 	// Service account key file
@@ -164,7 +164,7 @@ func createGCPSecretManagerClient(config GCPSecretManagerConfig) (*secretmanager
 			}
 			config.ServiceAccountKeyPath = filepath.Join(home, config.ServiceAccountKeyPath[2:])
 		}
-		
+
 		clientOptions = append(clientOptions, option.WithCredentialsFile(config.ServiceAccountKeyPath))
 	}
 
@@ -195,7 +195,7 @@ func getGCPProjectID() string {
 	if projectID := os.Getenv("GCP_PROJECT"); projectID != "" {
 		return projectID
 	}
-	
+
 	// TODO: Could try to read from gcloud config or metadata service
 	return ""
 }
@@ -208,10 +208,10 @@ func (p *GCPSecretManagerProvider) Name() string {
 // Resolve fetches a secret from GCP Secret Manager
 func (p *GCPSecretManagerProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
 	secretName, version, jsonPath := p.parseReference(ref.Key)
-	
+
 	// Build the resource name
 	resourceName := p.buildResourceName(secretName, version)
-	
+
 	p.logger.Debug("Accessing GCP secret: %s", logging.Secret(resourceName))
 
 	// Access the secret version
@@ -233,7 +233,7 @@ func (p *GCPSecretManagerProvider) Resolve(ctx context.Context, ref provider.Ref
 	}
 
 	secretData := string(result.Payload.Data)
-	
+
 	// Extract JSON field if specified
 	if jsonPath != "" {
 		extractedValue, err := extractJSONPath(secretData, jsonPath)
@@ -268,14 +268,14 @@ func (p *GCPSecretManagerProvider) Resolve(ctx context.Context, ref provider.Ref
 // parseReference parses GCP secret references
 func (p *GCPSecretManagerProvider) parseReference(ref string) (secretName, version, jsonPath string) {
 	version = "latest" // Default version
-	
+
 	// Check for JSON path extraction (secret-name#.json.path)
 	if strings.Contains(ref, "#") {
 		parts := strings.SplitN(ref, "#", 2)
 		ref = parts[0]
 		jsonPath = parts[1]
 	}
-	
+
 	// Check for version specification (secret-name:version or secret-name@version)
 	if strings.Contains(ref, ":") && !strings.HasPrefix(ref, "projects/") {
 		parts := strings.SplitN(ref, ":", 2)
@@ -288,7 +288,7 @@ func (p *GCPSecretManagerProvider) parseReference(ref string) (secretName, versi
 	} else {
 		secretName = ref
 	}
-	
+
 	return secretName, version, jsonPath
 }
 
@@ -301,7 +301,7 @@ func (p *GCPSecretManagerProvider) buildResourceName(secretName, version string)
 		}
 		return fmt.Sprintf("%s/versions/%s", secretName, version)
 	}
-	
+
 	// Build from project ID and secret name
 	return fmt.Sprintf("projects/%s/secrets/%s/versions/%s", p.projectID, secretName, version)
 }
@@ -312,17 +312,17 @@ func extractJSONPath(jsonStr, path string) (string, error) {
 	if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
 		return "", fmt.Errorf("invalid JSON: %w", err)
 	}
-	
+
 	// Simple path extraction (e.g., .field.subfield)
 	path = strings.TrimPrefix(path, ".")
 	parts := strings.Split(path, ".")
-	
+
 	current := data
 	for _, part := range parts {
 		if part == "" {
 			continue
 		}
-		
+
 		switch v := current.(type) {
 		case map[string]interface{}:
 			var exists bool
@@ -341,7 +341,7 @@ func extractJSONPath(jsonStr, path string) (string, error) {
 			return "", fmt.Errorf("cannot traverse path at: %s", part)
 		}
 	}
-	
+
 	// Convert result to string
 	switch v := current.(type) {
 	case string:
@@ -361,7 +361,7 @@ func extractJSONPath(jsonStr, path string) (string, error) {
 // Describe returns metadata about a secret without fetching its value
 func (p *GCPSecretManagerProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
 	secretName, _, _ := p.parseReference(ref.Key)
-	
+
 	// Build secret resource name (without version)
 	var resourceName string
 	if strings.HasPrefix(secretName, "projects/") {
@@ -465,10 +465,10 @@ func getGCPErrorSuggestion(err error) string {
 // CreateNewVersion creates a new version of a secret in GCP Secret Manager
 func (p *GCPSecretManagerProvider) CreateNewVersion(ctx context.Context, ref provider.Reference, newValue []byte, meta map[string]string) (string, error) {
 	secretName, _, _ := p.parseReference(ref.Key)
-	
+
 	// Build the full secret name
 	fullSecretName := fmt.Sprintf("projects/%s/secrets/%s", p.config.ProjectID, secretName)
-	
+
 	// Create new secret version
 	req := &secretmanagerpb.AddSecretVersionRequest{
 		Parent: fullSecretName,
@@ -476,59 +476,59 @@ func (p *GCPSecretManagerProvider) CreateNewVersion(ctx context.Context, ref pro
 			Data: newValue,
 		},
 	}
-	
+
 	result, err := p.client.AddSecretVersion(ctx, req)
 	if err != nil {
 		return "", fmt.Errorf("failed to create new secret version: %w", err)
 	}
-	
+
 	// Extract version number from the response name
 	// Format: projects/PROJECT/secrets/SECRET/versions/VERSION
 	parts := strings.Split(result.Name, "/")
 	if len(parts) >= 6 {
 		return parts[5], nil // Return just the version number
 	}
-	
+
 	return "latest", nil
 }
 
 // DeprecateVersion marks an old version as disabled in GCP Secret Manager
 func (p *GCPSecretManagerProvider) DeprecateVersion(ctx context.Context, ref provider.Reference, version string) error {
 	secretName, _, _ := p.parseReference(ref.Key)
-	
+
 	// Build the full version name
 	versionName := fmt.Sprintf("projects/%s/secrets/%s/versions/%s", p.config.ProjectID, secretName, version)
-	
+
 	// Disable the secret version
 	req := &secretmanagerpb.DisableSecretVersionRequest{
 		Name: versionName,
 	}
-	
+
 	_, err := p.client.DisableSecretVersion(ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to disable secret version: %w", err)
 	}
-	
+
 	return nil
 }
 
 // GetRotationMetadata returns metadata about rotation capabilities for a secret
 func (p *GCPSecretManagerProvider) GetRotationMetadata(ctx context.Context, ref provider.Reference) (provider.RotationMetadata, error) {
 	secretName, _, _ := p.parseReference(ref.Key)
-	
+
 	// Build the full secret name
 	fullSecretName := fmt.Sprintf("projects/%s/secrets/%s", p.config.ProjectID, secretName)
-	
+
 	// Get secret metadata
 	req := &secretmanagerpb.GetSecretRequest{
 		Name: fullSecretName,
 	}
-	
+
 	secret, err := p.client.GetSecret(ctx, req)
 	if err != nil {
 		return provider.RotationMetadata{}, fmt.Errorf("failed to get secret metadata: %w", err)
 	}
-	
+
 	metadata := provider.RotationMetadata{
 		SupportsRotation:   true,
 		SupportsVersioning: true,
@@ -539,13 +539,13 @@ func (p *GCPSecretManagerProvider) GetRotationMetadata(ctx context.Context, ref 
 			"project_id": p.config.ProjectID,
 		},
 	}
-	
+
 	// Set creation time as last rotated (GCP doesn't track rotation explicitly)
 	if secret.CreateTime != nil {
 		createTime := secret.CreateTime.AsTime()
 		metadata.LastRotated = &createTime
 	}
-	
+
 	// Check for labels that might indicate rotation policy
 	if secret.Labels != nil {
 		if rotationInterval, exists := secret.Labels["rotation_interval"]; exists {
@@ -555,7 +555,7 @@ func (p *GCPSecretManagerProvider) GetRotationMetadata(ctx context.Context, ref 
 			metadata.Constraints["rotation_policy"] = rotationPolicy
 		}
 	}
-	
+
 	return metadata, nil
 }
 

@@ -396,7 +396,7 @@ func TestWebhookRetry_CustomPayloadAndHeaders(t *testing.T) {
 		Method:          "POST",
 		PayloadTemplate: customTemplate,
 		Headers: map[string]string{
-			"Authorization": "Bearer test-token",
+			"Authorization":   "Bearer test-token",
 			"X-Custom-Header": "custom-value",
 		},
 		Retry: &notifications.RetryConfig{

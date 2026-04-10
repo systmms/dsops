@@ -148,8 +148,8 @@ func (s *CanaryStrategy) Execute(ctx context.Context, plan []RolloutWave) error 
 		if s.rollback != nil {
 			s.logger.Warn("Triggering rollback due to canary failure")
 			req := rollback.RollbackRequest{
-				Service:     "",                         // Will be set by caller
-				Environment: "",                         // Will be set by caller
+				Service:     "", // Will be set by caller
+				Environment: "", // Will be set by caller
 				Reason:      "canary_health_check_failed",
 			}
 			if _, rbErr := s.rollback.TriggerRollback(ctx, req); rbErr != nil {

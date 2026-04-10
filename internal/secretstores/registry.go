@@ -25,20 +25,20 @@ func NewRegistry() *Registry {
 	// Register secret store types (storage systems only)
 	secretStoreTypes := []string{
 		"literal",
-		"mock", 
+		"mock",
 		"json",
 		"bitwarden",
 		"onepassword",
 		"vault",
 		"aws.secretsmanager",
 		"aws.ssm",
-		"aws.sts", 
+		"aws.sts",
 		"aws.sso",
 		"aws",
 		"gcp.secretmanager",
 		"gcp",
 		"azure.keyvault",
-		"azure.identity", 
+		"azure.identity",
 		"azure",
 		"doppler",
 		"pass",
@@ -83,4 +83,3 @@ func (r *Registry) GetSupportedTypes() []string {
 func (r *Registry) IsSupported(storeType string) bool {
 	return r.supportedTypes[storeType]
 }
-

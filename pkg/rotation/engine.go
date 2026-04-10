@@ -74,7 +74,7 @@ func (e *DefaultRotationEngine) SetRepository(repository *dsopsdata.Repository) 
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.repository = repository
-	
+
 	// Propagate repository to schema-aware strategies
 	for name, strategy := range e.strategies {
 		if schemaAware, ok := strategy.(SchemaAwareRotator); ok {
@@ -82,7 +82,7 @@ func (e *DefaultRotationEngine) SetRepository(repository *dsopsdata.Repository) 
 			e.logger.Debug("Updated schema repository for strategy: %s", name)
 		}
 	}
-	
+
 	e.logger.Debug("Schema repository updated with %d service types", len(repository.ServiceTypes))
 }
 
@@ -97,7 +97,7 @@ func (e *DefaultRotationEngine) RegisterStrategy(strategy SecretValueRotator) er
 	}
 
 	e.strategies[name] = strategy
-	
+
 	// Set repository on schema-aware strategies
 	if e.repository != nil {
 		if schemaAware, ok := strategy.(SchemaAwareRotator); ok {
@@ -105,7 +105,7 @@ func (e *DefaultRotationEngine) RegisterStrategy(strategy SecretValueRotator) er
 			e.logger.Debug("Set schema repository for newly registered strategy: %s", name)
 		}
 	}
-	
+
 	e.logger.Debug("Registered rotation strategy: %s", name)
 	return nil
 }
@@ -147,7 +147,7 @@ func (e *DefaultRotationEngine) AutoSelectStrategy(ctx context.Context, secret S
 			if serviceType.Spec.Defaults.RotationStrategy != "" {
 				strategy := serviceType.Spec.Defaults.RotationStrategy
 				e.logger.Debug("Using schema default strategy '%s' for service type '%s'", strategy, secret.SecretType)
-				
+
 				// Verify the strategy is available and supports the secret
 				if strategyImpl, err := e.GetStrategy(strategy); err == nil {
 					if strategyImpl.SupportsSecret(ctx, secret) {
@@ -190,7 +190,7 @@ func (e *DefaultRotationEngine) GetServiceInstanceMetadata(serviceType, instance
 			metadata[k] = v
 		}
 	}
-	
+
 	// Add service instance specific fields
 	metadata["endpoint"] = instance.Spec.Endpoint
 	metadata["auth"] = instance.Spec.Auth
@@ -268,14 +268,14 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 		if ck, exists := request.Secret.Metadata["credential_kind"]; exists {
 			credentialKind = ck
 		}
-		
+
 		validationResult := validator.ValidateNewCredential(
 			string(request.Secret.SecretType),
 			credentialKind,
 			request.NewValue.Value,
 			"", // Current value would be fetched from provider
 		)
-		
+
 		if !validationResult.Valid {
 			auditEntry := AuditEntry{
 				Timestamp: time.Now(),
@@ -288,7 +288,7 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 				},
 			}
 			auditTrail = append(auditTrail, auditEntry)
-			
+
 			return &RotationResult{
 				Secret:     request.Secret,
 				Status:     StatusFailed,
@@ -296,7 +296,7 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 				AuditTrail: auditTrail,
 			}, fmt.Errorf("validation failed: %v", validationResult.Errors)
 		}
-		
+
 		// Add TTL to result if available
 		if validationResult.TTLSeconds > 0 {
 			expiresAt := time.Now().Add(time.Duration(validationResult.TTLSeconds) * time.Second)
@@ -360,7 +360,7 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 		if ck, exists := request.Secret.Metadata["credential_kind"]; exists {
 			credentialKind = ck
 		}
-		
+
 		// Get TTL from credential type definition
 		if svcType, exists := e.repository.GetServiceType(string(request.Secret.SecretType)); exists {
 			for _, credKind := range svcType.Spec.CredentialKinds {
@@ -377,11 +377,11 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 							}
 						}
 					}
-					
+
 					if ttl > 0 {
 						expiresAt := time.Now().Add(ttl)
 						result.ExpiresAt = &expiresAt
-						
+
 						auditEntry := AuditEntry{
 							Timestamp: time.Now(),
 							Action:    "ttl_set",
@@ -395,7 +395,7 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 							},
 						}
 						result.AuditTrail = append(result.AuditTrail, auditEntry)
-						
+
 						e.logger.Info("Rotated credential will expire at %v (TTL: %v)", expiresAt, ttl)
 					}
 					break
@@ -409,7 +409,7 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 		e.logger.Warn("Failed to store rotation result in memory: %v", err)
 		// Don't fail the rotation just because storage failed
 	}
-	
+
 	// Store in persistent storage
 	if e.persistentStorage != nil {
 		// Create history entry
@@ -424,12 +424,12 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 			User:           os.Getenv("USER"),
 			Metadata:       make(map[string]string),
 		}
-		
+
 		// Add error if failed
 		if result.Status == StatusFailed && result.Error != "" {
 			historyEntry.Error = result.Error
 		}
-		
+
 		// Add version info if available (from secret refs)
 		if result.OldSecretRef != nil && result.OldSecretRef.Version != "" {
 			historyEntry.OldVersion = result.OldSecretRef.Version
@@ -437,12 +437,12 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 		if result.NewSecretRef != nil && result.NewSecretRef.Version != "" {
 			historyEntry.NewVersion = result.NewSecretRef.Version
 		}
-		
+
 		// Save history
 		if err := e.persistentStorage.SaveHistory(historyEntry); err != nil {
 			e.logger.Warn("Failed to save rotation history: %v", err)
 		}
-		
+
 		// Update status
 		status := &rotationstorage.RotationStatus{
 			ServiceName:   string(request.Secret.SecretType),
@@ -451,13 +451,13 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 			LastResult:    string(result.Status),
 			RotationCount: 1, // This should be incremented from existing status
 		}
-		
+
 		// Get existing status to update counts
 		if existing, err := e.persistentStorage.GetStatus(status.ServiceName); err == nil {
 			status.RotationCount = existing.RotationCount + 1
 			status.SuccessCount = existing.SuccessCount
 			status.FailureCount = existing.FailureCount
-			
+
 			switch result.Status {
 			case StatusCompleted:
 				status.SuccessCount++
@@ -473,16 +473,16 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 				status.FailureCount = 1
 			}
 		}
-		
+
 		if result.Status == StatusFailed {
 			status.LastError = result.Error
 		}
-		
+
 		// Set next rotation if TTL is available
 		if result.ExpiresAt != nil {
 			status.NextRotation = result.ExpiresAt
 		}
-		
+
 		// Save status
 		if err := e.persistentStorage.SaveStatus(status); err != nil {
 			e.logger.Warn("Failed to save rotation status: %v", err)
@@ -535,15 +535,15 @@ func (e *DefaultRotationEngine) Rotate(ctx context.Context, request RotationRequ
 func (e *DefaultRotationEngine) BatchRotate(ctx context.Context, requests []RotationRequest) ([]RotationResult, error) {
 	results := make([]RotationResult, len(requests))
 	var wg sync.WaitGroup
-	
+
 	// Use a semaphore to limit concurrent rotations
 	semaphore := make(chan struct{}, 5) // Max 5 concurrent rotations
-	
+
 	for i, request := range requests {
 		wg.Add(1)
 		go func(idx int, req RotationRequest) {
 			defer wg.Done()
-			semaphore <- struct{}{} // Acquire
+			semaphore <- struct{}{}        // Acquire
 			defer func() { <-semaphore }() // Release
 
 			result, err := e.Rotate(ctx, req)

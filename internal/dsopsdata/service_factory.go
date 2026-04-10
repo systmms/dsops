@@ -22,13 +22,13 @@ type DataDrivenServiceFactory struct {
 func NewDataDrivenServiceFactory(repository *Repository) *DataDrivenServiceFactory {
 	// Create and populate protocol registry
 	registry := protocol.NewRegistry()
-	
+
 	// Register all protocol adapters
 	_ = registry.Register(protocol.NewSQLAdapter())
 	_ = registry.Register(protocol.NewHTTPAPIAdapter())
 	_ = registry.Register(protocol.NewNoSQLAdapter())
 	_ = registry.Register(protocol.NewCertificateAdapter())
-	
+
 	return &DataDrivenServiceFactory{
 		repository: repository,
 		registry:   registry,
@@ -43,11 +43,11 @@ func (f *DataDrivenServiceFactory) CreateService(name string, cfg config.Service
 	}
 
 	return &DataDrivenService{
-		name:         name,
-		serviceType:  serviceType,
-		config:       cfg,
-		repository:   f.repository,
-		registry:     f.registry,
+		name:        name,
+		serviceType: serviceType,
+		config:      cfg,
+		repository:  f.repository,
+		registry:    f.registry,
 	}, nil
 }
 
@@ -199,16 +199,16 @@ func (s *DataDrivenService) Execute(ctx context.Context, plan service.RotationPl
 	adapter, err := s.registry.GetByProtocol(protocolType)
 	if err != nil {
 		return service.RotationResult{
-			ServiceRef:  plan.ServiceRef,
-			Plan:        plan,
-			Status:      "failed",
-			Error:       fmt.Sprintf("No protocol adapter found for %s: %v", protocolType, err),
+			ServiceRef: plan.ServiceRef,
+			Plan:       plan,
+			Status:     "failed",
+			Error:      fmt.Sprintf("No protocol adapter found for %s: %v", protocolType, err),
 		}, err
 	}
-	
+
 	// Build adapter configuration
 	adapterConfig := s.buildAdapterConfig()
-	
+
 	// Initialize result
 	result := service.RotationResult{
 		ServiceRef:    plan.ServiceRef,
@@ -218,7 +218,7 @@ func (s *DataDrivenService) Execute(ctx context.Context, plan service.RotationPl
 		ExecutedSteps: []service.ExecutedStep{},
 		Metadata:      make(map[string]string),
 	}
-	
+
 	// Execute each step using the protocol adapter
 	for _, step := range plan.Steps {
 		executedStep := service.ExecutedStep{
@@ -226,15 +226,15 @@ func (s *DataDrivenService) Execute(ctx context.Context, plan service.RotationPl
 			StartedAt: time.Now(),
 			Status:    "in_progress",
 		}
-		
+
 		// Build protocol operation from step
 		operation := s.buildProtocolOperation(step, plan)
-		
+
 		// Execute via protocol adapter
 		adapterResult, err := adapter.Execute(ctx, operation, adapterConfig)
-		
+
 		executedStep.CompletedAt = time.Now()
-		
+
 		if err != nil {
 			executedStep.Status = "failed"
 			executedStep.Error = err.Error()
@@ -248,7 +248,7 @@ func (s *DataDrivenService) Execute(ctx context.Context, plan service.RotationPl
 		} else {
 			executedStep.Status = "success"
 			executedStep.Output = fmt.Sprintf("%v", adapterResult.Data)
-			
+
 			// Store important results in metadata
 			if step.Action == "create" {
 				if newValue, ok := adapterResult.Data["value"]; ok {
@@ -259,21 +259,21 @@ func (s *DataDrivenService) Execute(ctx context.Context, plan service.RotationPl
 				}
 			}
 		}
-		
+
 		result.ExecutedSteps = append(result.ExecutedSteps, executedStep)
-		
+
 		// Stop on failure
 		if result.Status == "failed" {
 			break
 		}
 	}
-	
+
 	// Set final status
 	result.CompletedAt = time.Now()
 	if result.Status != "failed" {
 		result.Status = "success"
 	}
-	
+
 	return result, nil
 }
 
@@ -410,14 +410,14 @@ func contains(slice []string, item string) bool {
 func (s *DataDrivenService) getProtocolType() string {
 	// Use the service category from metadata
 	category := s.serviceType.Metadata.Category
-	
+
 	// Map categories to protocol types
 	switch category {
 	case "database":
 		// Determine if SQL or NoSQL based on service type
 		if strings.Contains(s.serviceType.Metadata.Name, "mongo") ||
-		   strings.Contains(s.serviceType.Metadata.Name, "redis") ||
-		   strings.Contains(s.serviceType.Metadata.Name, "dynamo") {
+			strings.Contains(s.serviceType.Metadata.Name, "redis") ||
+			strings.Contains(s.serviceType.Metadata.Name, "dynamo") {
 			return "nosql"
 		}
 		return "sql"
@@ -438,7 +438,7 @@ func (s *DataDrivenService) buildAdapterConfig() protocol.AdapterConfig {
 		Auth:          make(map[string]string),
 		ServiceConfig: make(map[string]interface{}),
 	}
-	
+
 	// Extract connection details from service config
 	if s.config.Config != nil {
 		// Connection parameters
@@ -456,7 +456,7 @@ func (s *DataDrivenService) buildAdapterConfig() protocol.AdapterConfig {
 		if baseURL, ok := s.config.Config["base_url"].(string); ok {
 			config.Connection["base_url"] = baseURL
 		}
-		
+
 		// Auth parameters
 		if username, ok := s.config.Config["username"].(string); ok {
 			config.Auth["username"] = username
@@ -472,7 +472,7 @@ func (s *DataDrivenService) buildAdapterConfig() protocol.AdapterConfig {
 			config.Auth["type"] = "bearer"
 			config.Auth["value"] = token
 		}
-		
+
 		// Timeout
 		if timeout, ok := s.config.Config["timeout"].(float64); ok {
 			config.Timeout = int(timeout)
@@ -481,13 +481,13 @@ func (s *DataDrivenService) buildAdapterConfig() protocol.AdapterConfig {
 			config.Timeout = timeout
 		}
 	}
-	
+
 	// Set service type
 	config.Connection["type"] = s.serviceType.Metadata.Name
-	
+
 	// Add service-specific configuration from dsops-data
 	config.ServiceConfig = s.extractServiceConfig()
-	
+
 	return config
 }
 
@@ -499,18 +499,18 @@ func (s *DataDrivenService) buildProtocolOperation(step service.RotationStep, pl
 		Parameters: make(map[string]interface{}),
 		Metadata:   make(map[string]string),
 	}
-	
+
 	// Extract credential kind from target (e.g., "password:new" -> "password")
 	targetParts := strings.Split(step.Target, ":")
 	credentialKind := targetParts[0]
-	
+
 	// Add parameters from plan metadata
 	if plan.Metadata != nil {
 		for k, v := range plan.Metadata {
 			operation.Parameters[k] = v
 		}
 	}
-	
+
 	// Add specific parameters based on action
 	switch step.Action {
 	case "create", "rotate":
@@ -522,13 +522,13 @@ func (s *DataDrivenService) buildProtocolOperation(step service.RotationStep, pl
 			operation.Parameters["generate"] = true
 			operation.Parameters["credential_kind"] = credentialKind
 		}
-		
+
 	case "verify":
 		// Add credential to verify
 		if value, ok := plan.Metadata["verify_value"]; ok {
 			operation.Parameters["value"] = value
 		}
-		
+
 	case "revoke", "delete":
 		// Add identifier for what to revoke
 		if oldValue, ok := plan.Metadata["old_value"]; ok {
@@ -538,19 +538,19 @@ func (s *DataDrivenService) buildProtocolOperation(step service.RotationStep, pl
 			operation.Parameters["serial_number"] = serial
 		}
 	}
-	
+
 	// Add service reference info
 	operation.Metadata["service_type"] = s.serviceType.Metadata.Name
 	operation.Metadata["service_instance"] = plan.ServiceRef.Instance
 	operation.Metadata["credential_kind"] = credentialKind
-	
+
 	return operation
 }
 
 // extractServiceConfig extracts service-specific configuration for protocol adapters
 func (s *DataDrivenService) extractServiceConfig() map[string]interface{} {
 	config := make(map[string]interface{})
-	
+
 	// Extract commands based on credential kinds and capabilities
 	// Since dsops-data doesn't define commands directly, we'll build them
 	// from the service type metadata and credential capabilities
@@ -566,15 +566,15 @@ func (s *DataDrivenService) extractServiceConfig() map[string]interface{} {
 	if len(commands) > 0 {
 		config["commands"] = commands
 	}
-	
+
 	// Extract rate limiting
 	if s.serviceType.Spec.Defaults.RateLimit != "" {
 		config["rate_limit"] = s.serviceType.Spec.Defaults.RateLimit
 	}
-	
+
 	// Add metadata that might be useful
 	config["service_type"] = s.serviceType.Metadata.Name
 	config["category"] = s.serviceType.Metadata.Category
-	
+
 	return config
 }

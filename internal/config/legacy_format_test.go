@@ -185,9 +185,9 @@ func TestConfig_BackwardCompatibility_ConvertLegacyReference(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name         string
-		providerRef  *ProviderRef
-		expectedURI  string
+		name        string
+		providerRef *ProviderRef
+		expectedURI string
 	}{
 		{
 			name: "simple conversion",
@@ -334,11 +334,11 @@ func TestConfig_LegacyFormat_ReferenceTypeDetection(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		ref             Reference
-		isLegacy        bool
-		isStore         bool
-		isService       bool
+		name      string
+		ref       Reference
+		isLegacy  bool
+		isStore   bool
+		isService bool
 	}{
 		{
 			name: "legacy with provider and key",
@@ -419,8 +419,8 @@ func TestConfig_LegacyFormat_ToLegacyProviderRef_Conversion(t *testing.T) {
 			},
 		},
 		{
-			name:     "service reference returns empty",
-			ref:      Reference{
+			name: "service reference returns empty",
+			ref: Reference{
 				Service: "svc://postgres/db",
 			},
 			expected: ProviderRef{},

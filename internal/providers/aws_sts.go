@@ -11,9 +11,9 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go-v2/service/sts/types"
+	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/logging"
 	"github.com/systmms/dsops/pkg/provider"
-	dserrors "github.com/systmms/dsops/internal/errors"
 )
 
 // AWSSTSProvider implements the Provider interface for AWS STS (Security Token Service)
@@ -27,16 +27,16 @@ type AWSSTSProvider struct {
 
 // STSConfig holds AWS STS-specific configuration
 type STSConfig struct {
-	Region         string
-	Profile        string
-	AssumeRole     string
+	Region          string
+	Profile         string
+	AssumeRole      string
 	RoleSessionName string
-	ExternalID     string
-	Duration       int32 // in seconds
-	SerialNumber   string // For MFA
-	TokenCode      string // For MFA
-	Policy         string // Session policy JSON
-	Tags           map[string]string
+	ExternalID      string
+	Duration        int32  // in seconds
+	SerialNumber    string // For MFA
+	TokenCode       string // For MFA
+	Policy          string // Session policy JSON
+	Tags            map[string]string
 }
 
 // stsCredentialCache caches temporary credentials
@@ -48,10 +48,10 @@ type stsCredentialCache struct {
 // NewAWSSTSProvider creates a new AWS STS provider
 func NewAWSSTSProvider(name string, configMap map[string]interface{}) (*AWSSTSProvider, error) {
 	logger := logging.New(false, false)
-	
+
 	config := STSConfig{
 		RoleSessionName: fmt.Sprintf("dsops-%d", time.Now().Unix()),
-		Duration:       3600, // Default 1 hour
+		Duration:        3600, // Default 1 hour
 	}
 
 	// Parse configuration
@@ -118,7 +118,7 @@ func NewAWSSTSProvider(name string, configMap map[string]interface{}) (*AWSSTSPr
 // createSTSClient creates an AWS STS client with the given configuration
 func createSTSClient(config STSConfig) (*sts.Client, error) {
 	ctx := context.Background()
-	
+
 	// Build config options
 	var configOpts []func(*awsconfig.LoadOptions) error
 
@@ -281,7 +281,7 @@ func (p *AWSSTSProvider) Capabilities() provider.Capabilities {
 func (p *AWSSTSProvider) Validate(ctx context.Context) error {
 	// Get caller identity to validate credentials
 	input := &sts.GetCallerIdentityInput{}
-	
+
 	_, err := p.client.GetCallerIdentity(ctx, input)
 	if err != nil {
 		return dserrors.UserError{
@@ -311,7 +311,6 @@ func getSTSErrorSuggestion(err error) string {
 		return "Check AWS credentials, role ARN, and IAM permissions"
 	}
 }
-
 
 // NewAWSSTSProviderFactory creates an AWS STS provider factory
 func NewAWSSTSProviderFactory(name string, config map[string]interface{}) (provider.Provider, error) {

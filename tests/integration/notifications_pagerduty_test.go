@@ -53,8 +53,8 @@ func TestPagerDutyEvents_TriggerIncident(t *testing.T) {
 		// Return success response (PagerDuty uses 202 Accepted)
 		w.WriteHeader(http.StatusAccepted)
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":   "success",
-			"message":  "Event processed",
+			"status":    "success",
+			"message":   "Event processed",
 			"dedup_key": event.DedupKey,
 		})
 	}))
@@ -142,7 +142,7 @@ func TestPagerDutyEvents_ResolveIncident(t *testing.T) {
 
 		w.WriteHeader(http.StatusAccepted)
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":   "success",
+			"status":    "success",
 			"dedup_key": event.DedupKey,
 		})
 	}))

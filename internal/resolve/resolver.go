@@ -211,10 +211,10 @@ func (r *Resolver) ResolveEnvironment(ctx context.Context, env config.Environmen
 func (r *Resolver) ResolveVariablesConcurrently(ctx context.Context, env config.Environment) (map[string]ResolvedVariable, error) {
 	result := make(map[string]ResolvedVariable)
 	resultMutex := &sync.Mutex{}
-	
+
 	var wg sync.WaitGroup
 	errorChan := make(chan error, len(env))
-	
+
 	// Use a semaphore to limit concurrent provider calls
 	// This prevents overwhelming providers with too many concurrent requests
 	maxConcurrent := 10
@@ -224,24 +224,24 @@ func (r *Resolver) ResolveVariablesConcurrently(ctx context.Context, env config.
 		wg.Add(1)
 		go func(name string, varDef config.Variable) {
 			defer wg.Done()
-			
+
 			// Acquire semaphore
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
 			resolved := r.resolveVariable(ctx, name, varDef)
-			
+
 			resultMutex.Lock()
 			result[name] = resolved
 			resultMutex.Unlock()
-			
+
 			if resolved.Error != nil && !varDef.Optional {
 				errorChan <- dserrors.UserError{
-				Message:    fmt.Sprintf("Failed to resolve variable '%s'", name),
-				Details:    resolved.Error.Error(),
-				Suggestion: "Check that the provider is configured correctly and the secret exists",
-				Err:        resolved.Error,
-			}
+					Message:    fmt.Sprintf("Failed to resolve variable '%s'", name),
+					Details:    resolved.Error.Error(),
+					Suggestion: "Check that the provider is configured correctly and the secret exists",
+					Err:        resolved.Error,
+				}
 			}
 		}(varName, variable)
 	}
@@ -414,20 +414,20 @@ func (r *Resolver) applySingleTransform(value, transform string) (string, error)
 	switch {
 	case transform == "trim":
 		return strings.TrimSpace(value), nil
-	
+
 	case transform == "multiline_to_single":
 		return strings.ReplaceAll(strings.ReplaceAll(value, "\n", "\\n"), "\r", ""), nil
-	
+
 	case strings.HasPrefix(transform, "json_extract:"):
 		path := strings.TrimPrefix(transform, "json_extract:")
 		return extractJSONPath(value, path)
-	
+
 	case transform == "base64_decode":
 		return base64Decode(value)
-	
+
 	case transform == "base64_encode":
 		return base64Encode(value)
-	
+
 	case strings.HasPrefix(transform, "replace:"):
 		parts := strings.SplitN(strings.TrimPrefix(transform, "replace:"), ":", 2)
 		if len(parts) != 2 {
@@ -442,7 +442,7 @@ func (r *Resolver) applySingleTransform(value, transform string) (string, error)
 	case strings.HasPrefix(transform, "join:"):
 		separator := strings.TrimPrefix(transform, "join:")
 		return joinValues(value, separator)
-	
+
 	default:
 		return "", fmt.Errorf("unknown transform: %s", transform)
 	}
@@ -455,12 +455,12 @@ func (r *Resolver) enforcePolicies(envName string, env config.Environment) error
 	}
 
 	enforcer := r.config.GetPolicyEnforcer()
-	
+
 	// Validate secret count for environment
 	if err := enforcer.ValidateEnvironmentSecretCount(envName, len(env)); err != nil {
 		return err
 	}
-	
+
 	// Validate each variable's provider
 	for varName, variable := range env {
 		if variable.From != nil {
@@ -469,18 +469,18 @@ func (r *Resolver) enforcePolicies(envName string, env config.Environment) error
 			if err != nil {
 				continue // Provider validation will catch this later
 			}
-			
+
 			// Validate provider type globally
 			if err := enforcer.ValidateProviderType(providerConfig.Type); err != nil {
 				return fmt.Errorf("variable %s: %w", varName, err)
 			}
-			
+
 			// Validate provider type for this environment
 			if err := enforcer.ValidateEnvironmentProvider(envName, providerConfig.Type); err != nil {
 				return fmt.Errorf("variable %s: %w", varName, err)
 			}
 		}
 	}
-	
+
 	return nil
 }

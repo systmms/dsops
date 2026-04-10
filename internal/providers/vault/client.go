@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -174,6 +175,12 @@ func (c *HTTPVaultClient) authenticateKubernetesLocked(ctx context.Context) erro
 	tokenPath := "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	if customPath := os.Getenv("VAULT_K8S_TOKEN_PATH"); customPath != "" {
 		tokenPath = customPath
+	}
+
+	// Clean path to prevent traversal attacks
+	tokenPath = filepath.Clean(tokenPath)
+	if !filepath.IsAbs(tokenPath) {
+		return fmt.Errorf("kubernetes token path must be absolute: %s", tokenPath)
 	}
 
 	tokenBytes, err := os.ReadFile(tokenPath)

@@ -14,19 +14,19 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sso"
 	"github.com/aws/aws-sdk-go-v2/service/ssooidc"
+	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/logging"
 	"github.com/systmms/dsops/pkg/provider"
-	dserrors "github.com/systmms/dsops/internal/errors"
 )
 
 // AWSSSOProvider implements the Provider interface for AWS IAM Identity Center (formerly AWS SSO)
 type AWSSSOProvider struct {
-	name      string
-	ssoClient *sso.Client
+	name       string
+	ssoClient  *sso.Client
 	oidcClient *ssooidc.Client
-	logger    *logging.Logger
-	config    SSOConfig
-	cache     *ssoCredentialCache
+	logger     *logging.Logger
+	config     SSOConfig
+	cache      *ssoCredentialCache
 }
 
 // SSOConfig holds AWS SSO-specific configuration
@@ -58,7 +58,7 @@ type ssoTokenCache struct {
 // NewAWSSSOProvider creates a new AWS SSO provider
 func NewAWSSSOProvider(name string, configMap map[string]interface{}) (*AWSSSOProvider, error) {
 	logger := logging.New(false, false)
-	
+
 	config := SSOConfig{
 		RefreshToken: true, // Default to auto-refresh
 	}
@@ -137,7 +137,7 @@ func NewAWSSSOProvider(name string, configMap map[string]interface{}) (*AWSSSOPr
 // createSSOClients creates AWS SSO and OIDC clients
 func createSSOClients(config SSOConfig) (*sso.Client, *ssooidc.Client, error) {
 	ctx := context.Background()
-	
+
 	// Build config options
 	var configOpts []func(*awsconfig.LoadOptions) error
 
@@ -198,7 +198,7 @@ func (p *AWSSSOProvider) Resolve(ctx context.Context, ref provider.Reference) (p
 		AccessToken: aws.String(accessToken),
 	}
 
-	p.logger.Debug("Getting SSO role credentials for account %s, role %s", 
+	p.logger.Debug("Getting SSO role credentials for account %s, role %s",
 		logging.Secret(p.config.AccountID), logging.Secret(p.config.RoleName))
 
 	result, err := p.ssoClient.GetRoleCredentials(ctx, input)

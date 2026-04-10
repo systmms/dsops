@@ -30,27 +30,27 @@
 //
 //	// Create rotation engine
 //	engine := NewRotationEngine()
-//	
+//
 //	// Register strategies
 //	engine.RegisterStrategy(&PostgresRotator{})
 //	engine.RegisterStrategy(&StripeRotator{})
-//	
+//
 //	// Perform rotation
 //	request := RotationRequest{
 //	    Secret: SecretInfo{
 //	        Key:         "DATABASE_PASSWORD",
-//	        Provider:    "aws.secretsmanager", 
+//	        Provider:    "aws.secretsmanager",
 //	        SecretType:  SecretTypePassword,
 //	    },
 //	    Strategy:  "postgres",
 //	    TwoSecret: true,
 //	}
-//	
+//
 //	result, err := engine.Rotate(ctx, request)
 //	if err != nil {
 //	    return fmt.Errorf("rotation failed: %w", err)
 //	}
-//	
+//
 //	fmt.Printf("Rotation completed: %s\n", result.Status)
 //
 // # Implementing Custom Rotators
@@ -67,27 +67,27 @@
 //	type MyServiceRotator struct {
 //	    client MyServiceClient
 //	}
-//	
+//
 //	func (r *MyServiceRotator) Name() string {
 //	    return "my-service"
 //	}
-//	
+//
 //	func (r *MyServiceRotator) SupportsSecret(ctx context.Context, secret SecretInfo) bool {
 //	    return secret.SecretType == SecretTypeAPIKey
 //	}
-//	
+//
 //	func (r *MyServiceRotator) Rotate(ctx context.Context, req RotationRequest) (*RotationResult, error) {
 //	    // Implementation specific to your service
 //	    newAPIKey, err := r.client.CreateNewAPIKey(ctx)
 //	    if err != nil {
 //	        return nil, err
 //	    }
-//	    
+//
 //	    // Store new key in secret provider
-//	    // Update service to use new key  
+//	    // Update service to use new key
 //	    // Verify new key works
 //	    // Deprecate old key
-//	    
+//
 //	    return &RotationResult{
 //	        Status:    StatusCompleted,
 //	        RotatedAt: &now,
@@ -111,18 +111,18 @@
 //	type DataDrivenRotator struct {
 //	    repository *dsopsdata.Repository
 //	}
-//	
+//
 //	func (r *DataDrivenRotator) SetRepository(repo *dsopsdata.Repository) {
 //	    r.repository = repo
 //	}
-//	
+//
 //	func (r *DataDrivenRotator) Rotate(ctx context.Context, req RotationRequest) (*RotationResult, error) {
 //	    // Use repository to get service-specific configuration
 //	    serviceDef, err := r.repository.GetServiceType(req.Secret.Provider)
 //	    if err != nil {
 //	        return nil, err
 //	    }
-//	    
+//
 //	    // Use service definition to determine rotation approach
 //	    // ...
 //	}
@@ -143,12 +143,12 @@ import (
 // the update with secret storage systems.
 //
 // Implementations should handle the complete rotation lifecycle:
-//   1. Generate or obtain new secret values
-//   2. Update the target service with new credentials
-//   3. Verify the new credentials work correctly
-//   4. Update the secret storage system
-//   5. Clean up old credentials
-//   6. Handle rollback if anything fails
+//  1. Generate or obtain new secret values
+//  2. Update the target service with new credentials
+//  3. Verify the new credentials work correctly
+//  4. Update the secret storage system
+//  5. Clean up old credentials
+//  6. Handle rollback if anything fails
 //
 // Thread safety: Implementations must be thread-safe as multiple rotations
 // may occur concurrently for different secrets.
@@ -186,12 +186,12 @@ type SecretValueRotator interface {
 	//	    if secret.SecretType != SecretTypePassword {
 	//	        return false
 	//	    }
-	//	    
+	//
 	//	    // Check for required metadata
 	//	    if secret.Metadata["database_type"] != "postgresql" {
 	//	        return false
 	//	    }
-	//	    
+	//
 	//	    return true
 	//	}
 	SupportsSecret(ctx context.Context, secret SecretInfo) bool
@@ -220,13 +220,13 @@ type SecretValueRotator interface {
 	//	    if req.DryRun {
 	//	        return r.planRotation(ctx, req)
 	//	    }
-	//	    
+	//
 	//	    startTime := time.Now()
 	//	    result := &RotationResult{
 	//	        Secret: req.Secret,
 	//	        Status: StatusRotating,
 	//	    }
-	//	    
+	//
 	//	    // Generate new password
 	//	    newPassword, err := r.generatePassword(req)
 	//	    if err != nil {
@@ -234,14 +234,14 @@ type SecretValueRotator interface {
 	//	        result.Error = err.Error()
 	//	        return result, err
 	//	    }
-	//	    
+	//
 	//	    // Update database user
 	//	    if err := r.updateDatabasePassword(ctx, newPassword); err != nil {
 	//	        result.Status = StatusFailed
 	//	        result.Error = err.Error()
 	//	        return result, err
 	//	    }
-	//	    
+	//
 	//	    // Verify connection works
 	//	    if err := r.verifyConnection(ctx, newPassword); err != nil {
 	//	        // Attempt rollback
@@ -250,19 +250,19 @@ type SecretValueRotator interface {
 	//	        result.Error = err.Error()
 	//	        return result, err
 	//	    }
-	//	    
+	//
 	//	    // Update secret store
 	//	    if err := r.updateSecretStore(ctx, req, newPassword); err != nil {
 	//	        result.Status = StatusFailed
 	//	        result.Error = err.Error()
 	//	        return result, err
 	//	    }
-	//	    
+	//
 	//	    now := time.Now()
 	//	    result.Status = StatusCompleted
 	//	    result.RotatedAt = &now
 	//	    result.AuditTrail = r.generateAuditTrail(startTime, now)
-	//	    
+	//
 	//	    return result, nil
 	//	}
 	Rotate(ctx context.Context, request RotationRequest) (*RotationResult, error)
@@ -290,7 +290,7 @@ type SecretValueRotator interface {
 	//	            if err := r.testConnection(ctx, req.NewSecretRef); err != nil {
 	//	                return fmt.Errorf("connection test failed: %w", err)
 	//	            }
-	//	            
+	//
 	//	        case TestTypeQuery:
 	//	            if err := r.testQuery(ctx, req.NewSecretRef, test.Config); err != nil {
 	//	                return fmt.Errorf("query test failed: %w", err)
@@ -328,17 +328,17 @@ type SecretValueRotator interface {
 	//	    if err != nil {
 	//	        return fmt.Errorf("cannot retrieve old password for rollback: %w", err)
 	//	    }
-	//	    
+	//
 	//	    // Restore database user password
 	//	    if err := r.updateDatabasePassword(ctx, oldPassword); err != nil {
 	//	        return fmt.Errorf("rollback failed: %w", err)
 	//	    }
-	//	    
+	//
 	//	    // Verify rollback worked
 	//	    if err := r.verifyConnection(ctx, oldPassword); err != nil {
 	//	        return fmt.Errorf("rollback verification failed: %w", err)
 	//	    }
-	//	    
+	//
 	//	    r.logRollback(req.Secret, req.Reason)
 	//	    return nil
 	//	}
@@ -365,13 +365,13 @@ type SecretValueRotator interface {
 	//	    if err != nil {
 	//	        return nil, err
 	//	    }
-	//	    
+	//
 	//	    // Calculate next rotation time
 	//	    nextRotation := lastRotation.Add(r.getRotationInterval(secret))
-	//	    
+	//
 	//	    // Check if rotation is currently possible
 	//	    canRotate, reason := r.canRotateNow(ctx, secret)
-	//	    
+	//
 	//	    return &RotationStatusInfo{
 	//	        Status:          StatusCompleted,
 	//	        LastRotated:     &lastRotation,
@@ -391,10 +391,10 @@ type SecretValueRotator interface {
 // while new ones are being deployed and verified.
 //
 // The two-secret rotation process follows these phases:
-//   1. Create secondary (new) secret alongside existing primary
-//   2. Deploy and verify secondary secret works in all systems
-//   3. Promote secondary to primary (make it the active credential)
-//   4. Deprecate old primary after grace period
+//  1. Create secondary (new) secret alongside existing primary
+//  2. Deploy and verify secondary secret works in all systems
+//  3. Promote secondary to primary (make it the active credential)
+//  4. Deprecate old primary after grace period
 //
 // This strategy is ideal for:
 //   - High-availability services that cannot tolerate downtime
@@ -407,20 +407,20 @@ type SecretValueRotator interface {
 //	type DatabaseTwoKeyRotator struct {
 //	    client DatabaseClient
 //	}
-//	
+//
 //	func (r *DatabaseTwoKeyRotator) CreateSecondarySecret(ctx context.Context, req SecondarySecretRequest) (*SecretReference, error) {
 //	    // Generate new password
 //	    newPassword, err := r.generatePassword()
 //	    if err != nil {
 //	        return nil, err
 //	    }
-//	    
+//
 //	    // Create new database user with same permissions
 //	    newUsername := req.Secret.Key + "_new"
 //	    if err := r.client.CreateUser(ctx, newUsername, newPassword); err != nil {
 //	        return nil, err
 //	    }
-//	    
+//
 //	    return &SecretReference{
 //	        Provider:   req.Secret.Provider,
 //	        Key:        newUsername,
@@ -455,7 +455,7 @@ type TwoSecretRotator interface {
 	//	        Type: ValueTypeGenerated,
 	//	    },
 	//	}
-	//	
+	//
 	//	secondaryRef, err := rotator.CreateSecondarySecret(ctx, req)
 	//	if err != nil {
 	//	    return fmt.Errorf("failed to create secondary secret: %w", err)
@@ -486,7 +486,7 @@ type TwoSecretRotator interface {
 	//	    GracePeriod:  5 * time.Minute,
 	//	    VerifyFirst:  true,
 	//	}
-	//	
+	//
 	//	if err := rotator.PromoteSecondarySecret(ctx, req); err != nil {
 	//	    return fmt.Errorf("failed to promote secondary secret: %w", err)
 	//	}
@@ -518,7 +518,7 @@ type TwoSecretRotator interface {
 	//	    GracePeriod: 10 * time.Minute,
 	//	    HardDelete:  false, // Keep for rollback
 	//	}
-	//	
+	//
 	//	if err := rotator.DeprecatePrimarySecret(ctx, req); err != nil {
 	//	    log.Warnf("Failed to deprecate old primary: %v", err)
 	//	    // This may not be fatal - new primary is already active
@@ -532,7 +532,7 @@ type TwoSecretRotator interface {
 // definitions from the dsops-data repository. Instead of hardcoding service-specific
 // rotation logic, rotators can use standardized schemas that define:
 //   - Service connection patterns
-//   - Credential types and formats  
+//   - Credential types and formats
 //   - Rotation procedures and constraints
 //   - Verification tests and validation rules
 //
@@ -547,18 +547,18 @@ type TwoSecretRotator interface {
 //	type GenericSchemaRotator struct {
 //	    repository *dsopsdata.Repository
 //	}
-//	
+//
 //	func (r *GenericSchemaRotator) SetRepository(repo *dsopsdata.Repository) {
 //	    r.repository = repo
 //	}
-//	
+//
 //	func (r *GenericSchemaRotator) Rotate(ctx context.Context, req RotationRequest) (*RotationResult, error) {
 //	    // Get service definition from dsops-data
 //	    serviceDef, err := r.repository.GetServiceType(req.Secret.Provider)
 //	    if err != nil {
 //	        return nil, fmt.Errorf("unknown service type: %w", err)
 //	    }
-//	    
+//
 //	    // Use schema to determine rotation approach
 //	    switch serviceDef.RotationType {
 //	    case "api_key_rotation":
@@ -569,7 +569,6 @@ type TwoSecretRotator interface {
 //	        return nil, fmt.Errorf("unsupported rotation type: %s", serviceDef.RotationType)
 //	    }
 //	}
-//
 type SchemaAwareRotator interface {
 	// SetRepository sets the dsops-data repository for schema-aware rotation.
 	//
@@ -591,9 +590,9 @@ type SchemaAwareRotator interface {
 	//	if err != nil {
 	//	    return err
 	//	}
-	//	
+	//
 	//	rotator.SetRepository(repository)
-	//	
+	//
 	//	// Rotator can now use service definitions
 	//	result, err := rotator.Rotate(ctx, rotationRequest)
 	SetRepository(repository *dsopsdata.Repository)
@@ -732,7 +731,7 @@ type RotationRequest struct {
 //	    Status: StatusCompleted,
 //	    NewSecretRef: &SecretReference{
 //	        Provider:    "aws.secretsmanager",
-//	        Key:         "prod/db/password", 
+//	        Key:         "prod/db/password",
 //	        Version:     "v2",
 //	        Identifier:  "db_user_prod",
 //	    },
@@ -795,10 +794,10 @@ type RotationResult struct {
 
 // VerificationRequest contains information for verifying a rotated secret
 type VerificationRequest struct {
-	Secret       SecretInfo        `json:"secret"`
-	NewSecretRef SecretReference   `json:"new_secret_ref"`
+	Secret       SecretInfo         `json:"secret"`
+	NewSecretRef SecretReference    `json:"new_secret_ref"`
 	Tests        []VerificationTest `json:"tests"`
-	Timeout      time.Duration     `json:"timeout"`
+	Timeout      time.Duration      `json:"timeout"`
 }
 
 // RollbackRequest contains information for rolling back a rotation
@@ -810,52 +809,52 @@ type RollbackRequest struct {
 
 // SecondarySecretRequest for two-secret strategy
 type SecondarySecretRequest struct {
-	Secret       SecretInfo            `json:"secret"`
-	NewValue     *NewSecretValue       `json:"new_value,omitempty"`
-	Config       map[string]interface{} `json:"config,omitempty"`
+	Secret   SecretInfo             `json:"secret"`
+	NewValue *NewSecretValue        `json:"new_value,omitempty"`
+	Config   map[string]interface{} `json:"config,omitempty"`
 }
 
 // PromoteRequest for promoting secondary to primary
 type PromoteRequest struct {
-	Secret           SecretInfo      `json:"secret"`
-	SecondaryRef     SecretReference `json:"secondary_ref"`
-	GracePeriod      time.Duration   `json:"grace_period"`
-	VerifyFirst      bool            `json:"verify_first"`
+	Secret       SecretInfo      `json:"secret"`
+	SecondaryRef SecretReference `json:"secondary_ref"`
+	GracePeriod  time.Duration   `json:"grace_period"`
+	VerifyFirst  bool            `json:"verify_first"`
 }
 
 // DeprecateRequest for deprecating old primary
 type DeprecateRequest struct {
-	Secret       SecretInfo      `json:"secret"`
-	OldRef       SecretReference `json:"old_ref"`
-	GracePeriod  time.Duration   `json:"grace_period"`
-	HardDelete   bool            `json:"hard_delete"`
+	Secret      SecretInfo      `json:"secret"`
+	OldRef      SecretReference `json:"old_ref"`
+	GracePeriod time.Duration   `json:"grace_period"`
+	HardDelete  bool            `json:"hard_delete"`
 }
 
 // SecretReference points to a specific version/instance of a secret
 type SecretReference struct {
-	Provider    string            `json:"provider"`
-	Key         string            `json:"key"`
-	Version     string            `json:"version,omitempty"`
-	Identifier  string            `json:"identifier,omitempty"` // DB user, API key ID, etc.
-	Metadata    map[string]string `json:"metadata,omitempty"`
+	Provider   string            `json:"provider"`
+	Key        string            `json:"key"`
+	Version    string            `json:"version,omitempty"`
+	Identifier string            `json:"identifier,omitempty"` // DB user, API key ID, etc.
+	Metadata   map[string]string `json:"metadata,omitempty"`
 }
 
 // NewSecretValue specifies how to generate the new secret value
 type NewSecretValue struct {
-	Type   ValueType             `json:"type"`
+	Type   ValueType              `json:"type"`
 	Config map[string]interface{} `json:"config,omitempty"`
-	Value  string                `json:"value,omitempty"` // For literal values
+	Value  string                 `json:"value,omitempty"` // For literal values
 }
 
 // ValueType specifies how to generate new secret values
 type ValueType string
 
 const (
-	ValueTypeRandom      ValueType = "random"      // Generate random value
-	ValueTypeLiteral     ValueType = "literal"     // Use provided value
-	ValueTypeFile        ValueType = "file"        // Read from file
-	ValueTypeGenerated   ValueType = "generated"   // Provider generates (API key, cert)
-	ValueTypeRotated     ValueType = "rotated"     // Provider rotates (OAuth refresh)
+	ValueTypeRandom    ValueType = "random"    // Generate random value
+	ValueTypeLiteral   ValueType = "literal"   // Use provided value
+	ValueTypeFile      ValueType = "file"      // Read from file
+	ValueTypeGenerated ValueType = "generated" // Provider generates (API key, cert)
+	ValueTypeRotated   ValueType = "rotated"   // Provider rotates (OAuth refresh)
 )
 
 // SecretType categorizes the type of secret being rotated
@@ -874,55 +873,55 @@ const (
 type RotationStatus string
 
 const (
-	StatusPending     RotationStatus = "pending"      // Ready to rotate
-	StatusRotating    RotationStatus = "rotating"     // In progress
-	StatusVerifying   RotationStatus = "verifying"    // Verifying new value
-	StatusCompleted   RotationStatus = "completed"    // Successfully rotated
-	StatusFailed      RotationStatus = "failed"       // Rotation failed
-	StatusRolledBack  RotationStatus = "rolled_back"  // Rolled back to old value
-	StatusDeprecated  RotationStatus = "deprecated"   // Old version deprecated
+	StatusPending    RotationStatus = "pending"     // Ready to rotate
+	StatusRotating   RotationStatus = "rotating"    // In progress
+	StatusVerifying  RotationStatus = "verifying"   // Verifying new value
+	StatusCompleted  RotationStatus = "completed"   // Successfully rotated
+	StatusFailed     RotationStatus = "failed"      // Rotation failed
+	StatusRolledBack RotationStatus = "rolled_back" // Rolled back to old value
+	StatusDeprecated RotationStatus = "deprecated"  // Old version deprecated
 )
 
 // RotationConstraints define limits and requirements for rotation
 type RotationConstraints struct {
-	MinRotationInterval time.Duration     `json:"min_rotation_interval,omitempty"`
-	MaxValueLength      int               `json:"max_value_length,omitempty"`
-	MinValueLength      int               `json:"min_value_length,omitempty"`
-	AllowedCharsets     []string          `json:"allowed_charsets,omitempty"`
-	RequiredTests       []VerificationTest `json:"required_tests,omitempty"`
-	GracePeriod         time.Duration     `json:"grace_period,omitempty"`
-	NotificationRequired bool             `json:"notification_required,omitempty"`
+	MinRotationInterval  time.Duration      `json:"min_rotation_interval,omitempty"`
+	MaxValueLength       int                `json:"max_value_length,omitempty"`
+	MinValueLength       int                `json:"min_value_length,omitempty"`
+	AllowedCharsets      []string           `json:"allowed_charsets,omitempty"`
+	RequiredTests        []VerificationTest `json:"required_tests,omitempty"`
+	GracePeriod          time.Duration      `json:"grace_period,omitempty"`
+	NotificationRequired bool               `json:"notification_required,omitempty"`
 }
 
 // VerificationTest defines how to verify a rotated secret works
 type VerificationTest struct {
-	Name        string        `json:"name"`
-	Type        TestType      `json:"type"`
+	Name        string                 `json:"name"`
+	Type        TestType               `json:"type"`
 	Config      map[string]interface{} `json:"config,omitempty"`
-	Timeout     time.Duration `json:"timeout,omitempty"`
-	Required    bool          `json:"required"`
-	Description string        `json:"description,omitempty"`
+	Timeout     time.Duration          `json:"timeout,omitempty"`
+	Required    bool                   `json:"required"`
+	Description string                 `json:"description,omitempty"`
 }
 
 // TestType specifies the type of verification test
 type TestType string
 
 const (
-	TestTypeConnection  TestType = "connection"   // Test database/service connection
-	TestTypeQuery       TestType = "query"        // Execute test query/request
-	TestTypeAPI         TestType = "api"          // Test API endpoint
-	TestTypePing        TestType = "ping"         // Simple connectivity test
-	TestTypeCustom      TestType = "custom"       // Custom test script
+	TestTypeConnection TestType = "connection" // Test database/service connection
+	TestTypeQuery      TestType = "query"      // Execute test query/request
+	TestTypeAPI        TestType = "api"        // Test API endpoint
+	TestTypePing       TestType = "ping"       // Simple connectivity test
+	TestTypeCustom     TestType = "custom"     // Custom test script
 )
 
 // VerificationResult contains the outcome of a verification test
 type VerificationResult struct {
-	Test        VerificationTest `json:"test"`
-	Status      TestStatus       `json:"status"`
-	Duration    time.Duration    `json:"duration"`
-	Message     string           `json:"message,omitempty"`
-	Error       string           `json:"error,omitempty"`
-	Details     map[string]interface{} `json:"details,omitempty"`
+	Test     VerificationTest       `json:"test"`
+	Status   TestStatus             `json:"status"`
+	Duration time.Duration          `json:"duration"`
+	Message  string                 `json:"message,omitempty"`
+	Error    string                 `json:"error,omitempty"`
+	Details  map[string]interface{} `json:"details,omitempty"`
 }
 
 // TestStatus represents the result of a verification test
@@ -937,23 +936,23 @@ const (
 
 // AuditEntry records an action taken during rotation
 type AuditEntry struct {
-	Timestamp   time.Time         `json:"timestamp"`
-	Action      string            `json:"action"`
-	Component   string            `json:"component"`
-	Status      string            `json:"status"`
-	Message     string            `json:"message,omitempty"`
-	Details     map[string]interface{} `json:"details,omitempty"`
-	Error       string            `json:"error,omitempty"`
+	Timestamp time.Time              `json:"timestamp"`
+	Action    string                 `json:"action"`
+	Component string                 `json:"component"`
+	Status    string                 `json:"status"`
+	Message   string                 `json:"message,omitempty"`
+	Details   map[string]interface{} `json:"details,omitempty"`
+	Error     string                 `json:"error,omitempty"`
 }
 
 // RotationStatusInfo contains detailed information about rotation status
 type RotationStatusInfo struct {
-	Status           RotationStatus `json:"status"`
-	LastRotated      *time.Time     `json:"last_rotated,omitempty"`
-	NextRotation     *time.Time     `json:"next_rotation,omitempty"`
-	RotationVersion  string         `json:"rotation_version,omitempty"`
-	CanRotate        bool           `json:"can_rotate"`
-	Reason           string         `json:"reason,omitempty"`
+	Status          RotationStatus `json:"status"`
+	LastRotated     *time.Time     `json:"last_rotated,omitempty"`
+	NextRotation    *time.Time     `json:"next_rotation,omitempty"`
+	RotationVersion string         `json:"rotation_version,omitempty"`
+	CanRotate       bool           `json:"can_rotate"`
+	Reason          string         `json:"reason,omitempty"`
 }
 
 // RotationEngine orchestrates rotation across multiple strategies.
@@ -975,23 +974,23 @@ type RotationStatusInfo struct {
 //
 //	// Create and configure engine
 //	engine := NewRotationEngine()
-//	
+//
 //	// Register rotation strategies
 //	engine.RegisterStrategy(&PostgreSQLRotator{})
 //	engine.RegisterStrategy(&StripeRotator{})
 //	engine.RegisterStrategy(&GenericAPIKeyRotator{})
-//	
+//
 //	// Perform single rotation
 //	request := RotationRequest{
 //	    Secret: SecretInfo{Key: "db_password", Provider: "postgresql"},
 //	    Strategy: "postgresql",
 //	}
 //	result, err := engine.Rotate(ctx, request)
-//	
+//
 //	// Batch rotate multiple secrets
 //	requests := []RotationRequest{dbRequest, apiRequest, certRequest}
 //	results, err := engine.BatchRotate(ctx, requests)
-//	
+//
 //	// Schedule future rotation
 //	nextWeek := time.Now().Add(7 * 24 * time.Hour)
 //	err = engine.ScheduleRotation(ctx, request, nextWeek)
@@ -1076,7 +1075,7 @@ type RotationEngine interface {
 	//	    Strategy:   "postgresql",
 	//	    TwoSecret:  true, // Zero-downtime rotation
 	//	}
-	//	
+	//
 	//	result, err := engine.Rotate(ctx, request)
 	//	if err != nil {
 	//	    return fmt.Errorf("rotation failed: %w", err)
@@ -1108,12 +1107,12 @@ type RotationEngine interface {
 	//	    {Secret: apiSecret, Strategy: "stripe"},
 	//	    {Secret: certSecret, Strategy: "certificate"},
 	//	}
-	//	
+	//
 	//	results, err := engine.BatchRotate(ctx, requests)
 	//	if err != nil {
 	//	    return fmt.Errorf("batch rotation failed: %w", err)
 	//	}
-	//	
+	//
 	//	for i, result := range results {
 	//	    if result.Status != StatusCompleted {
 	//	        log.Errorf("Request %d failed: %s", i, result.Error)
@@ -1139,9 +1138,9 @@ type RotationEngine interface {
 	//	if err != nil {
 	//	    return fmt.Errorf("failed to get history: %w", err)
 	//	}
-	//	
+	//
 	//	for _, record := range history {
-	//	    fmt.Printf("%s: %s (status: %s)\n", 
+	//	    fmt.Printf("%s: %s (status: %s)\n",
 	//	        record.RotatedAt.Format(time.RFC3339),
 	//	        record.Secret.Key,
 	//	        record.Status)
@@ -1169,7 +1168,7 @@ type RotationEngine interface {
 	//	    Strategy: "postgresql",
 	//	    TwoSecret: true, // Zero downtime
 	//	}
-	//	
+	//
 	//	if err := engine.ScheduleRotation(ctx, request, maintenanceWindow); err != nil {
 	//	    return fmt.Errorf("failed to schedule rotation: %w", err)
 	//	}

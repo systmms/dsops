@@ -129,12 +129,12 @@ func TestInfisicalIntegration(t *testing.T) {
 
 	// Setup mock secrets
 	secrets := map[string]string{
-		"DATABASE_URL":    "postgres://localhost:5432/testdb",
-		"API_KEY":         "sk-test-12345",
-		"JWT_SECRET":      "super-secret-jwt-key",
-		"SPECIAL_CHARS":   "p@$$w0rd!#&*()[]{}|\\<>?",
-		"UNICODE_SECRET":  "Hello 世界 🌍",
-		"JSON_VALUE":      `{"nested": "value", "number": 42}`,
+		"DATABASE_URL":   "postgres://localhost:5432/testdb",
+		"API_KEY":        "sk-test-12345",
+		"JWT_SECRET":     "super-secret-jwt-key",
+		"SPECIAL_CHARS":  "p@$$w0rd!#&*()[]{}|\\<>?",
+		"UNICODE_SECRET": "Hello 世界 🌍",
+		"JSON_VALUE":     `{"nested": "value", "number": 42}`,
 	}
 
 	mockServer := mockInfisicalServer(t, secrets)

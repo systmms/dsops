@@ -73,14 +73,14 @@ Examples:
 				for name := range env {
 					available = append(available, name)
 				}
-				
+
 				suggestion := fmt.Sprintf("Check your environment '%s' for available variables", envName)
 				if len(available) > 0 && len(available) <= 10 {
 					suggestion = fmt.Sprintf("Available variables in '%s': %v", envName, available)
 				} else if len(available) > 10 {
 					suggestion = fmt.Sprintf("Environment '%s' has %d variables. Use 'dsops plan --env %s' to see them all", envName, len(available), envName)
 				}
-				
+
 				return dserrors.ConfigError{
 					Field:      "variable",
 					Value:      varName,
@@ -130,8 +130,8 @@ Examples:
 			if jsonOutput {
 				// JSON output with metadata
 				output := map[string]interface{}{
-					"variable": varName,
-					"value":    value,
+					"variable":    varName,
+					"value":       value,
 					"environment": envName,
 				}
 

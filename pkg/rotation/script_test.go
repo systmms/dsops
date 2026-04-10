@@ -96,9 +96,9 @@ func TestScriptRotator_WithRepository(t *testing.T) {
 	secret := SecretInfo{
 		SecretType: "postgresql",
 		Metadata: map[string]string{
-			"script_path":      "/path/to/script.sh",
-			"service_type":     "postgresql",
-			"credential_kind":  "password",
+			"script_path":     "/path/to/script.sh",
+			"service_type":    "postgresql",
+			"credential_kind": "password",
 		},
 	}
 

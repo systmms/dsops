@@ -23,10 +23,10 @@ func extractJSONPath(jsonStr, path string) (string, error) {
 
 	// Remove the leading dot
 	path = strings.TrimPrefix(path, ".")
-	
+
 	// Split path into components
 	parts := strings.Split(path, ".")
-	
+
 	current := data
 	for _, part := range parts {
 		if part == "" {
@@ -101,10 +101,10 @@ func extractYAMLPath(yamlStr, path string) (string, error) {
 
 	// Remove the leading dot
 	path = strings.TrimPrefix(path, ".")
-	
+
 	// Split path into components
 	parts := strings.Split(path, ".")
-	
+
 	current := data
 	for _, part := range parts {
 		if part == "" {
@@ -184,7 +184,7 @@ func joinValues(input, separator string) (string, error) {
 
 	// If not JSON array, try splitting by common delimiters and joining with new separator
 	input = strings.TrimSpace(input)
-	
+
 	// Try common delimiters
 	delimiters := []string{"\n", ",", ";", "|", " "}
 	for _, delimiter := range delimiters {

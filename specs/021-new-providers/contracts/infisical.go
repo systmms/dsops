@@ -72,12 +72,12 @@ func ParseInfisicalReference(key string) (*InfisicalReference, error) {
 
 // MockInfisicalClient is a test double for InfisicalClient
 type MockInfisicalClient struct {
-	Token       string
-	TokenTTL    time.Duration
-	Secrets     map[string]*InfisicalSecret
-	AuthErr     error
-	GetErr      error
-	ListErr     error
+	Token    string
+	TokenTTL time.Duration
+	Secrets  map[string]*InfisicalSecret
+	AuthErr  error
+	GetErr   error
+	ListErr  error
 }
 
 func (m *MockInfisicalClient) Authenticate(ctx context.Context) (string, time.Duration, error) {

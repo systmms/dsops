@@ -265,7 +265,7 @@ func NewLeakShowCommand(cfg *config.Config) *cobra.Command {
 			fmt.Printf("Severity:    %s\n", report.Severity)
 			fmt.Printf("Status:      %s\n", report.Status)
 			fmt.Printf("Created:     %s\n", report.Timestamp.Format(time.RFC3339))
-			
+
 			if report.ResolvedAt != nil {
 				fmt.Printf("Resolved:    %s\n", report.ResolvedAt.Format(time.RFC3339))
 			}
@@ -339,12 +339,12 @@ func NewLeakShowCommand(cfg *config.Config) *cobra.Command {
 
 func NewLeakUpdateCommand(cfg *config.Config) *cobra.Command {
 	var (
-		status       string
-		addAction    []string
-		addFile      []string
-		addSecret    []string
-		addCommit    []string
-		notify       bool
+		status    string
+		addAction []string
+		addFile   []string
+		addSecret []string
+		addCommit []string
+		notify    bool
 	)
 
 	cmd := &cobra.Command{
@@ -630,16 +630,16 @@ func sendIncidentNotifications(cfg *config.Config, manager *incident.Manager, re
 
 	// TODO: Add notification config to policies section
 	// For now, we'll use environment variables
-	
+
 	notifConfig := incident.NotificationConfig{}
-	
+
 	// Check for Slack webhook
 	if webhook := os.Getenv("DSOPS_SLACK_WEBHOOK"); webhook != "" {
 		notifConfig.Slack = &incident.SlackConfig{
 			WebhookURL: webhook,
 		}
 	}
-	
+
 	// Check for GitHub config
 	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
 		owner := os.Getenv("GITHUB_OWNER")
@@ -653,18 +653,18 @@ func sendIncidentNotifications(cfg *config.Config, manager *incident.Manager, re
 			}
 		}
 	}
-	
+
 	// Send notifications
 	notifier := incident.NewNotifier(notifConfig)
 	records := notifier.SendNotifications(report)
-	
+
 	// Update report with notification records
 	for _, record := range records {
 		if err := manager.AddNotification(report, record.Channel, record.Success, record.Details); err != nil {
 			return fmt.Errorf("failed to record notification: %w", err)
 		}
 	}
-	
+
 	// Report results
 	successCount := 0
 	for _, record := range records {
@@ -675,10 +675,10 @@ func sendIncidentNotifications(cfg *config.Config, manager *incident.Manager, re
 			fmt.Printf("❌ Failed to notify %s: %s\n", record.Channel, record.Details)
 		}
 	}
-	
+
 	if successCount == 0 && len(records) > 0 {
 		return fmt.Errorf("all notifications failed")
 	}
-	
+
 	return nil
 }

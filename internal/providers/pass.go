@@ -244,4 +244,3 @@ func (p *PassProvider) buildCommand(ctx context.Context, args ...string) *exec.C
 
 	return cmd
 }
-

@@ -177,12 +177,12 @@ func (c *Config) GetEnvironment(name string) (Environment, error) {
 		for envName := range c.Definition.Envs {
 			available = append(available, envName)
 		}
-		
+
 		suggestion := "Check your dsops.yaml for available environments"
 		if len(available) > 0 {
 			suggestion = fmt.Sprintf("Available environments: %s", strings.Join(available, ", "))
 		}
-		
+
 		return nil, dserrors.ConfigError{
 			Field:      "environment",
 			Value:      name,
@@ -320,7 +320,7 @@ func (r *Reference) ToSecretRef() (secretstore.SecretRef, error) {
 	if r.IsStoreReference() {
 		return secretstore.ParseSecretRef(r.Store)
 	}
-	
+
 	if r.IsLegacyFormat() {
 		// Convert legacy format to new SecretRef
 		return secretstore.SecretRef{
@@ -373,13 +373,13 @@ func (r *Reference) GetEffectiveProvider() string {
 	if r.IsLegacyFormat() {
 		return r.Provider
 	}
-	
+
 	if r.IsStoreReference() {
 		if ref, err := secretstore.ParseSecretRef(r.Store); err == nil {
 			return ref.Store
 		}
 	}
-	
+
 	if r.IsServiceReference() {
 		if ref, err := service.ParseServiceRef(r.Service); err == nil {
 			return ref.Type
@@ -394,12 +394,12 @@ func ConvertLegacyReference(ref *ProviderRef) string {
 	if ref == nil {
 		return ""
 	}
-	
+
 	storeURI := fmt.Sprintf("store://%s/%s", ref.Provider, ref.Key)
 	if ref.Version != "" {
 		storeURI += "?version=" + ref.Version
 	}
-	
+
 	return storeURI
 }
 

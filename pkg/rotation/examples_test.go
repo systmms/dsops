@@ -245,8 +245,8 @@ func ExampleSchemaAwareRotator() {
 	postgresType.Metadata.Category = "database"
 	postgresType.Spec.CredentialKinds = []dsopsdata.CredentialKind{
 		{
-			Name:        "password",
-			Description: "Database password",
+			Name:         "password",
+			Description:  "Database password",
 			Capabilities: []string{"read", "write"},
 		},
 	}
@@ -271,7 +271,7 @@ func ExampleSchemaAwareRotator() {
 
 	// The rotator can now use service definitions from dsops-data
 	if rotator.SupportsSecret(ctx, secretInfo) {
-		fmt.Printf("Rotator supports %s using schema: %s\n", 
+		fmt.Printf("Rotator supports %s using schema: %s\n",
 			secretInfo.Provider, "postgresql")
 
 		request := rotation.RotationRequest{
@@ -327,7 +327,7 @@ func ExampleSecretValueRotator_verification() {
 
 	// First, simulate a rotation that will fail verification
 	fmt.Println("Attempting rotation with failing verification...")
-	
+
 	// Mock a verification request that will fail
 	verifyRequest := rotation.VerificationRequest{
 		Secret: secretInfo,
@@ -341,7 +341,7 @@ func ExampleSecretValueRotator_verification() {
 	err := rotator.Verify(ctx, verifyRequest)
 	if err != nil {
 		fmt.Printf("Verification failed: %v\n", err)
-		
+
 		// Rollback to previous secret
 		rollbackRequest := rotation.RollbackRequest{
 			Secret: secretInfo,
@@ -362,7 +362,7 @@ func ExampleSecretValueRotator_verification() {
 
 	// Now demonstrate successful rotation
 	fmt.Println("\nAttempting rotation with passing verification...")
-	
+
 	request := rotation.RotationRequest{
 		Secret:   secretInfo,
 		Strategy: "postgresql-with-verification",
@@ -373,10 +373,10 @@ func ExampleSecretValueRotator_verification() {
 		log.Printf("Rotation failed: %v", err)
 	} else {
 		fmt.Printf("Rotation successful: %s\n", result.Status)
-		
+
 		// Show verification results
 		for _, vResult := range result.VerificationResults {
-			fmt.Printf("Test %s: %s (duration: %s)\n", 
+			fmt.Printf("Test %s: %s (duration: %s)\n",
 				vResult.Test.Name, vResult.Status, vResult.Duration)
 		}
 	}
@@ -508,8 +508,8 @@ func (r *MockAPIKeyRotator) Rollback(ctx context.Context, request rotation.Rollb
 func (r *MockAPIKeyRotator) GetStatus(ctx context.Context, secret rotation.SecretInfo) (*rotation.RotationStatusInfo, error) {
 	fixedTime := time.Date(2025, 11, 15, 12, 0, 0, 0, time.UTC)
 	return &rotation.RotationStatusInfo{
-		Status:    rotation.StatusCompleted,
-		CanRotate: true,
+		Status:      rotation.StatusCompleted,
+		CanRotate:   true,
 		LastRotated: &fixedTime,
 	}, nil
 }
@@ -546,8 +546,8 @@ func (r *MockCertificateRotator) Rollback(ctx context.Context, request rotation.
 func (r *MockCertificateRotator) GetStatus(ctx context.Context, secret rotation.SecretInfo) (*rotation.RotationStatusInfo, error) {
 	fixedTime := time.Date(2025, 11, 15, 12, 0, 0, 0, time.UTC)
 	return &rotation.RotationStatusInfo{
-		Status:    rotation.StatusCompleted,
-		CanRotate: true,
+		Status:      rotation.StatusCompleted,
+		CanRotate:   true,
 		LastRotated: &fixedTime,
 	}, nil
 }
@@ -560,7 +560,7 @@ type MockTwoSecretRotator struct {
 func (r *MockTwoSecretRotator) CreateSecondarySecret(ctx context.Context, request rotation.SecondarySecretRequest) (*rotation.SecretReference, error) {
 	identifier := "db_user_secondary"
 	r.secondarySecrets[request.Secret.Key] = identifier
-	
+
 	return &rotation.SecretReference{
 		Provider:   request.Secret.Provider,
 		Key:        request.Secret.Key + "_secondary",
@@ -619,8 +619,8 @@ func (r *MockSchemaAwareRotator) Rollback(ctx context.Context, request rotation.
 func (r *MockSchemaAwareRotator) GetStatus(ctx context.Context, secret rotation.SecretInfo) (*rotation.RotationStatusInfo, error) {
 	fixedTime := time.Date(2025, 11, 15, 12, 0, 0, 0, time.UTC)
 	return &rotation.RotationStatusInfo{
-		Status:    rotation.StatusCompleted,
-		CanRotate: true,
+		Status:      rotation.StatusCompleted,
+		CanRotate:   true,
 		LastRotated: &fixedTime,
 	}, nil
 }

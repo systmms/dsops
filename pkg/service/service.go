@@ -37,21 +37,21 @@ type Service interface {
 
 // ServiceRef identifies a credential within a service using the new reference format
 type ServiceRef struct {
-	Type       string            // Service type (e.g., "github", "postgres", "stripe")
-	Instance   string            // Service instance ID (e.g., "acme-org", "prod-db")
-	Kind       string            // Credential kind (e.g., "pat", "password", "api-key")
-	Principal  string            // Identity the credential belongs to (e.g., "ci-bot")
-	Options    map[string]string // Additional options for the service
+	Type      string            // Service type (e.g., "github", "postgres", "stripe")
+	Instance  string            // Service instance ID (e.g., "acme-org", "prod-db")
+	Kind      string            // Credential kind (e.g., "pat", "password", "api-key")
+	Principal string            // Identity the credential belongs to (e.g., "ci-bot")
+	Options   map[string]string // Additional options for the service
 }
 
 // RotationRequest contains all information needed to plan a rotation
 type RotationRequest struct {
-	ServiceRef    ServiceRef
-	Strategy      string            // Rotation strategy (e.g., "two-key", "immediate")
-	Policy        string            // Rotation policy name
-	NewValue      []byte            // New credential value (if provided)
-	Metadata      map[string]string // Additional metadata
-	DryRun        bool              // Plan only, don't execute
+	ServiceRef ServiceRef
+	Strategy   string            // Rotation strategy (e.g., "two-key", "immediate")
+	Policy     string            // Rotation policy name
+	NewValue   []byte            // New credential value (if provided)
+	Metadata   map[string]string // Additional metadata
+	DryRun     bool              // Plan only, don't execute
 }
 
 // RotationPlan describes what will happen during rotation
@@ -60,7 +60,7 @@ type RotationPlan struct {
 	Strategy      string
 	Steps         []RotationStep
 	EstimatedTime time.Duration
-	Fingerprint   string            // Unique identifier for this plan
+	Fingerprint   string // Unique identifier for this plan
 	CreatedAt     time.Time
 	Metadata      map[string]string
 }
@@ -76,16 +76,16 @@ type RotationStep struct {
 
 // RotationResult contains the outcome of a rotation execution
 type RotationResult struct {
-	ServiceRef      ServiceRef
-	Plan            RotationPlan
-	Status          string // "success", "failed", "partial"
-	OldCredential   CredentialInfo
-	NewCredential   CredentialInfo
-	ExecutedSteps   []ExecutedStep
-	StartedAt       time.Time
-	CompletedAt     time.Time
-	Error           string
-	Metadata        map[string]string
+	ServiceRef    ServiceRef
+	Plan          RotationPlan
+	Status        string // "success", "failed", "partial"
+	OldCredential CredentialInfo
+	NewCredential CredentialInfo
+	ExecutedSteps []ExecutedStep
+	StartedAt     time.Time
+	CompletedAt   time.Time
+	Error         string
+	Metadata      map[string]string
 }
 
 // ExecutedStep tracks the execution of a single rotation step
@@ -100,13 +100,13 @@ type ExecutedStep struct {
 
 // CredentialInfo describes a credential without exposing its value
 type CredentialInfo struct {
-	ID          string
-	Version     string
-	Status      string // "active", "deprecated", "revoked"
-	CreatedAt   time.Time
-	ExpiresAt   *time.Time
-	LastUsed    *time.Time
-	Metadata    map[string]string
+	ID        string
+	Version   string
+	Status    string // "active", "deprecated", "revoked"
+	CreatedAt time.Time
+	ExpiresAt *time.Time
+	LastUsed  *time.Time
+	Metadata  map[string]string
 }
 
 // RotationStatus provides information about current rotation state
@@ -121,14 +121,14 @@ type RotationStatus struct {
 
 // ServiceCapabilities describes what rotation operations a service supports
 type ServiceCapabilities struct {
-	SupportedStrategies []string          // Strategies this service can use
-	MaxActiveKeys       int               // Maximum concurrent credentials (0 = unlimited)
-	SupportsExpiration  bool              // Can set expiration dates
-	SupportsVersioning  bool              // Maintains credential versions
-	SupportsRevocation  bool              // Can revoke old credentials
-	SupportsVerification bool             // Can verify credential functionality
-	MinRotationInterval time.Duration     // Minimum time between rotations
-	Constraints         map[string]string // Format, length, character constraints
+	SupportedStrategies  []string          // Strategies this service can use
+	MaxActiveKeys        int               // Maximum concurrent credentials (0 = unlimited)
+	SupportsExpiration   bool              // Can set expiration dates
+	SupportsVersioning   bool              // Maintains credential versions
+	SupportsRevocation   bool              // Can revoke old credentials
+	SupportsVerification bool              // Can verify credential functionality
+	MinRotationInterval  time.Duration     // Minimum time between rotations
+	Constraints          map[string]string // Format, length, character constraints
 }
 
 // Error types for service operations
@@ -248,11 +248,11 @@ func (ref ServiceRef) String() string {
 	// Build query parameters
 	params := url.Values{}
 	params.Set("kind", ref.Kind)
-	
+
 	if ref.Principal != "" {
 		params.Set("principal", ref.Principal)
 	}
-	
+
 	for key, value := range ref.Options {
 		params.Set(key, value)
 	}

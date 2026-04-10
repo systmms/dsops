@@ -72,10 +72,10 @@ type StoredRotationResult struct {
 
 // StoredRotationStatus represents stored rotation status
 type StoredRotationStatus struct {
-	SecretKey   string              `json:"secret_key"`
-	Provider    string              `json:"provider"`
-	Status      RotationStatusInfo  `json:"status"`
-	UpdatedAt   time.Time           `json:"updated_at"`
+	SecretKey string             `json:"secret_key"`
+	Provider  string             `json:"provider"`
+	Status    RotationStatusInfo `json:"status"`
+	UpdatedAt time.Time          `json:"updated_at"`
 }
 
 // StoreRotationResult saves a rotation result to persistent storage
@@ -91,8 +91,8 @@ func (f *FileRotationStorage) StoreRotationResult(ctx context.Context, result Ro
 	}
 
 	// Determine file path based on secret key
-	fileName := fmt.Sprintf("%s_%d.json", 
-		sanitizeFileName(result.Secret.Key), 
+	fileName := fmt.Sprintf("%s_%d.json",
+		sanitizeFileName(result.Secret.Key),
 		stored.StoredAt.Unix())
 	filePath := filepath.Join(f.dataDir, "history", fileName)
 
@@ -106,7 +106,7 @@ func (f *FileRotationStorage) StoreRotationResult(ctx context.Context, result Ro
 		return fmt.Errorf("failed to write rotation result: %w", err)
 	}
 
-	f.logger.Debug("Stored rotation result for %s at %s", 
+	f.logger.Debug("Stored rotation result for %s at %s",
 		logging.Secret(result.Secret.Key), filePath)
 
 	return nil
@@ -181,8 +181,8 @@ func (f *FileRotationStorage) GetRotationStatus(ctx context.Context, secret Secr
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 
-	fileName := fmt.Sprintf("%s_%s.json", 
-		sanitizeFileName(secret.Key), 
+	fileName := fmt.Sprintf("%s_%s.json",
+		sanitizeFileName(secret.Key),
 		sanitizeFileName(secret.Provider))
 	filePath := filepath.Join(f.dataDir, "status", fileName)
 
@@ -222,8 +222,8 @@ func (f *FileRotationStorage) UpdateRotationStatus(ctx context.Context, secret S
 		UpdatedAt: time.Now(),
 	}
 
-	fileName := fmt.Sprintf("%s_%s.json", 
-		sanitizeFileName(secret.Key), 
+	fileName := fmt.Sprintf("%s_%s.json",
+		sanitizeFileName(secret.Key),
 		sanitizeFileName(secret.Provider))
 	filePath := filepath.Join(f.dataDir, "status", fileName)
 
@@ -319,9 +319,9 @@ func (f *FileRotationStorage) Close() error {
 
 func generateRotationID(result RotationResult) string {
 	timestamp := time.Now().Unix()
-	return fmt.Sprintf("%s_%s_%d", 
-		result.Secret.Provider, 
-		sanitizeFileName(result.Secret.Key), 
+	return fmt.Sprintf("%s_%s_%d",
+		result.Secret.Provider,
+		sanitizeFileName(result.Secret.Key),
 		timestamp)
 }
 

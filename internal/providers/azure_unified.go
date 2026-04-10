@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	dserrors "github.com/systmms/dsops/internal/errors"
 	"github.com/systmms/dsops/internal/logging"
 	"github.com/systmms/dsops/pkg/provider"
-	dserrors "github.com/systmms/dsops/internal/errors"
 )
 
 // AzureUnifiedProvider provides intelligent routing to different Azure providers
@@ -26,7 +26,7 @@ type UnifiedAzureConfig struct {
 	UseManagedIdentity bool
 	UserAssignedID     string
 	DefaultService     string // Default service if not specified in reference
-	
+
 	// Service-specific configs
 	KeyVault map[string]interface{}
 	Identity map[string]interface{}
@@ -36,7 +36,7 @@ type UnifiedAzureConfig struct {
 // NewAzureUnifiedProvider creates a new unified Azure provider
 func NewAzureUnifiedProvider(name string, configMap map[string]interface{}) (*AzureUnifiedProvider, error) {
 	logger := logging.New(false, false)
-	
+
 	config := UnifiedAzureConfig{
 		DefaultService:     "keyvault", // Default to Key Vault
 		UseManagedIdentity: true,       // Default to managed identity
@@ -74,7 +74,7 @@ func NewAzureUnifiedProvider(name string, configMap map[string]interface{}) (*Az
 
 	// Create sub-providers
 	providers := make(map[string]provider.Provider)
-	
+
 	// Create Key Vault provider if vault_url is configured
 	kvConfig := mergeAzureConfigs(getAzureCommonConfig(config), config.KeyVault)
 	if vaultURL, exists := kvConfig["vault_url"]; exists && vaultURL != "" {
@@ -95,9 +95,9 @@ func NewAzureUnifiedProvider(name string, configMap map[string]interface{}) (*Az
 		return nil, fmt.Errorf("failed to create Identity provider: %w", err)
 	}
 	providers["identity"] = identityProvider
-	providers["auth"] = identityProvider     // Alias
-	providers["token"] = identityProvider    // Alias
-	providers["managed"] = identityProvider  // Alias
+	providers["auth"] = identityProvider    // Alias
+	providers["token"] = identityProvider   // Alias
+	providers["managed"] = identityProvider // Alias
 
 	return &AzureUnifiedProvider{
 		name:           name,
@@ -129,17 +129,17 @@ func getAzureCommonConfig(config UnifiedAzureConfig) map[string]interface{} {
 // mergeAzureConfigs merges two configuration maps
 func mergeAzureConfigs(base, override map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
-	
+
 	// Copy base config
 	for k, v := range base {
 		result[k] = v
 	}
-	
+
 	// Override with specific config
 	for k, v := range override {
 		result[k] = v
 	}
-	
+
 	return result
 }
 
@@ -151,7 +151,7 @@ func (p *AzureUnifiedProvider) Name() string {
 // Resolve intelligently routes to the appropriate Azure provider
 func (p *AzureUnifiedProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
 	service, key := p.parseAzureReference(ref.Key)
-	
+
 	// Get the appropriate provider
 	subProvider, exists := p.providers[service]
 	if !exists {
@@ -169,7 +169,7 @@ func (p *AzureUnifiedProvider) Resolve(ctx context.Context, ref provider.Referen
 	}
 
 	p.logger.Debug("Routing to %s provider with key: %s", service, logging.Secret(key))
-	
+
 	// Delegate to sub-provider
 	return subProvider.Resolve(ctx, subRef)
 }
@@ -181,42 +181,42 @@ func (p *AzureUnifiedProvider) parseAzureReference(ref string) (service, key str
 		parts := strings.SplitN(ref, ":", 2)
 		return "keyvault", parts[1]
 	}
-	
+
 	if strings.HasPrefix(ref, "vault:") || strings.HasPrefix(ref, "secrets:") {
 		parts := strings.SplitN(ref, ":", 2)
 		return "keyvault", parts[1]
 	}
-	
+
 	if strings.HasPrefix(ref, "identity:") || strings.HasPrefix(ref, "auth:") {
 		parts := strings.SplitN(ref, ":", 2)
 		return "identity", parts[1]
 	}
-	
+
 	if strings.HasPrefix(ref, "token:") || strings.HasPrefix(ref, "managed:") {
 		parts := strings.SplitN(ref, ":", 2)
 		return "identity", parts[1]
 	}
-	
+
 	// Auto-detect based on format
 	lowerRef := strings.ToLower(ref)
-	
+
 	// Token/authentication patterns suggest Identity
 	if strings.Contains(lowerRef, "scope") || strings.Contains(lowerRef, ".default") ||
-	   lowerRef == "access_token" || lowerRef == "token" || lowerRef == "expires_at" {
+		lowerRef == "access_token" || lowerRef == "token" || lowerRef == "expires_at" {
 		return "identity", ref
 	}
-	
+
 	// HTTPS URL patterns for Key Vault
 	if strings.HasPrefix(ref, "https://") && strings.Contains(ref, ".vault.azure.net/") {
 		return "keyvault", ref
 	}
-	
+
 	// Secret name patterns (typically Key Vault)
 	if strings.Contains(ref, "/") || strings.Contains(ref, "#") {
 		// Version or JSON extraction patterns
 		return "keyvault", ref
 	}
-	
+
 	// Default to configured service
 	return p.defaultService, ref
 }
@@ -225,7 +225,7 @@ func (p *AzureUnifiedProvider) parseAzureReference(ref string) (service, key str
 func (p *AzureUnifiedProvider) getAvailableAzureServices() string {
 	services := make([]string, 0, len(p.providers))
 	seen := make(map[string]bool)
-	
+
 	for service := range p.providers {
 		if !seen[service] {
 			services = append(services, service)
@@ -238,7 +238,7 @@ func (p *AzureUnifiedProvider) getAvailableAzureServices() string {
 // Describe returns metadata about the secret
 func (p *AzureUnifiedProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
 	service, key := p.parseAzureReference(ref.Key)
-	
+
 	subProvider, exists := p.providers[service]
 	if !exists {
 		return provider.Metadata{
@@ -265,20 +265,20 @@ func (p *AzureUnifiedProvider) Capabilities() provider.Capabilities {
 		RequiresAuth:       true,  // All require authentication
 		AuthMethods:        []string{"managed_identity", "service_principal", "azure_cli", "default_credential"},
 	}
-	
+
 	return caps
 }
 
 // Validate checks if all sub-providers are properly configured
 func (p *AzureUnifiedProvider) Validate(ctx context.Context) error {
 	var errors []string
-	
+
 	for service, subProvider := range p.providers {
 		if err := subProvider.Validate(ctx); err != nil {
 			errors = append(errors, fmt.Sprintf("%s: %v", service, err))
 		}
 	}
-	
+
 	if len(errors) > 0 {
 		return dserrors.UserError{
 			Message:    "One or more Azure services failed validation",
@@ -286,7 +286,7 @@ func (p *AzureUnifiedProvider) Validate(ctx context.Context) error {
 			Suggestion: "Check Azure credentials and permissions for each service",
 		}
 	}
-	
+
 	return nil
 }
 

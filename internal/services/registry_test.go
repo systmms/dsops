@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/systmms/dsops/internal/config"
 	"github.com/systmms/dsops/internal/dsopsdata"
 	"github.com/systmms/dsops/pkg/service"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestServiceRegistry(t *testing.T) {
@@ -70,7 +70,7 @@ func TestServiceRegistry(t *testing.T) {
 		assert.Contains(t, types, "mysql")
 		assert.Contains(t, types, "github")
 		assert.Contains(t, types, "stripe")
-		
+
 		// Should not contain secret store types
 		assert.NotContains(t, types, "bitwarden")
 		assert.NotContains(t, types, "vault")
@@ -81,12 +81,12 @@ func TestServiceRegistry(t *testing.T) {
 		assert.True(t, registry.IsSupported("postgres"))
 		assert.True(t, registry.IsSupported("mysql"))
 		assert.True(t, registry.IsSupported("github"))
-		
+
 		// Secret store types should not be supported
 		assert.False(t, registry.IsSupported("bitwarden"))
 		assert.False(t, registry.IsSupported("vault"))
 		assert.False(t, registry.IsSupported("aws.secretsmanager"))
-		
+
 		// Unknown types should not be supported
 		assert.False(t, registry.IsSupported("unknown"))
 	})
