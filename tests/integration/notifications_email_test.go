@@ -29,8 +29,8 @@ func parseHostPort(addr string) (string, int) {
 
 // mailhogMessage represents a message in MailHog's API response.
 type mailhogMessage struct {
-	ID      string `json:"ID"`
-	From    struct {
+	ID   string `json:"ID"`
+	From struct {
 		Mailbox string `json:"Mailbox"`
 		Domain  string `json:"Domain"`
 	} `json:"From"`
@@ -736,13 +736,13 @@ func TestEmailSMTP_RealWorldScenario(t *testing.T) {
 		Duration:    2*time.Minute + 34*time.Second,
 		Timestamp:   time.Now(),
 		Metadata: map[string]string{
-			"rotation_id":         "rot-2024-12-09-143022-abc123",
-			"previous_key_id":     "key-v47",
-			"new_key_id":          "key-v48",
-			"triggered_by":        "scheduled-rotation",
-			"affected_databases":  "analytics,reporting,metrics",
-			"runbook_url":         "https://wiki.company.com/runbooks/postgres-rotation-failure",
-			"pagerduty_incident":  "PD-12345",
+			"rotation_id":        "rot-2024-12-09-143022-abc123",
+			"previous_key_id":    "key-v47",
+			"new_key_id":         "key-v48",
+			"triggered_by":       "scheduled-rotation",
+			"affected_databases": "analytics,reporting,metrics",
+			"runbook_url":        "https://wiki.company.com/runbooks/postgres-rotation-failure",
+			"pagerduty_incident": "PD-12345",
 		},
 	}
 

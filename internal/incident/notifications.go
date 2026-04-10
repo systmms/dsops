@@ -25,9 +25,9 @@ type SlackConfig struct {
 
 // GitHubConfig holds GitHub integration configuration
 type GitHubConfig struct {
-	Token      string   `yaml:"token"`       // GitHub personal access token
-	Owner      string   `yaml:"owner"`       // Repository owner
-	Repository string   `yaml:"repository"`  // Repository name
+	Token      string   `yaml:"token"`            // GitHub personal access token
+	Owner      string   `yaml:"owner"`            // Repository owner
+	Repository string   `yaml:"repository"`       // Repository name
 	Labels     []string `yaml:"labels,omitempty"` // Labels to add to issues
 }
 
@@ -44,19 +44,19 @@ func NewNotifier(config NotificationConfig) *Notifier {
 // SendNotifications sends notifications to all configured channels
 func (n *Notifier) SendNotifications(report *Report) []NotificationRecord {
 	var records []NotificationRecord
-	
+
 	// Send to Slack
 	if n.config.Slack != nil {
 		record := n.sendSlackNotification(report)
 		records = append(records, record)
 	}
-	
+
 	// Send to GitHub
 	if n.config.GitHub != nil {
 		record := n.sendGitHubNotification(report)
 		records = append(records, record)
 	}
-	
+
 	return records
 }
 
@@ -66,22 +66,22 @@ func (n *Notifier) sendSlackNotification(report *Report) NotificationRecord {
 		Channel:   "slack",
 		Timestamp: time.Now(),
 	}
-	
+
 	// Override webhook URL from environment if set
 	webhookURL := n.config.Slack.WebhookURL
 	if envURL := os.Getenv("DSOPS_SLACK_WEBHOOK"); envURL != "" {
 		webhookURL = envURL
 	}
-	
+
 	if webhookURL == "" {
 		record.Success = false
 		record.Details = "No Slack webhook URL configured"
 		return record
 	}
-	
+
 	// Build Slack message
 	message := n.buildSlackMessage(report)
-	
+
 	// Send to Slack
 	data, err := json.Marshal(message)
 	if err != nil {
@@ -89,7 +89,7 @@ func (n *Notifier) sendSlackNotification(report *Report) NotificationRecord {
 		record.Details = fmt.Sprintf("Failed to marshal message: %v", err)
 		return record
 	}
-	
+
 	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		record.Success = false
@@ -97,13 +97,13 @@ func (n *Notifier) sendSlackNotification(report *Report) NotificationRecord {
 		return record
 	}
 	defer func() { _ = resp.Body.Close() }()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		record.Success = false
 		record.Details = fmt.Sprintf("Slack returned status %d", resp.StatusCode)
 		return record
 	}
-	
+
 	record.Success = true
 	return record
 }
@@ -122,7 +122,7 @@ func (n *Notifier) buildSlackMessage(report *Report) map[string]interface{} {
 	case "low":
 		color = "#00CED1" // dark turquoise
 	}
-	
+
 	// Build fields
 	var fields []map[string]interface{}
 	fields = append(fields, map[string]interface{}{
@@ -145,7 +145,7 @@ func (n *Notifier) buildSlackMessage(report *Report) map[string]interface{} {
 		"value": report.Status,
 		"short": true,
 	})
-	
+
 	// Add affected resources
 	if len(report.AffectedFiles) > 0 {
 		fields = append(fields, map[string]interface{}{
@@ -154,7 +154,7 @@ func (n *Notifier) buildSlackMessage(report *Report) map[string]interface{} {
 			"short": false,
 		})
 	}
-	
+
 	// Add actions required
 	if len(report.ActionsRequired) > 0 {
 		fields = append(fields, map[string]interface{}{
@@ -163,31 +163,31 @@ func (n *Notifier) buildSlackMessage(report *Report) map[string]interface{} {
 			"short": false,
 		})
 	}
-	
+
 	attachment := map[string]interface{}{
-		"color":      color,
-		"title":      fmt.Sprintf("🚨 Security Incident: %s", report.Title),
-		"text":       report.Description,
-		"fields":     fields,
-		"footer":     "dsops incident response",
-		"ts":         report.Timestamp.Unix(),
-		"mrkdwn_in":  []string{"text", "fields"},
+		"color":     color,
+		"title":     fmt.Sprintf("🚨 Security Incident: %s", report.Title),
+		"text":      report.Description,
+		"fields":    fields,
+		"footer":    "dsops incident response",
+		"ts":        report.Timestamp.Unix(),
+		"mrkdwn_in": []string{"text", "fields"},
 	}
-	
+
 	message := map[string]interface{}{
 		"attachments": []interface{}{attachment},
 	}
-	
+
 	// Add channel if configured
 	if n.config.Slack.Channel != "" {
 		message["channel"] = n.config.Slack.Channel
 	}
-	
+
 	// Add username if configured
 	if n.config.Slack.Username != "" {
 		message["username"] = n.config.Slack.Username
 	}
-	
+
 	return message
 }
 
@@ -197,51 +197,51 @@ func (n *Notifier) sendGitHubNotification(report *Report) NotificationRecord {
 		Channel:   "github",
 		Timestamp: time.Now(),
 	}
-	
+
 	// Get token from config or environment
 	token := n.config.GitHub.Token
 	if envToken := os.Getenv("GITHUB_TOKEN"); envToken != "" {
 		token = envToken
 	}
-	
+
 	if token == "" {
 		record.Success = false
 		record.Details = "No GitHub token configured"
 		return record
 	}
-	
+
 	// Build issue body
 	body := n.buildGitHubIssueBody(report)
-	
+
 	// Create issue
 	issue := map[string]interface{}{
 		"title":  fmt.Sprintf("[Security Incident] %s", report.Title),
 		"body":   body,
 		"labels": n.config.GitHub.Labels,
 	}
-	
+
 	data, err := json.Marshal(issue)
 	if err != nil {
 		record.Success = false
 		record.Details = fmt.Sprintf("Failed to marshal issue: %v", err)
 		return record
 	}
-	
+
 	// Create request
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues", 
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues",
 		n.config.GitHub.Owner, n.config.GitHub.Repository)
-	
+
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
 	if err != nil {
 		record.Success = false
 		record.Details = fmt.Sprintf("Failed to create request: %v", err)
 		return record
 	}
-	
+
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	// Send request
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
@@ -251,13 +251,13 @@ func (n *Notifier) sendGitHubNotification(report *Report) NotificationRecord {
 		return record
 	}
 	defer func() { _ = resp.Body.Close() }()
-	
+
 	if resp.StatusCode != http.StatusCreated {
 		record.Success = false
 		record.Details = fmt.Sprintf("GitHub returned status %d", resp.StatusCode)
 		return record
 	}
-	
+
 	// Parse response to get issue number
 	var respData map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&respData); err == nil {
@@ -265,7 +265,7 @@ func (n *Notifier) sendGitHubNotification(report *Report) NotificationRecord {
 			record.Details = fmt.Sprintf("Created issue #%d", int(number))
 		}
 	}
-	
+
 	record.Success = true
 	return record
 }
@@ -273,9 +273,9 @@ func (n *Notifier) sendGitHubNotification(report *Report) NotificationRecord {
 // buildGitHubIssueBody creates a GitHub issue body from an incident report
 func (n *Notifier) buildGitHubIssueBody(report *Report) string {
 	var body strings.Builder
-	
+
 	body.WriteString("## Security Incident Report\n\n")
-	
+
 	// Metadata table
 	body.WriteString("| Field | Value |\n")
 	body.WriteString("|-------|-------|\n")
@@ -285,11 +285,11 @@ func (n *Notifier) buildGitHubIssueBody(report *Report) string {
 	body.WriteString(fmt.Sprintf("| **Status** | %s |\n", report.Status))
 	body.WriteString(fmt.Sprintf("| **Timestamp** | %s |\n", report.Timestamp.Format(time.RFC3339)))
 	body.WriteString("\n")
-	
+
 	// Description
 	body.WriteString("### Description\n\n")
 	body.WriteString(report.Description + "\n\n")
-	
+
 	// Details
 	if len(report.Details) > 0 {
 		body.WriteString("### Details\n\n")
@@ -298,11 +298,11 @@ func (n *Notifier) buildGitHubIssueBody(report *Report) string {
 		}
 		body.WriteString("\n")
 	}
-	
+
 	// Affected Resources
 	if len(report.AffectedFiles) > 0 || len(report.AffectedSecrets) > 0 || len(report.AffectedCommits) > 0 {
 		body.WriteString("### Affected Resources\n\n")
-		
+
 		if len(report.AffectedFiles) > 0 {
 			body.WriteString("**Files:**\n")
 			for _, file := range report.AffectedFiles {
@@ -310,7 +310,7 @@ func (n *Notifier) buildGitHubIssueBody(report *Report) string {
 			}
 			body.WriteString("\n")
 		}
-		
+
 		if len(report.AffectedSecrets) > 0 {
 			body.WriteString("**Secrets:**\n")
 			for _, secret := range report.AffectedSecrets {
@@ -318,7 +318,7 @@ func (n *Notifier) buildGitHubIssueBody(report *Report) string {
 			}
 			body.WriteString("\n")
 		}
-		
+
 		if len(report.AffectedCommits) > 0 {
 			body.WriteString("**Commits:**\n")
 			for _, commit := range report.AffectedCommits {
@@ -327,7 +327,7 @@ func (n *Notifier) buildGitHubIssueBody(report *Report) string {
 			body.WriteString("\n")
 		}
 	}
-	
+
 	// Actions Required
 	if len(report.ActionsRequired) > 0 {
 		body.WriteString("### Actions Required\n\n")
@@ -336,7 +336,7 @@ func (n *Notifier) buildGitHubIssueBody(report *Report) string {
 		}
 		body.WriteString("\n")
 	}
-	
+
 	// Actions Taken
 	if len(report.ActionsTaken) > 0 {
 		body.WriteString("### Actions Taken\n\n")
@@ -345,9 +345,9 @@ func (n *Notifier) buildGitHubIssueBody(report *Report) string {
 		}
 		body.WriteString("\n")
 	}
-	
+
 	body.WriteString("---\n")
 	body.WriteString("*This issue was automatically created by dsops incident response*\n")
-	
+
 	return body.String()
 }

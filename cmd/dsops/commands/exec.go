@@ -143,8 +143,8 @@ Examples:
 			// Execute command with both Environment (for display) and SecureEnvironment (for execution)
 			options := execenv.ExecOptions{
 				Command:           args,
-				Environment:       environment,  // Kept for --print display (masked)
-				SecureEnvironment: secureEnv,    // Used for secure execution
+				Environment:       environment, // Kept for --print display (masked)
+				SecureEnvironment: secureEnv,   // Used for secure execution
 				AllowOverride:     allowOverride,
 				PrintVars:         printVars,
 				WorkingDir:        workingDir,

@@ -99,28 +99,28 @@ func TestBitwardenProviderSuggestions(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		errorMsg       string
+		name               string
+		errorMsg           string
 		expectedSuggestion string
 	}{
 		{
-			name:           "not_logged_in",
-			errorMsg:       "not logged in",
+			name:               "not_logged_in",
+			errorMsg:           "not logged in",
 			expectedSuggestion: "bw login",
 		},
 		{
-			name:           "vault_locked",
-			errorMsg:       "vault is locked",
+			name:               "vault_locked",
+			errorMsg:           "vault is locked",
 			expectedSuggestion: "bw unlock",
 		},
 		{
-			name:           "not_found",
-			errorMsg:       "Not found",
+			name:               "not_found",
+			errorMsg:           "Not found",
 			expectedSuggestion: "bw list items",
 		},
 		{
-			name:           "command_not_found",
-			errorMsg:       "command not found",
+			name:               "command_not_found",
+			errorMsg:           "command not found",
 			expectedSuggestion: "Install Bitwarden CLI",
 		},
 	}
@@ -260,9 +260,9 @@ func TestIsRetryable(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		errorMsg   string
-		retryable  bool
+		name      string
+		errorMsg  string
+		retryable bool
 	}{
 		{"timeout", "operation timeout", true},
 		{"rate_limit", "rate limit exceeded", true},
@@ -295,34 +295,34 @@ func TestSimplifyError(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		inputError     error
-		expectedType   string
-		expectedInMsg  string
+		name          string
+		inputError    error
+		expectedType  string
+		expectedInMsg string
 	}{
 		{
-			name:           "yaml_error",
-			inputError:     fmt.Errorf("yaml: line 5: mapping values are not allowed"),
-			expectedType:   "ConfigError",
-			expectedInMsg:  "Invalid YAML",
+			name:          "yaml_error",
+			inputError:    fmt.Errorf("yaml: line 5: mapping values are not allowed"),
+			expectedType:  "ConfigError",
+			expectedInMsg: "Invalid YAML",
 		},
 		{
-			name:           "json_error",
-			inputError:     fmt.Errorf("json: invalid character"),
-			expectedType:   "ConfigError",
-			expectedInMsg:  "Invalid JSON",
+			name:          "json_error",
+			inputError:    fmt.Errorf("json: invalid character"),
+			expectedType:  "ConfigError",
+			expectedInMsg: "Invalid JSON",
 		},
 		{
-			name:           "permission_denied",
-			inputError:     fmt.Errorf("permission denied"),
-			expectedType:   "UserError",
-			expectedInMsg:  "Permission denied",
+			name:          "permission_denied",
+			inputError:    fmt.Errorf("permission denied"),
+			expectedType:  "UserError",
+			expectedInMsg: "Permission denied",
 		},
 		{
-			name:           "file_not_found",
-			inputError:     fmt.Errorf("no such file or directory"),
-			expectedType:   "UserError",
-			expectedInMsg:  "not found",
+			name:          "file_not_found",
+			inputError:    fmt.Errorf("no such file or directory"),
+			expectedType:  "UserError",
+			expectedInMsg: "not found",
 		},
 	}
 

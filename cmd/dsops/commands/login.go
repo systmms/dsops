@@ -50,7 +50,7 @@ Examples:
 func showAvailableProviders() error {
 	fmt.Println("🔐 Available Secret Providers:")
 	fmt.Println()
-	
+
 	providers := []struct {
 		name        string
 		description string
@@ -73,12 +73,12 @@ func showAvailableProviders() error {
 	for _, p := range providers {
 		fmt.Printf("  %-12s %s %s\n", p.name, p.status, p.description)
 	}
-	
+
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("  dsops login <provider>           # Show authentication steps")
 	fmt.Println("  dsops login <provider> --interactive  # Run authentication commands")
-	
+
 	return nil
 }
 
@@ -113,7 +113,7 @@ func authenticateProvider(providerType string, interactive bool) error {
 func authenticateBitwarden(interactive bool) error {
 	fmt.Println("🔐 Bitwarden Authentication")
 	fmt.Println()
-	
+
 	// Check if CLI is installed
 	if _, err := exec.LookPath("bw"); err != nil {
 		fmt.Println("❌ Bitwarden CLI not found")
@@ -147,7 +147,7 @@ func authenticateBitwarden(interactive bool) error {
 func authenticateOnePassword(interactive bool) error {
 	fmt.Println("🔐 1Password Authentication")
 	fmt.Println()
-	
+
 	// Check if CLI is installed
 	if _, err := exec.LookPath("op"); err != nil {
 		fmt.Println("❌ 1Password CLI not found")
@@ -214,7 +214,7 @@ func authenticateAWS(interactive bool) error {
 func authenticateGCP(interactive bool) error {
 	fmt.Println("🔐 Google Cloud Platform Authentication")
 	fmt.Println()
-	
+
 	// Check if gcloud CLI is installed
 	if _, err := exec.LookPath("gcloud"); err != nil {
 		fmt.Println("❌ Google Cloud CLI not found")
@@ -269,7 +269,7 @@ func authenticateGCP(interactive bool) error {
 func authenticateAzure(interactive bool) error {
 	fmt.Println("🔐 Microsoft Azure Authentication")
 	fmt.Println()
-	
+
 	// Check if Azure CLI is installed
 	if _, err := exec.LookPath("az"); err != nil {
 		fmt.Println("❌ Azure CLI not found")
@@ -340,7 +340,7 @@ func authenticateAzure(interactive bool) error {
 func authenticateVault(interactive bool) error {
 	fmt.Println("🔐 HashiCorp Vault Authentication")
 	fmt.Println()
-	
+
 	// Check if Vault CLI is installed
 	if _, err := exec.LookPath("vault"); err != nil {
 		fmt.Println("❌ Vault CLI not found")
@@ -397,7 +397,7 @@ func runCommand(command string, args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-	
+
 	if err := cmd.Run(); err != nil {
 		return dserrors.CommandError{
 			Command:    fmt.Sprintf("%s %s", command, strings.Join(args, " ")),
@@ -405,7 +405,7 @@ func runCommand(command string, args ...string) error {
 			Suggestion: "Check the command output above for details",
 		}
 	}
-	
+
 	return nil
 }
 
@@ -442,7 +442,7 @@ func authenticateAWSSTS(interactive bool) error {
 func authenticateAWSSSO(interactive bool) error {
 	fmt.Println("🔐 AWS IAM Identity Center (SSO) Authentication")
 	fmt.Println()
-	
+
 	// Check if AWS CLI is installed
 	if _, err := exec.LookPath("aws"); err != nil {
 		fmt.Println("❌ AWS CLI not found")

@@ -47,11 +47,11 @@
 //	    client MyStoreClient
 //	    name   string
 //	}
-//	
+//
 //	func (s *MySecretStore) Name() string {
 //	    return s.name
 //	}
-//	
+//
 //	func (s *MySecretStore) Resolve(ctx context.Context, ref SecretRef) (SecretValue, error) {
 //	    // Validate reference format
 //	    if !ref.IsValid() {
@@ -60,7 +60,7 @@
 //	            Message: "invalid secret reference",
 //	        }
 //	    }
-//	    
+//
 //	    // Retrieve secret from your storage system
 //	    value, err := s.client.GetSecret(ref.Path)
 //	    if err != nil {
@@ -72,7 +72,7 @@
 //	        }
 //	        return SecretValue{}, err
 //	    }
-//	    
+//
 //	    // Extract specific field if requested
 //	    if ref.Field != "" {
 //	        fieldValue, err := extractField(value, ref.Field)
@@ -81,14 +81,14 @@
 //	        }
 //	        value = fieldValue
 //	    }
-//	    
+//
 //	    return SecretValue{
 //	        Value:     value,
 //	        Version:   "1",
 //	        UpdatedAt: time.Now(),
 //	    }, nil
 //	}
-//	
+//
 //	// ... implement other methods
 //
 // # Error Handling
@@ -129,12 +129,12 @@ import (
 //	if err := store.Validate(ctx); err != nil {
 //	    return fmt.Errorf("store validation failed: %w", err)
 //	}
-//	
+//
 //	ref := SecretRef{
 //	    Store: "my-store",
 //	    Path:  "app/database/password",
 //	}
-//	
+//
 //	secret, err := store.Resolve(ctx, ref)
 //	if err != nil {
 //	    return fmt.Errorf("failed to resolve secret: %w", err)
@@ -173,7 +173,7 @@ type SecretStore interface {
 	//	    Field:   "password",
 	//	    Version: "AWSCURRENT",
 	//	}
-	//	
+	//
 	//	secret, err := store.Resolve(ctx, ref)
 	//	if err != nil {
 	//	    var notFound NotFoundError
@@ -249,7 +249,7 @@ type SecretStore interface {
 	//
 	//	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	//	defer cancel()
-	//	
+	//
 	//	if err := store.Validate(ctx); err != nil {
 	//	    var authErr AuthError
 	//	    if errors.As(err, &authErr) {
@@ -283,7 +283,7 @@ type SecretStore interface {
 //	    Field:   "password",
 //	    Version: "AWSCURRENT",
 //	}
-//	
+//
 //	// HashiCorp Vault KV store
 //	SecretRef{
 //	    Store:   "vault",
@@ -291,7 +291,7 @@ type SecretStore interface {
 //	    Field:   "api_key",
 //	    Version: "2",
 //	}
-//	
+//
 //	// 1Password item
 //	SecretRef{
 //	    Store:   "onepassword",
@@ -649,13 +649,13 @@ func (e ValidationError) Error() string {
 //
 //	// Basic secret reference
 //	ref, err := ParseSecretRef("store://aws-prod/database/password")
-//	
+//
 //	// With field extraction
 //	ref, err := ParseSecretRef("store://vault/secret/app#api_key")
-//	
+//
 //	// With version and options
 //	ref, err := ParseSecretRef("store://aws-prod/cert?version=AWSCURRENT&region=us-west-2")
-//	
+//
 //	// Complex example
 //	ref, err := ParseSecretRef("store://onepassword/Production/Database#password?vault=Private")
 //
@@ -752,7 +752,7 @@ func ParseSecretRef(uri string) (SecretRef, error) {
 //	    Version: "AWSCURRENT",
 //	    Options: map[string]string{"region": "us-west-2"},
 //	}
-//	
+//
 //	uri := ref.String()
 //	// Result: "store://aws-prod/database/password#password?version=AWSCURRENT&region=us-west-2"
 //
@@ -800,7 +800,7 @@ func (ref SecretRef) String() string {
 //	    Path:  "database/password",
 //	    // Field, Version, Options are optional
 //	}
-//	
+//
 //	if !ref.IsValid() {
 //	    return ValidationError{
 //	        Message: "invalid secret reference",

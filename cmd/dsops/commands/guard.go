@@ -39,11 +39,11 @@ Examples:
 
 func NewGuardRepoCommand(cfg *config.Config) *cobra.Command {
 	var (
-		path       string
-		all        bool
-		verbose    bool
-		exitCode   bool
-		patterns   []string
+		path     string
+		all      bool
+		verbose  bool
+		exitCode bool
+		patterns []string
 	)
 
 	cmd := &cobra.Command{
@@ -149,7 +149,7 @@ func scanRepository(repoPath string, scanAll, verbose, exitCode bool, customPatt
 				}
 			}
 		}
-		
+
 		// Use a range that works with any number of commits
 		commitRange = "--max-count=10"
 	}
@@ -192,7 +192,7 @@ func scanRepository(repoPath string, scanAll, verbose, exitCode bool, customPatt
 
 func checkGitignore(repoPath string, verbose bool) error {
 	gitignorePath := filepath.Join(repoPath, ".gitignore")
-	
+
 	fmt.Printf("🔍 Checking .gitignore patterns: %s\n", gitignorePath)
 	fmt.Println()
 
@@ -237,7 +237,7 @@ func checkGitignore(repoPath string, verbose bool) error {
 		if strings.HasPrefix(pattern, "#") {
 			continue // Skip comments
 		}
-		
+
 		found := false
 		for _, existing := range existingPatterns {
 			if strings.TrimSpace(existing) == pattern {
@@ -245,7 +245,7 @@ func checkGitignore(repoPath string, verbose bool) error {
 				break
 			}
 		}
-		
+
 		if !found {
 			missingPatterns = append(missingPatterns, pattern)
 		}
@@ -334,7 +334,7 @@ func scanCommitsForSecrets(repoPath, commitRange string, patterns []string, verb
 	// Parse commits and scan files
 	lines := strings.Split(string(output), "\n")
 	var currentCommit string
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {

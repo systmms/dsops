@@ -54,10 +54,10 @@ func (f *fakeValidatingProvider) Validate(ctx context.Context) error {
 
 func TestGetTimeoutSuggestion(t *testing.T) {
 	tests := []struct {
-		name          string
-		providerName  string
-		timeoutMs     int
-		expectedHint  string
+		name         string
+		providerName string
+		timeoutMs    int
+		expectedHint string
 	}{
 		{
 			name:         "bitwarden_short_timeout",

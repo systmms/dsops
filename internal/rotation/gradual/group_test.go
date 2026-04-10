@@ -27,8 +27,8 @@ func TestGroupStrategy_Plan_NoDependencies(t *testing.T) {
 
 	// Configure group with no dependencies - all services can run in parallel
 	config := GroupConfig{
-		Services: []string{"service-a", "service-b", "service-c"},
-		Dependencies: map[string][]string{},
+		Services:      []string{"service-a", "service-b", "service-c"},
+		Dependencies:  map[string][]string{},
 		FailurePolicy: FailurePolicyRollbackAll,
 	}
 	strategy.config = config
@@ -103,8 +103,8 @@ func TestGroupStrategy_Plan_DiamondDependencies(t *testing.T) {
 	config := GroupConfig{
 		Services: []string{"service-a", "service-b", "service-c", "service-d"},
 		Dependencies: map[string][]string{
-			"service-b": {"service-a"}, // B depends on A
-			"service-c": {"service-a"}, // C depends on A
+			"service-b": {"service-a"},              // B depends on A
+			"service-c": {"service-a"},              // C depends on A
 			"service-d": {"service-b", "service-c"}, // D depends on B and C
 		},
 		FailurePolicy: FailurePolicyRollbackAll,

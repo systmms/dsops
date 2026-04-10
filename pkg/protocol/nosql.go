@@ -54,21 +54,21 @@ func (a *NoSQLAdapter) Execute(ctx context.Context, operation Operation, config 
 	if err := a.Validate(config); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	// Get the appropriate handler
 	dbType := strings.ToLower(config.Connection["type"])
 	handler, ok := a.handlers[dbType]
 	if !ok {
 		return nil, fmt.Errorf("unsupported NoSQL database type: %s", dbType)
 	}
-	
+
 	// Connect to the database
 	conn, err := handler.Connect(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect: %w", err)
 	}
 	defer func() { _ = conn.Close() }()
-	
+
 	// Execute the operation
 	switch operation.Action {
 	case "create":
@@ -91,18 +91,18 @@ func (a *NoSQLAdapter) Validate(config AdapterConfig) error {
 	if config.Connection == nil {
 		return fmt.Errorf("connection configuration is required")
 	}
-	
+
 	dbType, ok := config.Connection["type"]
 	if !ok || dbType == "" {
 		return fmt.Errorf("database type is required")
 	}
-	
+
 	// Get handler for specific validation
 	handler, ok := a.handlers[strings.ToLower(dbType)]
 	if !ok {
 		return fmt.Errorf("unsupported NoSQL database type: %s", dbType)
 	}
-	
+
 	return handler.ValidateConfig(config)
 }
 
@@ -127,13 +127,13 @@ func (a *NoSQLAdapter) executeCreate(ctx context.Context, conn NoSQLConnection, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Render command
 	command, params, err := a.renderCommand(createTemplate, operation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to render create command: %w", err)
 	}
-	
+
 	// Execute command
 	result, err := conn.Execute(ctx, command, params)
 	if err != nil {
@@ -142,7 +142,7 @@ func (a *NoSQLAdapter) executeCreate(ctx context.Context, conn NoSQLConnection, 
 			Error:   fmt.Sprintf("failed to execute create: %v", err),
 		}, err
 	}
-	
+
 	return &Result{
 		Success: true,
 		Data: map[string]interface{}{
@@ -164,13 +164,13 @@ func (a *NoSQLAdapter) executeVerify(ctx context.Context, conn NoSQLConnection, 
 		// Default verify - ping/info command
 		verifyTemplate = `{"ping": 1}`
 	}
-	
+
 	// Render command
 	command, params, err := a.renderCommand(verifyTemplate, operation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to render verify command: %w", err)
 	}
-	
+
 	// Execute command
 	_, err = conn.Execute(ctx, command, params)
 	if err != nil {
@@ -179,7 +179,7 @@ func (a *NoSQLAdapter) executeVerify(ctx context.Context, conn NoSQLConnection, 
 			Error:   fmt.Sprintf("verification failed: %v", err),
 		}, err
 	}
-	
+
 	return &Result{
 		Success: true,
 		Data: map[string]interface{}{
@@ -197,13 +197,13 @@ func (a *NoSQLAdapter) executeRotate(ctx context.Context, conn NoSQLConnection, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Render command
 	command, params, err := a.renderCommand(rotateTemplate, operation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to render rotate command: %w", err)
 	}
-	
+
 	// Execute command
 	result, err := conn.Execute(ctx, command, params)
 	if err != nil {
@@ -212,7 +212,7 @@ func (a *NoSQLAdapter) executeRotate(ctx context.Context, conn NoSQLConnection, 
 			Error:   fmt.Sprintf("failed to execute rotate: %v", err),
 		}, err
 	}
-	
+
 	return &Result{
 		Success: true,
 		Data: map[string]interface{}{
@@ -230,13 +230,13 @@ func (a *NoSQLAdapter) executeRevoke(ctx context.Context, conn NoSQLConnection, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Render command
 	command, params, err := a.renderCommand(revokeTemplate, operation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to render revoke command: %w", err)
 	}
-	
+
 	// Execute command
 	result, err := conn.Execute(ctx, command, params)
 	if err != nil {
@@ -245,7 +245,7 @@ func (a *NoSQLAdapter) executeRevoke(ctx context.Context, conn NoSQLConnection, 
 			Error:   fmt.Sprintf("failed to execute revoke: %v", err),
 		}, err
 	}
-	
+
 	return &Result{
 		Success: true,
 		Data: map[string]interface{}{
@@ -263,13 +263,13 @@ func (a *NoSQLAdapter) executeList(ctx context.Context, conn NoSQLConnection, op
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Render command
 	command, params, err := a.renderCommand(listTemplate, operation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to render list command: %w", err)
 	}
-	
+
 	// Execute command
 	result, err := conn.Execute(ctx, command, params)
 	if err != nil {
@@ -278,7 +278,7 @@ func (a *NoSQLAdapter) executeList(ctx context.Context, conn NoSQLConnection, op
 			Error:   fmt.Sprintf("failed to execute list: %v", err),
 		}, err
 	}
-	
+
 	// Convert result to list if needed
 	var items []interface{}
 	switch v := result.(type) {
@@ -291,7 +291,7 @@ func (a *NoSQLAdapter) executeList(ctx context.Context, conn NoSQLConnection, op
 	default:
 		items = []interface{}{result}
 	}
-	
+
 	return &Result{
 		Success: true,
 		Data: map[string]interface{}{
@@ -310,18 +310,18 @@ func (a *NoSQLAdapter) getCommandTemplate(action string, operation Operation, co
 	if !ok {
 		return "", fmt.Errorf("commands configuration not found")
 	}
-	
+
 	// Find command for this action and target
 	key := fmt.Sprintf("%s_%s", action, operation.Target)
 	if cmd, ok := commands[key].(string); ok {
 		return cmd, nil
 	}
-	
+
 	// Fall back to action-only key
 	if cmd, ok := commands[action].(string); ok {
 		return cmd, nil
 	}
-	
+
 	return "", fmt.Errorf("command template not found for action %s", action)
 }
 
@@ -334,43 +334,43 @@ func (a *NoSQLAdapter) renderCommand(templateStr string, operation Operation) (s
 		if err != nil {
 			return "", nil, err
 		}
-		
+
 		var buf strings.Builder
 		data := a.buildTemplateData(operation)
-		
+
 		if err := tmpl.Execute(&buf, data); err != nil {
 			return "", nil, err
 		}
-		
+
 		// Parse the rendered JSON to extract parameters
 		var jsonData map[string]interface{}
 		if err := json.Unmarshal([]byte(buf.String()), &jsonData); err != nil {
 			return "", nil, fmt.Errorf("invalid JSON in rendered command: %w", err)
 		}
-		
+
 		// Extract command and parameters
 		if cmd, ok := jsonData["command"].(string); ok {
 			delete(jsonData, "command")
 			return cmd, jsonData, nil
 		}
-		
+
 		// If no explicit command field, use the entire JSON as the command
 		return buf.String(), nil, nil
 	}
-	
+
 	// Plain text command template
 	tmpl, err := template.New("command").Parse(templateStr)
 	if err != nil {
 		return "", nil, err
 	}
-	
+
 	var buf strings.Builder
 	data := a.buildTemplateData(operation)
-	
+
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", nil, err
 	}
-	
+
 	// Extract parameters from operation
 	params := make(map[string]interface{})
 	if operation.Parameters != nil {
@@ -378,7 +378,7 @@ func (a *NoSQLAdapter) renderCommand(templateStr string, operation Operation) (s
 			params[k] = v
 		}
 	}
-	
+
 	return buf.String(), params, nil
 }
 
@@ -390,14 +390,14 @@ func (a *NoSQLAdapter) buildTemplateData(operation Operation) map[string]interfa
 		"Parameters": operation.Parameters,
 		"Metadata":   operation.Metadata,
 	}
-	
+
 	// Add all parameters as top-level fields for easier access
 	if operation.Parameters != nil {
 		for k, v := range operation.Parameters {
 			data[k] = v
 		}
 	}
-	
+
 	return data
 }
 
@@ -452,7 +452,7 @@ func (c *MockNoSQLConnection) Execute(ctx context.Context, command string, param
 		"command": command,
 		"type":    c.dbType,
 	}
-	
+
 	// Add timeout check
 	select {
 	case <-ctx.Done():
@@ -460,7 +460,7 @@ func (c *MockNoSQLConnection) Execute(ctx context.Context, command string, param
 	case <-time.After(100 * time.Millisecond):
 		// Simulate some processing time
 	}
-	
+
 	return result, nil
 }
 

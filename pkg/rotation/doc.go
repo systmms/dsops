@@ -9,39 +9,39 @@
 // The rotation system follows a multi-layered architecture that separates concerns
 // and enables flexible, extensible secret rotation across diverse service types:
 //
-//     ┌─────────────────────────────────────────────────────────────┐
-//     │                  CLI Commands                               │
-//     │            (cmd/dsops/commands/)                            │
-//     └─────────────────────────┬───────────────────────────────────┘
-//                               │
-//     ┌─────────────────────────▼───────────────────────────────────┐
-//     │                Rotation Engine                              │
-//     │               (pkg/rotation/)                   ◄───────────┤
-//     └─────────────────────────┬───────────────────────────────────┘
-//                               │
-//     ┌─────────────────────────▼───────────────────────────────────┐
-//     │              Rotation Strategies                            │
-//     │                                                             │
-//     │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
-//     │  │  PostgreSQL │  │   Stripe    │  │   Generic   │  ...     │
-//     │  │  Rotator    │  │  Rotator    │  │  Rotator    │          │
-//     │  └─────────────┘  └─────────────┘  └─────────────┘          │
-//     └─────────────────────────┬───────────────────────────────────┘
-//                               │
-//     ┌─────────────────────────▼───────────────────────────────────┐
-//     │              Protocol Adapters                              │
-//     │               (pkg/protocol/)                               │
-//     │                                                             │
-//     │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
-//     │  │   SQL       │  │  HTTP API   │  │ Certificate │  ...     │
-//     │  │  Adapter    │  │  Adapter    │  │  Adapter    │          │
-//     │  └─────────────┘  └─────────────┘  └─────────────┘          │
-//     └─────────────────────────┬───────────────────────────────────┘
-//                               │
-//     ┌─────────────────────────▼───────────────────────────────────┐
-//     │                dsops-data Repository                        │
-//     │          Community Service Definitions                      │
-//     └─────────────────────────────────────────────────────────────┘
+//	┌─────────────────────────────────────────────────────────────┐
+//	│                  CLI Commands                               │
+//	│            (cmd/dsops/commands/)                            │
+//	└─────────────────────────┬───────────────────────────────────┘
+//	                          │
+//	┌─────────────────────────▼───────────────────────────────────┐
+//	│                Rotation Engine                              │
+//	│               (pkg/rotation/)                   ◄───────────┤
+//	└─────────────────────────┬───────────────────────────────────┘
+//	                          │
+//	┌─────────────────────────▼───────────────────────────────────┐
+//	│              Rotation Strategies                            │
+//	│                                                             │
+//	│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
+//	│  │  PostgreSQL │  │   Stripe    │  │   Generic   │  ...     │
+//	│  │  Rotator    │  │  Rotator    │  │  Rotator    │          │
+//	│  └─────────────┘  └─────────────┘  └─────────────┘          │
+//	└─────────────────────────┬───────────────────────────────────┘
+//	                          │
+//	┌─────────────────────────▼───────────────────────────────────┐
+//	│              Protocol Adapters                              │
+//	│               (pkg/protocol/)                               │
+//	│                                                             │
+//	│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
+//	│  │   SQL       │  │  HTTP API   │  │ Certificate │  ...     │
+//	│  │  Adapter    │  │  Adapter    │  │  Adapter    │          │
+//	│  └─────────────┘  └─────────────┘  └─────────────┘          │
+//	└─────────────────────────┬───────────────────────────────────┘
+//	                          │
+//	┌─────────────────────────▼───────────────────────────────────┐
+//	│                dsops-data Repository                        │
+//	│          Community Service Definitions                      │
+//	└─────────────────────────────────────────────────────────────┘
 //
 // # Core Concepts
 //
@@ -78,7 +78,7 @@
 //
 //   - **Immediate**: Replace secret instantly (brief downtime acceptable)
 //   - **Two-Key**: Maintain two valid secrets for zero-downtime rotation
-//   - **Overlap**: Gradual transition with configurable overlap period  
+//   - **Overlap**: Gradual transition with configurable overlap period
 //   - **Gradual**: Percentage-based rollout for large deployments
 //   - **Custom**: User-defined scripts for special cases
 //
@@ -248,13 +248,13 @@
 //
 // Implement SecretValueRotator for service-specific rotation logic:
 //
-//     type CustomRotator struct {
-//         client CustomServiceClient
-//     }
-//     
-//     func (r *CustomRotator) Rotate(ctx context.Context, req RotationRequest) (*RotationResult, error) {
-//         // Custom rotation logic
-//     }
+//	type CustomRotator struct {
+//	    client CustomServiceClient
+//	}
+//
+//	func (r *CustomRotator) Rotate(ctx context.Context, req RotationRequest) (*RotationResult, error) {
+//	    // Custom rotation logic
+//	}
 //
 // ## Protocol Adapters
 //

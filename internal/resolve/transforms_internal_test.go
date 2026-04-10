@@ -603,9 +603,9 @@ func TestBase64EncodeDecodeEdgeCases(t *testing.T) {
 			encoded string
 			decoded string
 		}{
-			{"YQ==", "a"},       // 1 char, 2 padding
-			{"YWI=", "ab"},      // 2 chars, 1 padding
-			{"YWJj", "abc"},     // 3 chars, no padding
+			{"YQ==", "a"},        // 1 char, 2 padding
+			{"YWI=", "ab"},       // 2 chars, 1 padding
+			{"YWJj", "abc"},      // 3 chars, no padding
 			{"YWJjZA==", "abcd"}, // 4 chars, 2 padding
 		}
 		for _, c := range cases {
@@ -615,4 +615,3 @@ func TestBase64EncodeDecodeEdgeCases(t *testing.T) {
 		}
 	})
 }
-

@@ -75,7 +75,7 @@ func TestCanaryStrategy_Plan(t *testing.T) {
 				{ID: "instance-3", Labels: map[string]string{}},
 				{ID: "instance-4", Labels: map[string]string{}},
 			},
-			wantWaveCount: 4, // Canary + waves
+			wantWaveCount: 4,            // Canary + waves
 			wantCanary:    "instance-1", // First instance is canary
 			wantErr:       false,
 		},

@@ -145,11 +145,11 @@ func (a *ProviderToServiceAdapter) Plan(ctx context.Context, req service.Rotatio
 	// Create a basic plan based on the request
 	// This is a simplified implementation - real services would have more complex planning
 	plan := service.RotationPlan{
-		ServiceRef:    req.ServiceRef,
-		Strategy:      req.Strategy,
-		Fingerprint:   service.GenerateFingerprint(req),
-		CreatedAt:     time.Now(),
-		Metadata:      req.Metadata,
+		ServiceRef:  req.ServiceRef,
+		Strategy:    req.Strategy,
+		Fingerprint: service.GenerateFingerprint(req),
+		CreatedAt:   time.Now(),
+		Metadata:    req.Metadata,
 	}
 
 	// Basic steps for rotation
@@ -271,14 +271,14 @@ func (a *ProviderToServiceAdapter) Capabilities() service.ServiceCapabilities {
 	legacyCaps := a.provider.Capabilities()
 
 	return service.ServiceCapabilities{
-		SupportedStrategies:      []string{"immediate"}, // Legacy providers typically support basic rotation
-		MaxActiveKeys:            1,                     // Most legacy providers support one key
-		SupportsExpiration:       false,                 // Not commonly supported in legacy
-		SupportsVersioning:       legacyCaps.SupportsVersioning,
-		SupportsRevocation:       true, // Most can deprecate versions
-		SupportsVerification:     false, // Not commonly implemented
-		MinRotationInterval:      0,    // No restrictions
-		Constraints:              map[string]string{},
+		SupportedStrategies:  []string{"immediate"}, // Legacy providers typically support basic rotation
+		MaxActiveKeys:        1,                     // Most legacy providers support one key
+		SupportsExpiration:   false,                 // Not commonly supported in legacy
+		SupportsVersioning:   legacyCaps.SupportsVersioning,
+		SupportsRevocation:   true,  // Most can deprecate versions
+		SupportsVerification: false, // Not commonly implemented
+		MinRotationInterval:  0,     // No restrictions
+		Constraints:          map[string]string{},
 	}
 }
 

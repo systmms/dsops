@@ -201,10 +201,10 @@ func (aws *AWSSecretsManagerProvider) Describe(ctx context.Context, ref provider
 		UpdatedAt: aws.getLastChangedDate(result),
 		Type:      "aws-secret",
 		Tags: map[string]string{
-			"provider":     aws.name,
-			"secret_name":  secretName,
-			"region":       aws.region,
-			"kms_key_id":   aws.getKMSKeyId(result),
+			"provider":        aws.name,
+			"secret_name":     secretName,
+			"region":          aws.region,
+			"kms_key_id":      aws.getKMSKeyId(result),
 			"replica_regions": strings.Join(aws.getReplicaRegions(result), ","),
 		},
 	}, nil
@@ -244,7 +244,7 @@ func (aws *AWSSecretsManagerProvider) Validate(ctx context.Context) error {
 
 // parseKey parses AWS SM key formats:
 // - "secret-name" -> secret-name, ""
-// - "secret-name#.field" -> secret-name, ".field"  
+// - "secret-name#.field" -> secret-name, ".field"
 // - "secret/path" -> secret/path, ""
 func (aws *AWSSecretsManagerProvider) parseKey(key string) (secretName, jsonPath string) {
 	if idx := strings.Index(key, "#"); idx != -1 {
@@ -401,18 +401,18 @@ func (aws *AWSSecretsManagerProvider) DeprecateVersion(ctx context.Context, ref 
 
 	// AWS Secrets Manager automatically moves the old version to AWSPENDING when a new version
 	// becomes AWSCURRENT. We can optionally remove AWSPENDING stage to fully deprecate.
-	
+
 	input := &secretsmanager.UpdateSecretVersionStageInput{
-		SecretId:     &secretName,
-		VersionStage: stringPtr("AWSPENDING"),
+		SecretId:            &secretName,
+		VersionStage:        stringPtr("AWSPENDING"),
 		RemoveFromVersionId: &version,
 	}
 
 	_, err := aws.client.UpdateSecretVersionStage(ctx, input)
 	if err != nil {
 		// Don't fail if the version is already deprecated or doesn't exist
-		if strings.Contains(err.Error(), "InvalidVersionStage") || 
-		   strings.Contains(err.Error(), "InvalidParameterValue") {
+		if strings.Contains(err.Error(), "InvalidVersionStage") ||
+			strings.Contains(err.Error(), "InvalidParameterValue") {
 			return nil
 		}
 		return fmt.Errorf("failed to deprecate secret version: %w", err)
@@ -457,11 +457,11 @@ func (aws *AWSSecretsManagerProvider) GetRotationMetadata(ctx context.Context, r
 			metadata.Constraints["automatic_rotation"] = "enabled"
 			metadata.Constraints["rotation_lambda"] = *result.RotationLambdaARN
 		}
-		
+
 		if result.RotationRules != nil && result.RotationRules.AutomaticallyAfterDays != nil {
 			days := *result.RotationRules.AutomaticallyAfterDays
 			metadata.RotationInterval = fmt.Sprintf("%dd", days)
-			
+
 			if metadata.LastRotated != nil {
 				nextRotation := metadata.LastRotated.AddDate(0, 0, int(days))
 				metadata.NextRotation = &nextRotation

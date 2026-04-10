@@ -15,10 +15,10 @@ import (
 
 func NewShredCommand(cfg *config.Config) *cobra.Command {
 	var (
-		force       bool
-		verbose     bool
-		passes      int
-		recursive   bool
+		force     bool
+		verbose   bool
+		passes    int
+		recursive bool
 	)
 
 	cmd := &cobra.Command{
@@ -153,8 +153,8 @@ func collectFiles(path string, recursive bool) ([]string, error) {
 
 	if err != nil {
 		return nil, dserrors.UserError{
-			Message:    fmt.Sprintf("Error walking directory: %s", path),
-			Details:    err.Error(),
+			Message: fmt.Sprintf("Error walking directory: %s", path),
+			Details: err.Error(),
 		}
 	}
 

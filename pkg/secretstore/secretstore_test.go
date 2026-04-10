@@ -106,14 +106,14 @@ func TestParseSecretRef(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := ParseSecretRef(tt.uri)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("ParseSecretRef() expected error, got nil")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("ParseSecretRef() unexpected error: %v", err)
 				return
@@ -139,11 +139,11 @@ func TestParseSecretRef(t *testing.T) {
 			if tt.expected.Options == nil {
 				tt.expected.Options = map[string]string{}
 			}
-			
+
 			if len(result.Options) != len(tt.expected.Options) {
 				t.Errorf("Options length mismatch: got %d, want %d", len(result.Options), len(tt.expected.Options))
 			}
-			
+
 			for key, expectedValue := range tt.expected.Options {
 				if actualValue, ok := result.Options[key]; !ok || actualValue != expectedValue {
 					t.Errorf("Options[%q] = %q, want %q", key, actualValue, expectedValue)
@@ -222,7 +222,7 @@ func TestSecretRefString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.ref.String()
-			
+
 			// For the complete ref test, we need to handle URL parameter order
 			if tt.name == "complete ref" {
 				// Parse both URLs to compare parameters
@@ -234,18 +234,18 @@ func TestSecretRefString(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Failed to parse result URI: %v", err)
 				}
-				
+
 				// Compare structured data instead of string
-				if expectedRef.Store != resultRef.Store || 
-				   expectedRef.Path != resultRef.Path ||
-				   expectedRef.Field != resultRef.Field ||
-				   expectedRef.Version != resultRef.Version {
+				if expectedRef.Store != resultRef.Store ||
+					expectedRef.Path != resultRef.Path ||
+					expectedRef.Field != resultRef.Field ||
+					expectedRef.Version != resultRef.Version {
 					t.Errorf("String() structured comparison failed")
 				}
-				
+
 				return
 			}
-			
+
 			if result != tt.expected {
 				t.Errorf("String() = %q, want %q", result, tt.expected)
 			}

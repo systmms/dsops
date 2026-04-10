@@ -96,11 +96,11 @@ func NewLiteralProviderFactory(name string, config map[string]interface{}) (prov
 // NewMockProviderFactory creates a mock provider factory
 func NewMockProviderFactory(name string, config map[string]interface{}) (provider.Provider, error) {
 	mockProvider := NewMockProvider(name)
-	
+
 	// Add default test values
 	mockProvider.SetValue("test-secret", "mock-value")
 	mockProvider.SetValue("api-key", "mock-api-key-123")
-	
+
 	// Add any configured values
 	if values, ok := config["values"].(map[string]interface{}); ok {
 		for k, v := range values {

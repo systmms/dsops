@@ -23,23 +23,23 @@ type Report struct {
 	Title       string            `json:"title"`
 	Description string            `json:"description"`
 	Details     map[string]string `json:"details"`
-	
+
 	// Affected resources
-	AffectedFiles    []string `json:"affected_files,omitempty"`
-	AffectedSecrets  []string `json:"affected_secrets,omitempty"`
-	AffectedCommits  []string `json:"affected_commits,omitempty"`
-	
+	AffectedFiles   []string `json:"affected_files,omitempty"`
+	AffectedSecrets []string `json:"affected_secrets,omitempty"`
+	AffectedCommits []string `json:"affected_commits,omitempty"`
+
 	// Response actions
-	ActionsRequired  []string `json:"actions_required"`
-	ActionsTaken     []string `json:"actions_taken,omitempty"`
-	
+	ActionsRequired []string `json:"actions_required"`
+	ActionsTaken    []string `json:"actions_taken,omitempty"`
+
 	// Notification status
 	NotificationsSent []NotificationRecord `json:"notifications_sent,omitempty"`
-	
+
 	// Resolution
-	Status           string    `json:"status"` // open, investigating, resolved
-	ResolvedAt       *time.Time `json:"resolved_at,omitempty"`
-	ResolutionNotes  string    `json:"resolution_notes,omitempty"`
+	Status          string     `json:"status"` // open, investigating, resolved
+	ResolvedAt      *time.Time `json:"resolved_at,omitempty"`
+	ResolutionNotes string     `json:"resolution_notes,omitempty"`
 }
 
 // NotificationRecord tracks sent notifications
@@ -61,7 +61,7 @@ func NewManager(baseDir string) *Manager {
 	if baseDir == "" {
 		baseDir = "."
 	}
-	
+
 	return &Manager{
 		incidentDir: filepath.Join(baseDir, IncidentDirName),
 		auditPath:   filepath.Join(baseDir, AuditLogName),
@@ -74,10 +74,10 @@ func (m *Manager) CreateReport(incidentType, severity, title, description string
 	if err := os.MkdirAll(m.incidentDir, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create incident directory: %w", err)
 	}
-	
+
 	// Generate incident ID
 	id := generateIncidentID()
-	
+
 	report := &Report{
 		ID:          id,
 		Timestamp:   time.Now(),
@@ -88,18 +88,18 @@ func (m *Manager) CreateReport(incidentType, severity, title, description string
 		Details:     details,
 		Status:      "open",
 	}
-	
+
 	// Save report
 	if err := m.SaveReport(report); err != nil {
 		return nil, err
 	}
-	
+
 	// Log to audit
 	if err := m.logToAudit(report, "incident_created"); err != nil {
 		// Don't fail on audit log errors
 		fmt.Fprintf(os.Stderr, "Warning: failed to write audit log: %v\n", err)
 	}
-	
+
 	return report, nil
 }
 
@@ -107,16 +107,16 @@ func (m *Manager) CreateReport(incidentType, severity, title, description string
 func (m *Manager) SaveReport(report *Report) error {
 	filename := fmt.Sprintf("%s.json", report.ID)
 	path := filepath.Join(m.incidentDir, filename)
-	
+
 	data, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal report: %w", err)
 	}
-	
+
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		return fmt.Errorf("failed to write report: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -124,7 +124,7 @@ func (m *Manager) SaveReport(report *Report) error {
 func (m *Manager) LoadReport(id string) (*Report, error) {
 	filename := fmt.Sprintf("%s.json", id)
 	path := filepath.Join(m.incidentDir, filename)
-	
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -132,12 +132,12 @@ func (m *Manager) LoadReport(id string) (*Report, error) {
 		}
 		return nil, fmt.Errorf("failed to read report: %w", err)
 	}
-	
+
 	var report Report
 	if err := json.Unmarshal(data, &report); err != nil {
 		return nil, fmt.Errorf("failed to parse report: %w", err)
 	}
-	
+
 	return &report, nil
 }
 
@@ -147,28 +147,28 @@ func (m *Manager) ListReports() ([]*Report, error) {
 	if _, err := os.Stat(m.incidentDir); os.IsNotExist(err) {
 		return []*Report{}, nil // No incidents yet
 	}
-	
+
 	entries, err := os.ReadDir(m.incidentDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read incident directory: %w", err)
 	}
-	
+
 	var reports []*Report
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
 		}
-		
+
 		id := strings.TrimSuffix(entry.Name(), ".json")
 		report, err := m.LoadReport(id)
 		if err != nil {
 			// Skip invalid reports
 			continue
 		}
-		
+
 		reports = append(reports, report)
 	}
-	
+
 	return reports, nil
 }
 
@@ -177,12 +177,12 @@ func (m *Manager) UpdateReport(report *Report) error {
 	if err := m.SaveReport(report); err != nil {
 		return err
 	}
-	
+
 	// Log update
 	if err := m.logToAudit(report, "incident_updated"); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to write audit log: %v\n", err)
 	}
-	
+
 	return nil
 }
 
@@ -194,7 +194,7 @@ func (m *Manager) AddNotification(report *Report, channel string, success bool, 
 		Success:   success,
 		Details:   details,
 	}
-	
+
 	report.NotificationsSent = append(report.NotificationsSent, record)
 	return m.UpdateReport(report)
 }
@@ -205,16 +205,16 @@ func (m *Manager) ResolveReport(report *Report, resolutionNotes string) error {
 	report.Status = "resolved"
 	report.ResolvedAt = &now
 	report.ResolutionNotes = resolutionNotes
-	
+
 	if err := m.UpdateReport(report); err != nil {
 		return err
 	}
-	
+
 	// Log resolution
 	if err := m.logToAudit(report, "incident_resolved"); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to write audit log: %v\n", err)
 	}
-	
+
 	return nil
 }
 
@@ -225,7 +225,7 @@ func (m *Manager) logToAudit(report *Report, action string) error {
 	if err := os.MkdirAll(auditDir, 0700); err != nil {
 		return fmt.Errorf("failed to create audit directory: %w", err)
 	}
-	
+
 	// Create audit entry
 	entry := map[string]interface{}{
 		"timestamp":   time.Now().Format(time.RFC3339),
@@ -236,31 +236,31 @@ func (m *Manager) logToAudit(report *Report, action string) error {
 		"title":       report.Title,
 		"status":      report.Status,
 	}
-	
+
 	// Convert to JSON
 	data, err := json.Marshal(entry)
 	if err != nil {
 		return fmt.Errorf("failed to marshal audit entry: %w", err)
 	}
-	
+
 	// Append to audit log
 	f, err := os.OpenFile(m.auditPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to open audit log: %w", err)
 	}
 	defer func() { _ = f.Close() }()
-	
+
 	if _, err := fmt.Fprintf(f, "%s\n", data); err != nil {
 		return fmt.Errorf("failed to write audit log: %w", err)
 	}
-	
+
 	return nil
 }
 
 // generateIncidentID creates a unique incident ID
 func generateIncidentID() string {
-	return fmt.Sprintf("INC-%s-%d", 
-		time.Now().Format("20060102"), 
+	return fmt.Sprintf("INC-%s-%d",
+		time.Now().Format("20060102"),
 		time.Now().Unix()%100000)
 }
 
@@ -270,14 +270,14 @@ func (m *Manager) GetOpenIncidents() ([]*Report, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var openReports []*Report
 	for _, report := range allReports {
 		if report.Status != "resolved" {
 			openReports = append(openReports, report)
 		}
 	}
-	
+
 	return openReports, nil
 }
 
@@ -287,13 +287,13 @@ func (m *Manager) GetIncidentsByType(incidentType string) ([]*Report, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var filteredReports []*Report
 	for _, report := range allReports {
 		if report.Type == incidentType {
 			filteredReports = append(filteredReports, report)
 		}
 	}
-	
+
 	return filteredReports, nil
 }

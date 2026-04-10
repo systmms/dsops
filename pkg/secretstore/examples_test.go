@@ -144,19 +144,19 @@ func ExampleSecretStore_errorHandling() {
 
 		switch {
 		case errors.As(err, &notFoundErr):
-			fmt.Printf("Secret not found: %s in store %s\n", 
+			fmt.Printf("Secret not found: %s in store %s\n",
 				notFoundErr.Path, notFoundErr.Store)
 			// Could implement fallback logic here
-			
+
 		case errors.As(err, &authErr):
-			fmt.Printf("Authentication failed for store %s: %s\n", 
+			fmt.Printf("Authentication failed for store %s: %s\n",
 				authErr.Store, authErr.Message)
 			// Could trigger re-authentication here
-			
+
 		case errors.As(err, &validationErr):
 			fmt.Printf("Validation error: %s\n", validationErr.Message)
 			// Could provide user guidance here
-			
+
 		default:
 			fmt.Printf("Unexpected error: %v\n", err)
 		}
@@ -183,8 +183,8 @@ func ExampleSecretStore_capabilities() {
 				MaxVersions:        10,
 				MinRotationTime:    time.Hour,
 				Constraints: map[string]string{
-					"max_length":  "4096",
-					"complexity":  "high",
+					"max_length": "4096",
+					"complexity": "high",
 				},
 			},
 		},
@@ -204,7 +204,7 @@ func ExampleSecretStore_capabilities() {
 		fmt.Printf("Supports rotation: %t\n", caps.Rotation.SupportsRotation)
 		fmt.Printf("Max versions: %d\n", caps.Rotation.MaxVersions)
 		fmt.Printf("Min rotation time: %s\n", caps.Rotation.MinRotationTime)
-		
+
 		if constraint, ok := caps.Rotation.Constraints["max_length"]; ok {
 			fmt.Printf("Max secret length: %s\n", constraint)
 		}
@@ -240,11 +240,11 @@ func ExampleSecretStore_describe() {
 		name: "metadata-store",
 		metadata: map[string]secretstore.SecretMetadata{
 			"app/certificate": {
-				Exists:    true,
-				Version:   "v3.2",
-				UpdatedAt: time.Date(2024, 3, 15, 14, 30, 0, 0, time.UTC),
-				Size:      2048,
-				Type:      "certificate",
+				Exists:      true,
+				Version:     "v3.2",
+				UpdatedAt:   time.Date(2024, 3, 15, 14, 30, 0, 0, time.UTC),
+				Size:        2048,
+				Type:        "certificate",
 				Permissions: []string{"read", "rotate"},
 				Tags: map[string]string{
 					"environment": "production",
@@ -257,7 +257,7 @@ func ExampleSecretStore_describe() {
 
 	ctx := context.Background()
 	ref := secretstore.SecretRef{
-		Store: "metadata-store", 
+		Store: "metadata-store",
 		Path:  "app/certificate",
 	}
 
@@ -276,12 +276,12 @@ func ExampleSecretStore_describe() {
 		fmt.Printf("Permissions: %v\n", meta.Permissions)
 		fmt.Printf("Team: %s\n", meta.Tags["team"])
 		fmt.Printf("Expires: %s\n", meta.Tags["expires"])
-		
+
 		// Use metadata to make decisions without retrieving the secret
 		if meta.Type == "certificate" {
 			fmt.Println("Certificate detected - checking expiration...")
 		}
-		
+
 		if contains(meta.Permissions, "rotate") {
 			fmt.Println("Secret supports rotation")
 		}
@@ -330,9 +330,9 @@ func ExampleSecretRef_String() {
 	fmt.Printf("Parsed ref: %s\n", parsed.String())
 	fmt.Printf("Round-trip successful: %t\n",
 		ref.Store == parsed.Store &&
-		ref.Path == parsed.Path &&
-		ref.Field == parsed.Field &&
-		ref.Version == parsed.Version)
+			ref.Path == parsed.Path &&
+			ref.Field == parsed.Field &&
+			ref.Version == parsed.Version)
 
 	// Output:
 	// Original ref: store://production-vault/services/api/credentials#api_key?namespace=production&region=us-east-1&version=latest

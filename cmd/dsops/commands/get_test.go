@@ -259,8 +259,8 @@ func TestGetCommand_NonexistentVariableSuggestions(t *testing.T) {
 			Version: 0,
 			Envs: map[string]config.Environment{
 				"test": {
-					"VAR_ONE": {Literal: "value1"},
-					"VAR_TWO": {Literal: "value2"},
+					"VAR_ONE":   {Literal: "value1"},
+					"VAR_TWO":   {Literal: "value2"},
 					"VAR_THREE": {Literal: "value3"},
 				},
 			},

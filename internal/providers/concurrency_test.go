@@ -346,7 +346,7 @@ func TestProviderTimeoutConcurrency(t *testing.T) {
 
 	// Create fake provider with artificial delay
 	fake := fakes.NewFakeProvider("timeout-test").
-		WithDelay(100 * time.Millisecond).
+		WithDelay(100*time.Millisecond).
 		WithSecret("slow/secret", provider.SecretValue{
 			Value: "slow-value",
 		})

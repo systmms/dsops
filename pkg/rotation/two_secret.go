@@ -90,7 +90,7 @@ func (s *TwoSecretStrategy) Rotate(ctx context.Context, request RotationRequest)
 	if request.DryRun {
 		auditTrail = append(auditTrail, createAuditEntry("dry_run_secondary_creation", "two_secret_strategy", "info",
 			"Would create secondary secret", nil))
-		
+
 		return &RotationResult{
 			Secret:     request.Secret,
 			Status:     StatusPending,
@@ -110,7 +110,7 @@ func (s *TwoSecretStrategy) Rotate(ctx context.Context, request RotationRequest)
 	if err != nil {
 		auditTrail = append(auditTrail, createAuditEntry("secondary_creation_failed", "two_secret_strategy", "error",
 			"Failed to create secondary secret", map[string]interface{}{"error": err.Error()}))
-		
+
 		return &RotationResult{
 			Secret:     request.Secret,
 			Status:     StatusFailed,
@@ -137,7 +137,7 @@ func (s *TwoSecretStrategy) Rotate(ctx context.Context, request RotationRequest)
 	if err := s.Verify(ctx, verifyReq); err != nil {
 		// Verification failed, clean up secondary secret
 		s.logger.Error("Secondary secret verification failed: %v", err)
-		
+
 		// Attempt cleanup (best effort)
 		deprecateReq := DeprecateRequest{
 			Secret:      request.Secret,
@@ -214,7 +214,7 @@ func (s *TwoSecretStrategy) Verify(ctx context.Context, request VerificationRequ
 // Rollback implements rollback by promoting the old secret back to primary
 func (s *TwoSecretStrategy) Rollback(ctx context.Context, request RollbackRequest) error {
 	s.logger.Info("Rolling back two-secret rotation for %s", logging.Secret(request.Secret.Key))
-	
+
 	twoSecretRotator, ok := s.baseStrategy.(TwoSecretRotator)
 	if !ok {
 		return s.baseStrategy.Rollback(ctx, request)
@@ -238,11 +238,11 @@ func (s *TwoSecretStrategy) GetStatus(ctx context.Context, secret SecretInfo) (*
 
 // TwoSecretMetadata contains information about the two-secret setup
 type TwoSecretMetadata struct {
-	ActiveSecret   SecretReference `json:"active_secret"`
+	ActiveSecret   SecretReference  `json:"active_secret"`
 	InactiveSecret *SecretReference `json:"inactive_secret,omitempty"`
-	LastRotated    *time.Time      `json:"last_rotated,omitempty"`
-	NextRotation   *time.Time      `json:"next_rotation,omitempty"`
-	GracePeriod    time.Duration   `json:"grace_period"`
+	LastRotated    *time.Time       `json:"last_rotated,omitempty"`
+	NextRotation   *time.Time       `json:"next_rotation,omitempty"`
+	GracePeriod    time.Duration    `json:"grace_period"`
 }
 
 // GetTwoSecretStatus returns detailed status for two-secret rotation

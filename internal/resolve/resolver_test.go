@@ -276,12 +276,12 @@ func TestResolverErrorAggregation(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name          string
-		envVars       config.Environment
-		providerData  map[string]string
+		name           string
+		envVars        config.Environment
+		providerData   map[string]string
 		providerErrors map[string]error
-		expectedError bool
-		errorContains string
+		expectedError  bool
+		errorContains  string
 	}{
 		{
 			name: "single provider error",

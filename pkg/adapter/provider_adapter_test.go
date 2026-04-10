@@ -14,7 +14,7 @@ import (
 
 // Mock provider for testing
 type mockProvider struct {
-	name string
+	name             string
 	supportsRotation bool
 }
 
@@ -461,7 +461,7 @@ func TestProviderClassification(t *testing.T) {
 			"keeper",
 			"vault",
 			"aws.secretsmanager",
-			"gcp.secretmanager", 
+			"gcp.secretmanager",
 			"azure.keyvault",
 		}
 

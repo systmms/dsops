@@ -177,16 +177,16 @@ func runSecretsRotate(cfg *config.Config, envName string, keys []string, strateg
 }
 
 type SecretRotationResult struct {
-	Key            string     `json:"key"`
-	Provider       string     `json:"provider"`
-	Status         string     `json:"status"` // "success", "failed", "skipped", "not_supported"
-	Strategy       string     `json:"strategy"`
-	NewVersion     string     `json:"new_version,omitempty"`
-	OldVersion     string     `json:"old_version,omitempty"`
-	RotatedAt      *time.Time `json:"rotated_at,omitempty"`
-	Error          string     `json:"error,omitempty"`
-	DryRun         bool       `json:"dry_run"`
-	Reason         string     `json:"reason,omitempty"`
+	Key        string     `json:"key"`
+	Provider   string     `json:"provider"`
+	Status     string     `json:"status"` // "success", "failed", "skipped", "not_supported"
+	Strategy   string     `json:"strategy"`
+	NewVersion string     `json:"new_version,omitempty"`
+	OldVersion string     `json:"old_version,omitempty"`
+	RotatedAt  *time.Time `json:"rotated_at,omitempty"`
+	Error      string     `json:"error,omitempty"`
+	DryRun     bool       `json:"dry_run"`
+	Reason     string     `json:"reason,omitempty"`
 }
 
 func rotateSecretValueWithEngine(ctx context.Context, env config.Environment, key, strategy, newValueSpec string, providers map[string]provider.Provider, engine rotation.RotationEngine, logger *logging.Logger, dryRun, force bool) (rotation.RotationResult, error) {
@@ -221,8 +221,8 @@ func rotateSecretValueWithEngine(ctx context.Context, env config.Environment, ke
 
 	// Create secret info for the rotation engine
 	secretInfo := rotation.SecretInfo{
-		Key:         key,
-		Provider:    providerName,
+		Key:      key,
+		Provider: providerName,
 		ProviderRef: provider.Reference{
 			Provider: providerName,
 			Key:      varDef.From.Key,
@@ -245,7 +245,7 @@ func rotateSecretValueWithEngine(ctx context.Context, env config.Environment, ke
 				"length": 32,
 			},
 		}
-		
+
 		// Parse the new value spec (simplified for now)
 		if strings.HasPrefix(newValueSpec, "literal:") {
 			newValue.Type = rotation.ValueTypeLiteral
@@ -270,7 +270,6 @@ func rotateSecretValueWithEngine(ctx context.Context, env config.Environment, ke
 	}
 	return *result, nil
 }
-
 
 func displayEngineRotationResults(results []rotation.RotationResult, logger *logging.Logger) error {
 	logger.Info("\nSecret Value Rotation Results (New Engine):")
@@ -318,7 +317,6 @@ func displayEngineRotationResults(results []rotation.RotationResult, logger *log
 	return nil
 }
 
-
 func getSecretsEnvNames(envs map[string]config.Environment) []string {
 	names := make([]string, 0, len(envs))
 	for name := range envs {
@@ -329,7 +327,7 @@ func getSecretsEnvNames(envs map[string]config.Environment) []string {
 
 func createSecretsProviderInstances(providerConfigs map[string]config.ProviderConfig, registry *providers.Registry) (map[string]provider.Provider, error) {
 	instances := make(map[string]provider.Provider)
-	
+
 	for name, providerConfig := range providerConfigs {
 		instance, err := registry.CreateProvider(name, providerConfig)
 		if err != nil {
@@ -337,7 +335,7 @@ func createSecretsProviderInstances(providerConfigs map[string]config.ProviderCo
 		}
 		instances[name] = instance
 	}
-	
+
 	return instances, nil
 }
 
@@ -348,13 +346,13 @@ func inferSecretType(key, strategy string, varDef config.Variable) rotation.Secr
 	case "postgres", "mysql", "mongodb":
 		return rotation.SecretTypePassword
 	case "stripe", "github":
-		return rotation.SecretTypeAPIKey  
+		return rotation.SecretTypeAPIKey
 	case "certificate":
 		return rotation.SecretTypeCertificate
 	case "random":
 		return rotation.SecretTypeGeneric
 	}
-	
+
 	// Key name-based inference
 	keyLower := strings.ToLower(key)
 	if strings.Contains(keyLower, "password") || strings.Contains(keyLower, "pass") {
@@ -366,7 +364,7 @@ func inferSecretType(key, strategy string, varDef config.Variable) rotation.Secr
 	if strings.Contains(keyLower, "cert") || strings.Contains(keyLower, "certificate") {
 		return rotation.SecretTypeCertificate
 	}
-	
+
 	return rotation.SecretTypeGeneric
 }
 

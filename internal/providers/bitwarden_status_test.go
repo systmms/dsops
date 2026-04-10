@@ -48,13 +48,13 @@ func TestBitwardenStatusParsing(t *testing.T) {
 			expectError:  true,
 		},
 		{
-			name:         "empty JSON object",
-			jsonResponse: `{}`,
+			name:           "empty JSON object",
+			jsonResponse:   `{}`,
 			expectedStatus: "",
 		},
 		{
-			name:         "null status",
-			jsonResponse: `{"status":null}`,
+			name:           "null status",
+			jsonResponse:   `{"status":null}`,
 			expectedStatus: "",
 		},
 	}

@@ -248,38 +248,38 @@ func TestPercentageStrategy_CalculateWaveInstances(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name          string
-		totalCount    int
-		percentages   []int
-		wantCounts    []int
+		name           string
+		totalCount     int
+		percentages    []int
+		wantCounts     []int
 		wantAllCovered bool
 	}{
 		{
-			name:          "20 instances, default percentages (5%, 25%, 50%, 100%)",
-			totalCount:    20,
-			percentages:   []int{5, 25, 50, 100},
-			wantCounts:    []int{1, 4, 5, 10}, // 5%=1, 25%=5 total (add 4), 50%=10 total (add 5), 100%=20 total (add 10)
+			name:           "20 instances, default percentages (5%, 25%, 50%, 100%)",
+			totalCount:     20,
+			percentages:    []int{5, 25, 50, 100},
+			wantCounts:     []int{1, 4, 5, 10}, // 5%=1, 25%=5 total (add 4), 50%=10 total (add 5), 100%=20 total (add 10)
 			wantAllCovered: true,
 		},
 		{
-			name:          "10 instances, custom percentages (10%, 40%, 100%)",
-			totalCount:    10,
-			percentages:   []int{10, 40, 100},
-			wantCounts:    []int{1, 3, 6}, // 10%=1, 40%=4 total (add 3), 100%=10 total (add 6)
+			name:           "10 instances, custom percentages (10%, 40%, 100%)",
+			totalCount:     10,
+			percentages:    []int{10, 40, 100},
+			wantCounts:     []int{1, 3, 6}, // 10%=1, 40%=4 total (add 3), 100%=10 total (add 6)
 			wantAllCovered: true,
 		},
 		{
-			name:          "5 instances, aggressive percentages (20%, 60%, 100%)",
-			totalCount:    5,
-			percentages:   []int{20, 60, 100},
-			wantCounts:    []int{1, 2, 2}, // 20%=1, 60%=3 total (add 2), 100%=5 total (add 2)
+			name:           "5 instances, aggressive percentages (20%, 60%, 100%)",
+			totalCount:     5,
+			percentages:    []int{20, 60, 100},
+			wantCounts:     []int{1, 2, 2}, // 20%=1, 60%=3 total (add 2), 100%=5 total (add 2)
 			wantAllCovered: true,
 		},
 		{
-			name:          "100 instances, fine-grained percentages (1%, 5%, 25%, 50%, 100%)",
-			totalCount:    100,
-			percentages:   []int{1, 5, 25, 50, 100},
-			wantCounts:    []int{1, 4, 20, 25, 50}, // 1%=1, 5%=5 total (add 4), 25%=25 total (add 20), 50%=50 total (add 25), 100%=100 total (add 50)
+			name:           "100 instances, fine-grained percentages (1%, 5%, 25%, 50%, 100%)",
+			totalCount:     100,
+			percentages:    []int{1, 5, 25, 50, 100},
+			wantCounts:     []int{1, 4, 20, 25, 50}, // 1%=1, 5%=5 total (add 4), 25%=25 total (add 20), 50%=50 total (add 25), 100%=100 total (add 50)
 			wantAllCovered: true,
 		},
 	}
@@ -390,13 +390,13 @@ func TestPercentageStrategy_ProgressPersistence(t *testing.T) {
 
 	// Save progress
 	progress := RolloutProgress{
-		ServiceName: service.Name,
-		Environment: service.Environment,
-		CurrentWave: 1,
-		TotalWaves:  len(waves),
+		ServiceName:        service.Name,
+		Environment:        service.Environment,
+		CurrentWave:        1,
+		TotalWaves:         len(waves),
 		CompletedInstances: []string{"instance-1"},
-		StartTime:   time.Now(),
-		Status:      RolloutStatusInProgress,
+		StartTime:          time.Now(),
+		Status:             RolloutStatusInProgress,
 	}
 
 	err = strategy.SaveProgress(progress)

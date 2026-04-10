@@ -253,16 +253,16 @@ type FakeRotationEngine struct {
 	Strategies map[string]rotation.SecretValueRotator
 
 	// Mock behaviors
-	RotateFunc          func(ctx context.Context, req rotation.RotationRequest) (*rotation.RotationResult, error)
-	BatchRotateFunc     func(ctx context.Context, reqs []rotation.RotationRequest) ([]rotation.RotationResult, error)
-	GetHistoryFunc      func(ctx context.Context, secret rotation.SecretInfo, limit int) ([]rotation.RotationResult, error)
+	RotateFunc           func(ctx context.Context, req rotation.RotationRequest) (*rotation.RotationResult, error)
+	BatchRotateFunc      func(ctx context.Context, reqs []rotation.RotationRequest) ([]rotation.RotationResult, error)
+	GetHistoryFunc       func(ctx context.Context, secret rotation.SecretInfo, limit int) ([]rotation.RotationResult, error)
 	ScheduleRotationFunc func(ctx context.Context, req rotation.RotationRequest, when time.Time) error
 
 	// Recorded calls
-	RotateCalls        []rotation.RotationRequest
-	BatchRotateCalls   [][]rotation.RotationRequest
-	GetHistoryCalls    []historyCall
-	ScheduleCalls      []scheduleCall
+	RotateCalls      []rotation.RotationRequest
+	BatchRotateCalls [][]rotation.RotationRequest
+	GetHistoryCalls  []historyCall
+	ScheduleCalls    []scheduleCall
 }
 
 type historyCall struct {

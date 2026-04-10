@@ -10,9 +10,9 @@ import (
 
 // Registry manages service creation and registration for rotation targets
 type Registry struct {
-	factories          map[string]ServiceFactory
-	supportedTypes     map[string]bool
-	dataDrivenFactory  *dsopsdata.DataDrivenServiceFactory
+	factories         map[string]ServiceFactory
+	supportedTypes    map[string]bool
+	dataDrivenFactory *dsopsdata.DataDrivenServiceFactory
 }
 
 // ServiceFactory creates a service instance from configuration
@@ -72,19 +72,19 @@ func (r *Registry) CreateService(name string, cfg config.ServiceConfig) (service
 // GetSupportedTypes returns a list of supported service types
 func (r *Registry) GetSupportedTypes() []string {
 	typeSet := make(map[string]bool)
-	
+
 	// Add hardcoded service types
 	for serviceType := range r.supportedTypes {
 		typeSet[serviceType] = true
 	}
-	
+
 	// Add data-driven service types
 	if r.dataDrivenFactory != nil {
 		for _, serviceType := range r.dataDrivenFactory.GetSupportedTypes() {
 			typeSet[serviceType] = true
 		}
 	}
-	
+
 	// Convert to slice
 	types := make([]string, 0, len(typeSet))
 	for serviceType := range typeSet {
@@ -99,12 +99,12 @@ func (r *Registry) IsSupported(serviceType string) bool {
 	if r.supportedTypes[serviceType] {
 		return true
 	}
-	
+
 	// Check data-driven types
 	if r.dataDrivenFactory != nil {
 		return r.dataDrivenFactory.IsSupported(serviceType)
 	}
-	
+
 	return false
 }
 
@@ -114,7 +114,7 @@ func (r *Registry) HasImplementation(serviceType string) bool {
 	if r.dataDrivenFactory != nil && r.dataDrivenFactory.IsSupported(serviceType) {
 		return true
 	}
-	
+
 	// Check hardcoded factories as fallback
 	_, exists := r.factories[serviceType]
 	return exists

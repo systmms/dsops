@@ -11,10 +11,10 @@ import (
 
 func TestCredentialValidatorBasics(t *testing.T) {
 	logger := logging.New(false, true)
-	
+
 	// Test with nil repository (should allow all)
 	validator := NewCredentialValidator(nil, logger)
-	
+
 	result := validator.ValidateNewCredential("any", "any", "any-value", "")
 	if !result.Valid {
 		t.Error("Expected validation to pass when no repository configured")
@@ -26,17 +26,17 @@ func TestCredentialValidatorBasics(t *testing.T) {
 
 func TestCredentialValidatorSimple(t *testing.T) {
 	logger := logging.New(false, true)
-	
+
 	// Create simple repository structure for testing
 	// This avoids complex struct initialization by using a minimal setup
 	repo := &dsopsdata.Repository{
 		ServiceTypes: make(map[string]*dsopsdata.ServiceType),
 	}
-	
+
 	// Create a simple ServiceType manually
 	serviceType := &dsopsdata.ServiceType{}
 	serviceType.Metadata.Name = "test-service"
-	
+
 	// Add credential kind structure
 	credKind := dsopsdata.CredentialKind{
 		Name:         "test-password",
@@ -45,18 +45,18 @@ func TestCredentialValidatorSimple(t *testing.T) {
 	// Set constraints manually to avoid struct field issues
 	credKind.Constraints.Format = "^[A-Za-z0-9!@#$%^&*()]+$"
 	credKind.Constraints.TTL = "30d"
-	
+
 	serviceType.Spec.CredentialKinds = []dsopsdata.CredentialKind{credKind}
 	repo.ServiceTypes["test-service"] = serviceType
-	
+
 	validator := NewCredentialValidator(repo, logger)
-	
+
 	// Test valid credential
 	result := validator.ValidateNewCredential("test-service", "test-password", "ValidPassword123!", "")
 	if !result.Valid {
 		t.Errorf("Expected valid credential to pass validation, got errors: %v", result.Errors)
 	}
-	
+
 	// Test invalid format
 	result = validator.ValidateNewCredential("test-service", "test-password", "invalid-unicode-€", "")
 	if result.Valid {
@@ -65,7 +65,7 @@ func TestCredentialValidatorSimple(t *testing.T) {
 	if len(result.Errors) == 0 {
 		t.Error("Expected validation errors for invalid format")
 	}
-	
+
 	// Test unknown service (should be valid with warnings, not errors)
 	result = validator.ValidateNewCredential("unknown-service", "any", "any-value", "")
 	if !result.Valid {
@@ -78,7 +78,7 @@ func TestCredentialValidatorSimple(t *testing.T) {
 
 func TestTTLParsing(t *testing.T) {
 	logger := logging.New(false, true)
-	
+
 	tests := []struct {
 		name        string
 		ttlString   string
@@ -110,28 +110,28 @@ func TestTTLParsing(t *testing.T) {
 			expectedTTL: 0,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create simple repository for TTL testing
 			repo := &dsopsdata.Repository{
 				ServiceTypes: make(map[string]*dsopsdata.ServiceType),
 			}
-			
+
 			serviceType := &dsopsdata.ServiceType{}
 			serviceType.Metadata.Name = "test"
-			
+
 			credKind := dsopsdata.CredentialKind{
 				Name: "test-cred",
 			}
 			credKind.Constraints.TTL = tt.ttlString
-			
+
 			serviceType.Spec.CredentialKinds = []dsopsdata.CredentialKind{credKind}
 			repo.ServiceTypes["test"] = serviceType
-			
+
 			validator := NewCredentialValidator(repo, logger)
 			result := validator.ValidateNewCredential("test", "test-cred", "valid-value", "")
-			
+
 			expectedSeconds := int64(tt.expectedTTL.Seconds())
 			if result.TTLSeconds != expectedSeconds {
 				t.Errorf("Expected TTL %d seconds, got %d", expectedSeconds, result.TTLSeconds)
@@ -142,24 +142,24 @@ func TestTTLParsing(t *testing.T) {
 
 func TestSameValueValidation(t *testing.T) {
 	logger := logging.New(false, true)
-	
+
 	// Create simple repository
 	repo := &dsopsdata.Repository{
 		ServiceTypes: make(map[string]*dsopsdata.ServiceType),
 	}
-	
+
 	serviceType := &dsopsdata.ServiceType{}
 	serviceType.Metadata.Name = "test"
-	
+
 	credKind := dsopsdata.CredentialKind{
 		Name: "password",
 	}
-	
+
 	serviceType.Spec.CredentialKinds = []dsopsdata.CredentialKind{credKind}
 	repo.ServiceTypes["test"] = serviceType
-	
+
 	validator := NewCredentialValidator(repo, logger)
-	
+
 	// Test same value as current
 	result := validator.ValidateNewCredential("test", "password", "same-password", "same-password")
 	if result.Valid {
@@ -168,7 +168,7 @@ func TestSameValueValidation(t *testing.T) {
 	if len(result.Errors) == 0 || !containsString(result.Errors[0], "must be different") {
 		t.Errorf("Expected 'must be different' error, got: %v", result.Errors)
 	}
-	
+
 	// Test different value
 	result = validator.ValidateNewCredential("test", "password", "new-password", "old-password")
 	if !result.Valid {
@@ -178,24 +178,24 @@ func TestSameValueValidation(t *testing.T) {
 
 func TestEmptyValueValidation(t *testing.T) {
 	logger := logging.New(false, true)
-	
+
 	// Create simple repository
 	repo := &dsopsdata.Repository{
 		ServiceTypes: make(map[string]*dsopsdata.ServiceType),
 	}
-	
+
 	serviceType := &dsopsdata.ServiceType{}
 	serviceType.Metadata.Name = "test"
-	
+
 	credKind := dsopsdata.CredentialKind{
 		Name: "password",
 	}
-	
+
 	serviceType.Spec.CredentialKinds = []dsopsdata.CredentialKind{credKind}
 	repo.ServiceTypes["test"] = serviceType
-	
+
 	validator := NewCredentialValidator(repo, logger)
-	
+
 	// Test empty value (will fail because it equals current empty value)
 	result := validator.ValidateNewCredential("test", "password", "", "")
 	if result.Valid {
@@ -204,7 +204,7 @@ func TestEmptyValueValidation(t *testing.T) {
 	if len(result.Errors) == 0 || !containsString(result.Errors[0], "must be different") {
 		t.Errorf("Expected 'must be different' error for same empty values, got: %v", result.Errors)
 	}
-	
+
 	// Test empty value with different current value
 	result = validator.ValidateNewCredential("test", "password", "", "not-empty")
 	if !result.Valid {

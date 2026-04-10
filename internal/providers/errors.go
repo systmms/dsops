@@ -27,11 +27,11 @@ func (e *KeychainError) Unwrap() error {
 
 // Keychain sentinel errors
 var (
-	ErrKeychainItemNotFound       = fmt.Errorf("keychain item not found")
-	ErrKeychainAccessDenied       = fmt.Errorf("keychain access denied")
+	ErrKeychainItemNotFound        = fmt.Errorf("keychain item not found")
+	ErrKeychainAccessDenied        = fmt.Errorf("keychain access denied")
 	ErrKeychainUnsupportedPlatform = fmt.Errorf("keychain not supported on this platform")
-	ErrKeychainHeadless           = fmt.Errorf("keychain requires GUI environment for authentication")
-	ErrKeychainLocked             = fmt.Errorf("keychain is locked")
+	ErrKeychainHeadless            = fmt.Errorf("keychain requires GUI environment for authentication")
+	ErrKeychainLocked              = fmt.Errorf("keychain is locked")
 )
 
 // InfisicalError wraps Infisical API errors with context

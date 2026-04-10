@@ -21,9 +21,9 @@ import (
 
 func NewPlanCommand(cfg *config.Config) *cobra.Command {
 	var (
-		envName     string
-		outputJSON  bool
-		dataDir     string
+		envName    string
+		outputJSON bool
+		dataDir    string
 	)
 
 	cmd := &cobra.Command{
@@ -77,7 +77,7 @@ func registerProviders(resolver *resolve.Resolver, cfg *config.Config, dataDir s
 
 	// Create all registries
 	secretStoreRegistry := secretstores.NewRegistry()
-	
+
 	// Try to load dsops-data if directory exists
 	var serviceRegistry *services.Registry
 	if dataDir != "" {
@@ -96,8 +96,8 @@ func registerProviders(resolver *resolve.Resolver, cfg *config.Config, dataDir s
 					cfg.Logger.Debug("Falling back to hardcoded service registry")
 					serviceRegistry = services.NewRegistry()
 				} else {
-					cfg.Logger.Debug("Loaded dsops-data: %d service types, %d instances, %d policies, %d principals", 
-						len(repository.ServiceTypes), len(repository.ServiceInstances), 
+					cfg.Logger.Debug("Loaded dsops-data: %d service types, %d instances, %d policies, %d principals",
+						len(repository.ServiceTypes), len(repository.ServiceInstances),
 						len(repository.RotationPolicies), len(repository.Principals))
 					serviceRegistry = services.NewRegistryWithDataDriven(repository)
 					supportedTypes := serviceRegistry.GetSupportedTypes()
@@ -111,7 +111,7 @@ func registerProviders(resolver *resolve.Resolver, cfg *config.Config, dataDir s
 	} else {
 		serviceRegistry = services.NewRegistry()
 	}
-	
+
 	legacyRegistry := providers.NewRegistry()
 
 	// Register secret stores from new format
@@ -241,14 +241,14 @@ func outputPlanTable(result *resolve.PlanResult, cfg *config.Config, envName str
 	fmt.Printf("\nSummary:\n")
 	fmt.Printf("  Total variables: %d\n", len(result.Variables))
 	fmt.Printf("  Ready to resolve: %d\n", len(result.Variables)-errorCount)
-	
+
 	if errorCount > 0 {
 		fmt.Printf("  Errors: %d\n", errorCount)
 		fmt.Printf("\nErrors:\n")
 		for i, err := range result.Errors {
 			fmt.Printf("  %d. %s\n", i+1, err.Error())
 		}
-		
+
 		// Suggest next steps
 		fmt.Printf("\nNext steps:\n")
 		if strings.Contains(strings.Join(errorStrings(result.Errors), " "), "not registered") {
@@ -256,7 +256,7 @@ func outputPlanTable(result *resolve.PlanResult, cfg *config.Config, envName str
 			fmt.Printf("  • Run 'dsops doctor' to check provider connectivity\n")
 		}
 		fmt.Printf("  • Fix configuration errors and try again\n")
-		
+
 		return fmt.Errorf("plan completed with %d errors", errorCount)
 	}
 

@@ -24,14 +24,14 @@ import (
 
 // DockerTestEnv manages Docker Compose lifecycle for integration tests
 type DockerTestEnv struct {
-	t             *testing.T
-	composePath   string
-	services      []string
-	started       bool
-	clients       map[string]interface{}
-	cleanupFuncs  []func()
-	projectName   string
-	ports         map[string]map[int]int // service -> containerPort -> hostPort
+	t            *testing.T
+	composePath  string
+	services     []string
+	started      bool
+	clients      map[string]interface{}
+	cleanupFuncs []func()
+	projectName  string
+	ports        map[string]map[int]int // service -> containerPort -> hostPort
 }
 
 // VaultTestClient wraps Vault HTTP API for testing
@@ -464,10 +464,10 @@ func (e *DockerTestEnv) PostgresClient() *PostgresTestClient {
 	// - MaxIdleConns: Reduce connection churn by keeping connections warm
 	// - ConnMaxLifetime: Rotate connections to prevent stale state accumulation
 	// - ConnMaxIdleTime: Close idle connections that might be corrupted
-	db.SetMaxOpenConns(20)                     // Allow up to 20 concurrent connections
-	db.SetMaxIdleConns(10)                     // Keep up to 10 idle connections
-	db.SetConnMaxLifetime(5 * time.Minute)     // Rotate connections every 5 minutes
-	db.SetConnMaxIdleTime(1 * time.Minute)     // Close idle connections after 1 minute
+	db.SetMaxOpenConns(20)                 // Allow up to 20 concurrent connections
+	db.SetMaxIdleConns(10)                 // Keep up to 10 idle connections
+	db.SetConnMaxLifetime(5 * time.Minute) // Rotate connections every 5 minutes
+	db.SetConnMaxIdleTime(1 * time.Minute) // Close idle connections after 1 minute
 
 	client := &PostgresTestClient{db: db}
 	e.clients["postgres"] = client

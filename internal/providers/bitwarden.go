@@ -173,19 +173,19 @@ func (bw *BitwardenProvider) Validate(ctx context.Context) error {
 // parseKey parses a Bitwarden key into item ID/name and field
 // Formats supported:
 // - "item-id" -> returns item-id, "password"
-// - "item-name" -> returns item-name, "password"  
+// - "item-name" -> returns item-name, "password"
 // - "item-id.field" -> returns item-id, field
 // - "item-name.field" -> returns item-name, field
 func (bw *BitwardenProvider) parseKey(key string) (itemID, field string) {
 	parts := strings.Split(key, ".")
 	itemID = parts[0]
-	
+
 	if len(parts) > 1 {
 		field = parts[1]
 	} else {
 		field = "password" // Default field
 	}
-	
+
 	return itemID, field
 }
 
@@ -255,7 +255,7 @@ func (bw *BitwardenProvider) extractField(item *BitwardenItem, field string) (st
 				return customField.Value, nil
 			}
 		}
-		
+
 		// Check if it's a URI field reference
 		if strings.HasPrefix(field, "uri") && item.Login != nil {
 			return bw.extractUriField(item, field)
@@ -292,7 +292,7 @@ func parseTimestamp(timestamp string) time.Time {
 	if timestamp == "" {
 		return time.Time{}
 	}
-	
+
 	// Bitwarden uses ISO 8601 format
 	t, err := time.Parse(time.RFC3339, timestamp)
 	if err != nil {
@@ -306,20 +306,20 @@ func parseTimestamp(timestamp string) time.Time {
 
 // BitwardenStatus represents the status response from 'bw status'
 type BitwardenStatus struct {
-	Status      string `json:"status"`
-	LastSync    string `json:"lastSync"`
-	UserEmail   string `json:"userEmail"`
-	UserID      string `json:"userId"`
-	Template    string `json:"template"`
+	Status    string `json:"status"`
+	LastSync  string `json:"lastSync"`
+	UserEmail string `json:"userEmail"`
+	UserID    string `json:"userId"`
+	Template  string `json:"template"`
 }
 
 // BitwardenItemType represents the type of Bitwarden item
 type BitwardenItemType int
 
 const (
-	TypeLogin BitwardenItemType = 1
-	TypeNote  BitwardenItemType = 2
-	TypeCard  BitwardenItemType = 3
+	TypeLogin    BitwardenItemType = 1
+	TypeNote     BitwardenItemType = 2
+	TypeCard     BitwardenItemType = 3
 	TypeIdentity BitwardenItemType = 4
 )
 
@@ -342,10 +342,10 @@ type BitwardenItem struct {
 
 // BitwardenLogin represents login-specific data
 type BitwardenLogin struct {
-	Username string           `json:"username"`
-	Password string           `json:"password"`
-	Totp     string           `json:"totp"`
-	Uris     []BitwardenUri   `json:"uris"`
+	Username string         `json:"username"`
+	Password string         `json:"password"`
+	Totp     string         `json:"totp"`
+	Uris     []BitwardenUri `json:"uris"`
 }
 
 // BitwardenUri represents a URI associated with a login item

@@ -220,11 +220,11 @@ func TestEmailProvider_BuildMessage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		event     RotationEvent
-		wantSubj  string
-		wantBody  []string
-		dontWant  []string
+		name     string
+		event    RotationEvent
+		wantSubj string
+		wantBody []string
+		dontWant []string
 	}{
 		{
 			name: "completed event",

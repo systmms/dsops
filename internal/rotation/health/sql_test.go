@@ -13,8 +13,8 @@ import (
 
 // mockDB implements a minimal database interface for testing.
 type mockDB struct {
-	pingErr      error
-	pingLatency  time.Duration
+	pingErr     error
+	pingLatency time.Duration
 	// queryErr and queryLatency are commented out as unused, but kept for potential future use
 	// queryErr      error
 	// queryLatency  time.Duration
@@ -51,12 +51,12 @@ func TestNewSQLHealthChecker(t *testing.T) {
 	t.Parallel()
 
 	config := SQLHealthConfig{
-		PingEnabled:            true,
-		QueryLatencyEnabled:    true,
-		ConnectionPoolEnabled:  true,
-		QueryLatencyThreshold:  500 * time.Millisecond,
-		ConnectionPoolWarnPct:  80,
-		MaxConnections:         100,
+		PingEnabled:           true,
+		QueryLatencyEnabled:   true,
+		ConnectionPoolEnabled: true,
+		QueryLatencyThreshold: 500 * time.Millisecond,
+		ConnectionPoolWarnPct: 80,
+		MaxConnections:        100,
 	}
 
 	checker := NewSQLHealthChecker("test-sql", config)

@@ -36,14 +36,14 @@ type AkeylessSecret struct {
 
 // AkeylessMetadata represents secret metadata
 type AkeylessMetadata struct {
-	Path               string
-	ItemType           string
-	Version            int
-	CreationDate       time.Time
-	LastModified       time.Time
-	Tags               map[string]string
-	RotationInterval   string
-	LastRotationDate   *time.Time
+	Path             string
+	ItemType         string
+	Version          int
+	CreationDate     time.Time
+	LastModified     time.Time
+	Tags             map[string]string
+	RotationInterval string
+	LastRotationDate *time.Time
 }
 
 // AkeylessConfig holds configuration for the Akeyless provider

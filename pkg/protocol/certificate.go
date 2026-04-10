@@ -44,12 +44,12 @@ type CertificateRequest struct {
 
 // CertificateResult contains the generated certificate and key
 type CertificateResult struct {
-	Certificate []byte
-	PrivateKey  []byte
+	Certificate      []byte
+	PrivateKey       []byte
 	CertificateChain []byte
-	SerialNumber string
-	NotBefore    time.Time
-	NotAfter     time.Time
+	SerialNumber     string
+	NotBefore        time.Time
+	NotAfter         time.Time
 }
 
 // CertificateInfo contains certificate metadata
@@ -90,14 +90,14 @@ func (a *CertificateAdapter) Execute(ctx context.Context, operation Operation, c
 	if err := a.Validate(config); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	// Get the appropriate handler
 	certType := strings.ToLower(config.Connection["type"])
 	handler, ok := a.handlers[certType]
 	if !ok {
 		return nil, fmt.Errorf("unsupported certificate type: %s", certType)
 	}
-	
+
 	// Execute the operation
 	switch operation.Action {
 	case "create":
@@ -120,12 +120,12 @@ func (a *CertificateAdapter) Validate(config AdapterConfig) error {
 	if config.Connection == nil {
 		return fmt.Errorf("connection configuration is required")
 	}
-	
+
 	certType, ok := config.Connection["type"]
 	if !ok || certType == "" {
 		return fmt.Errorf("certificate type is required")
 	}
-	
+
 	// Validate based on certificate type
 	switch strings.ToLower(certType) {
 	case "self-signed":
@@ -137,7 +137,7 @@ func (a *CertificateAdapter) Validate(config AdapterConfig) error {
 	default:
 		return fmt.Errorf("unsupported certificate type: %s", certType)
 	}
-	
+
 	return nil
 }
 
@@ -148,11 +148,11 @@ func (a *CertificateAdapter) Capabilities() Capabilities {
 		RequiredConfig:   []string{"type"},
 		OptionalConfig:   []string{"common_name", "dns_names", "validity_days", "key_size"},
 		Features: map[string]bool{
-			"x509":         true,
-			"rsa":          true,
-			"ecdsa":        true,
-			"chain":        true,
-			"revocation":   true,
+			"x509":       true,
+			"rsa":        true,
+			"ecdsa":      true,
+			"chain":      true,
+			"revocation": true,
 		},
 	}
 }
@@ -161,7 +161,7 @@ func (a *CertificateAdapter) Capabilities() Capabilities {
 func (a *CertificateAdapter) executeCreate(ctx context.Context, handler CertificateHandler, operation Operation, config AdapterConfig) (*Result, error) {
 	// Build certificate request from operation parameters
 	req := a.buildCertificateRequest(operation, config)
-	
+
 	// Generate certificate
 	certResult, err := handler.GenerateCertificate(ctx, req, config)
 	if err != nil {
@@ -170,7 +170,7 @@ func (a *CertificateAdapter) executeCreate(ctx context.Context, handler Certific
 			Error:   fmt.Sprintf("failed to generate certificate: %v", err),
 		}, err
 	}
-	
+
 	return &Result{
 		Success: true,
 		Data: map[string]interface{}{
@@ -195,7 +195,7 @@ func (a *CertificateAdapter) executeVerify(ctx context.Context, handler Certific
 	if !ok {
 		return nil, fmt.Errorf("certificate parameter is required for verify")
 	}
-	
+
 	// Verify certificate
 	err := handler.VerifyCertificate(ctx, []byte(certPEM), config)
 	if err != nil {
@@ -204,7 +204,7 @@ func (a *CertificateAdapter) executeVerify(ctx context.Context, handler Certific
 			Error:   fmt.Sprintf("certificate verification failed: %v", err),
 		}, err
 	}
-	
+
 	return &Result{
 		Success: true,
 		Data: map[string]interface{}{
@@ -219,7 +219,7 @@ func (a *CertificateAdapter) executeVerify(ctx context.Context, handler Certific
 func (a *CertificateAdapter) executeRotate(ctx context.Context, handler CertificateHandler, operation Operation, config AdapterConfig) (*Result, error) {
 	// For rotation, we create a new certificate and optionally revoke the old one
 	req := a.buildCertificateRequest(operation, config)
-	
+
 	// Generate new certificate
 	certResult, err := handler.GenerateCertificate(ctx, req, config)
 	if err != nil {
@@ -228,12 +228,12 @@ func (a *CertificateAdapter) executeRotate(ctx context.Context, handler Certific
 			Error:   fmt.Sprintf("failed to rotate certificate: %v", err),
 		}, err
 	}
-	
+
 	// If old serial number provided, revoke it
 	if oldSerial, ok := operation.Parameters["old_serial_number"].(string); ok && oldSerial != "" {
 		_ = handler.RevokeCertificate(ctx, oldSerial, config) // Best effort revocation
 	}
-	
+
 	return &Result{
 		Success: true,
 		Data: map[string]interface{}{
@@ -255,7 +255,7 @@ func (a *CertificateAdapter) executeRevoke(ctx context.Context, handler Certific
 	if !ok {
 		return nil, fmt.Errorf("serial_number parameter is required for revoke")
 	}
-	
+
 	// Revoke certificate
 	err := handler.RevokeCertificate(ctx, serialNumber, config)
 	if err != nil {
@@ -264,7 +264,7 @@ func (a *CertificateAdapter) executeRevoke(ctx context.Context, handler Certific
 			Error:   fmt.Sprintf("failed to revoke certificate: %v", err),
 		}, err
 	}
-	
+
 	return &Result{
 		Success: true,
 		Data: map[string]interface{}{
@@ -286,7 +286,7 @@ func (a *CertificateAdapter) executeList(ctx context.Context, handler Certificat
 			Error:   fmt.Sprintf("failed to list certificates: %v", err),
 		}, err
 	}
-	
+
 	// Convert to generic format
 	items := make([]map[string]interface{}, len(certs))
 	for i, cert := range certs {
@@ -300,7 +300,7 @@ func (a *CertificateAdapter) executeList(ctx context.Context, handler Certificat
 			"status":        cert.Status,
 		}
 	}
-	
+
 	return &Result{
 		Success: true,
 		Data: map[string]interface{}{
@@ -315,36 +315,36 @@ func (a *CertificateAdapter) executeList(ctx context.Context, handler Certificat
 // buildCertificateRequest builds a certificate request from operation parameters
 func (a *CertificateAdapter) buildCertificateRequest(operation Operation, config AdapterConfig) CertificateRequest {
 	req := CertificateRequest{
-		ValidityDays: 365, // Default
+		ValidityDays: 365,  // Default
 		KeySize:      2048, // Default
 	}
-	
+
 	// Extract from operation parameters
 	if cn, ok := operation.Parameters["common_name"].(string); ok {
 		req.CommonName = cn
 	}
-	
+
 	if dnsNames, ok := operation.Parameters["dns_names"].([]string); ok {
 		req.DNSNames = dnsNames
 	} else if dnsName, ok := operation.Parameters["dns_name"].(string); ok {
 		req.DNSNames = []string{dnsName}
 	}
-	
+
 	if validity, ok := operation.Parameters["validity_days"].(float64); ok {
 		req.ValidityDays = int(validity)
 	}
-	
+
 	if keySize, ok := operation.Parameters["key_size"].(float64); ok {
 		req.KeySize = int(keySize)
 	}
-	
+
 	// Extract organization info if provided
 	if org, ok := operation.Parameters["organization"].([]string); ok {
 		req.Organization = org
 	} else if org, ok := operation.Parameters["organization"].(string); ok {
 		req.Organization = []string{org}
 	}
-	
+
 	return req
 }
 
@@ -357,7 +357,7 @@ func (h *SelfSignedHandler) GenerateCertificate(ctx context.Context, req Certifi
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate private key: %w", err)
 	}
-	
+
 	// Create certificate template
 	template := &x509.Certificate{
 		SerialNumber: big.NewInt(time.Now().Unix()),
@@ -376,25 +376,25 @@ func (h *SelfSignedHandler) GenerateCertificate(ctx context.Context, req Certifi
 		BasicConstraintsValid: true,
 		DNSNames:              req.DNSNames,
 	}
-	
+
 	// Generate certificate
 	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create certificate: %w", err)
 	}
-	
+
 	// Encode certificate to PEM
 	certPEM := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: certDER,
 	})
-	
+
 	// Encode private key to PEM
 	keyPEM := pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 	})
-	
+
 	return &CertificateResult{
 		Certificate:  certPEM,
 		PrivateKey:   keyPEM,
@@ -410,13 +410,13 @@ func (h *SelfSignedHandler) VerifyCertificate(ctx context.Context, certPEM []byt
 	if block == nil {
 		return fmt.Errorf("failed to decode certificate PEM")
 	}
-	
+
 	// Parse certificate
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return fmt.Errorf("failed to parse certificate: %w", err)
 	}
-	
+
 	// Basic validity check
 	now := time.Now()
 	if now.Before(cert.NotBefore) {
@@ -425,7 +425,7 @@ func (h *SelfSignedHandler) VerifyCertificate(ctx context.Context, certPEM []byt
 	if now.After(cert.NotAfter) {
 		return fmt.Errorf("certificate has expired")
 	}
-	
+
 	return nil
 }
 

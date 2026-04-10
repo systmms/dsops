@@ -30,8 +30,8 @@ func TestRegistryIsSupported(t *testing.T) {
 	registry := providers.NewRegistry()
 
 	tests := []struct {
-		name         string
-		providerType string
+		name          string
+		providerType  string
 		wantSupported bool
 	}{
 		{"literal", "literal", true},

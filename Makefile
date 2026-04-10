@@ -131,7 +131,7 @@ vuln: ## Check for vulnerable dependencies (govulncheck)
 .PHONY: fmt
 fmt: ## Format code
 	@echo "Formatting code..."
-	go fmt ./...
+	gofmt -s -w .
 	goimports -w -local github.com/systmms/dsops .
 
 .PHONY: vet

@@ -262,4 +262,3 @@ func (p *DopplerProvider) maskToken() string {
 	}
 	return p.config.Token[len(p.config.Token)-4:]
 }
-

@@ -366,45 +366,45 @@ func TestPassFolderDetection(t *testing.T) {
 // TestPassMetadataExtraction tests parsing pass output for metadata.
 func TestPassMetadataExtraction(t *testing.T) {
 	tests := []struct {
-		name               string
-		output             string
-		expectedPassword   string
+		name                string
+		output              string
+		expectedPassword    string
 		expectedHasMetadata bool
 	}{
 		{
-			name:               "password_only",
-			output:             "mysecretpassword",
-			expectedPassword:   "mysecretpassword",
+			name:                "password_only",
+			output:              "mysecretpassword",
+			expectedPassword:    "mysecretpassword",
 			expectedHasMetadata: false,
 		},
 		{
-			name:               "password_with_metadata",
-			output:             "mypassword\nusername: john\nurl: https://example.com",
-			expectedPassword:   "mypassword",
+			name:                "password_with_metadata",
+			output:              "mypassword\nusername: john\nurl: https://example.com",
+			expectedPassword:    "mypassword",
 			expectedHasMetadata: true,
 		},
 		{
-			name:               "password_with_trailing_newline",
-			output:             "password123\n",
-			expectedPassword:   "password123",
+			name:                "password_with_trailing_newline",
+			output:              "password123\n",
+			expectedPassword:    "password123",
 			expectedHasMetadata: false,
 		},
 		{
-			name:               "multiline_password",
-			output:             "line1\nline2\nline3",
-			expectedPassword:   "line1",
+			name:                "multiline_password",
+			output:              "line1\nline2\nline3",
+			expectedPassword:    "line1",
 			expectedHasMetadata: true,
 		},
 		{
-			name:               "empty_output",
-			output:             "",
-			expectedPassword:   "",
+			name:                "empty_output",
+			output:              "",
+			expectedPassword:    "",
 			expectedHasMetadata: false,
 		},
 		{
-			name:               "only_whitespace",
-			output:             "   \n\t\n  ",
-			expectedPassword:   "",
+			name:                "only_whitespace",
+			output:              "   \n\t\n  ",
+			expectedPassword:    "",
 			expectedHasMetadata: false,
 		},
 	}

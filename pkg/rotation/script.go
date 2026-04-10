@@ -78,7 +78,7 @@ func (s *ScriptRotator) validateCapability(secret SecretInfo, capability string)
 	}
 
 	if !s.hasCapability(credKind.Capabilities, capability) {
-		return fmt.Errorf("credential kind %s/%s does not support %s capability", 
+		return fmt.Errorf("credential kind %s/%s does not support %s capability",
 			string(secret.SecretType), credKind.Name, capability)
 	}
 
@@ -152,9 +152,9 @@ func (s *ScriptRotator) buildSchemaMetadata(secret SecretInfo) *SchemaMetadata {
 		CredentialKind: credKind.Name,
 		Capabilities:   credKind.Capabilities,
 		Constraints: &CredentialConstraints{
-			MaxActive:        credKind.Constraints.MaxActive,
-			TTL:              credKind.Constraints.TTL,
-			Format:           credKind.Constraints.Format,
+			MaxActive: credKind.Constraints.MaxActive,
+			TTL:       credKind.Constraints.TTL,
+			Format:    credKind.Constraints.Format,
 		},
 	}
 
@@ -177,45 +177,45 @@ func (s *ScriptRotator) buildSchemaMetadata(secret SecretInfo) *SchemaMetadata {
 
 // ScriptInput represents the JSON input passed to the script
 type ScriptInput struct {
-	Action            string                 `json:"action"`
-	SecretInfo        SecretInfo             `json:"secret_info"`
-	DryRun            bool                   `json:"dry_run"`
-	Force             bool                   `json:"force"`
-	NewValue          *NewSecretValue        `json:"new_value,omitempty"`
-	Config            map[string]interface{} `json:"config,omitempty"`
-	Environment       map[string]string      `json:"environment,omitempty"`
-	SchemaMetadata    *SchemaMetadata        `json:"schema_metadata,omitempty"`
+	Action         string                 `json:"action"`
+	SecretInfo     SecretInfo             `json:"secret_info"`
+	DryRun         bool                   `json:"dry_run"`
+	Force          bool                   `json:"force"`
+	NewValue       *NewSecretValue        `json:"new_value,omitempty"`
+	Config         map[string]interface{} `json:"config,omitempty"`
+	Environment    map[string]string      `json:"environment,omitempty"`
+	SchemaMetadata *SchemaMetadata        `json:"schema_metadata,omitempty"`
 }
 
 // SchemaMetadata contains information from dsops-data schemas
 type SchemaMetadata struct {
-	ServiceType       string              `json:"service_type,omitempty"`
-	CredentialKind    string              `json:"credential_kind,omitempty"`
-	Capabilities      []string            `json:"capabilities,omitempty"`
-	Constraints       *CredentialConstraints `json:"constraints,omitempty"`
-	ServiceInstance   *ServiceInstanceMeta   `json:"service_instance,omitempty"`
+	ServiceType     string                 `json:"service_type,omitempty"`
+	CredentialKind  string                 `json:"credential_kind,omitempty"`
+	Capabilities    []string               `json:"capabilities,omitempty"`
+	Constraints     *CredentialConstraints `json:"constraints,omitempty"`
+	ServiceInstance *ServiceInstanceMeta   `json:"service_instance,omitempty"`
 }
 
 // CredentialConstraints mirrors the dsops-data constraints structure
 type CredentialConstraints struct {
-	MaxActive           interface{} `json:"maxActive,omitempty"`           // Can be int or "unlimited"
-	TTL                 string      `json:"ttl,omitempty"`
-	Format              string      `json:"format,omitempty"`
-	RotationRequired    bool        `json:"rotationRequired,omitempty"`
-	MaxKeys             int         `json:"maxKeys,omitempty"`
-	Renewable           bool        `json:"renewable,omitempty"`
-	Managed             bool        `json:"managed,omitempty"`
-	RequiresMFA         bool        `json:"requiresMFA,omitempty"`
+	MaxActive        interface{} `json:"maxActive,omitempty"` // Can be int or "unlimited"
+	TTL              string      `json:"ttl,omitempty"`
+	Format           string      `json:"format,omitempty"`
+	RotationRequired bool        `json:"rotationRequired,omitempty"`
+	MaxKeys          int         `json:"maxKeys,omitempty"`
+	Renewable        bool        `json:"renewable,omitempty"`
+	Managed          bool        `json:"managed,omitempty"`
+	RequiresMFA      bool        `json:"requiresMFA,omitempty"`
 }
 
 // ServiceInstanceMeta contains relevant service instance metadata
 type ServiceInstanceMeta struct {
-	Type        string                 `json:"type"`
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name,omitempty"`
-	Endpoint    string                 `json:"endpoint"`
-	Auth        string                 `json:"auth"`
-	Config      map[string]interface{} `json:"config,omitempty"`
+	Type     string                 `json:"type"`
+	ID       string                 `json:"id"`
+	Name     string                 `json:"name,omitempty"`
+	Endpoint string                 `json:"endpoint"`
+	Auth     string                 `json:"auth"`
+	Config   map[string]interface{} `json:"config,omitempty"`
 }
 
 // ScriptOutput represents the expected JSON output from the script
@@ -363,8 +363,8 @@ func (s *ScriptRotator) Verify(ctx context.Context, request VerificationRequest)
 	s.logger.Debug("Verifying via script for %s", logging.Secret(request.Secret.Key))
 
 	scriptInput := ScriptInput{
-		Action:         "verify",
-		SecretInfo:     request.Secret,
+		Action:     "verify",
+		SecretInfo: request.Secret,
 		Config: map[string]interface{}{
 			"new_secret_ref": request.NewSecretRef,
 			"tests":          request.Tests,
@@ -400,8 +400,8 @@ func (s *ScriptRotator) Rollback(ctx context.Context, request RollbackRequest) e
 	s.logger.Info("Rolling back via script for %s", logging.Secret(request.Secret.Key))
 
 	scriptInput := ScriptInput{
-		Action:         "rollback",
-		SecretInfo:     request.Secret,
+		Action:     "rollback",
+		SecretInfo: request.Secret,
 		Config: map[string]interface{}{
 			"old_secret_ref": request.OldSecretRef,
 			"reason":         request.Reason,
@@ -441,7 +441,7 @@ func (s *ScriptRotator) GetStatus(ctx context.Context, secret SecretInfo) (*Rota
 				}, nil
 			}
 		}
-		
+
 		// Default fallback
 		return &RotationStatusInfo{
 			Status:    StatusPending,
@@ -466,7 +466,7 @@ func (s *ScriptRotator) GetStatus(ctx context.Context, secret SecretInfo) (*Rota
 		// Don't fail completely if status check fails, but consider capabilities
 		defaultCanRotate := true
 		defaultReason := "Status check failed, assuming rotation possible"
-		
+
 		if s.repository != nil {
 			credKind := s.getCredentialKind(secret)
 			if credKind != nil && !s.hasCapability(credKind.Capabilities, "rotate") {
@@ -474,7 +474,7 @@ func (s *ScriptRotator) GetStatus(ctx context.Context, secret SecretInfo) (*Rota
 				defaultReason = "Credential kind does not support rotation"
 			}
 		}
-		
+
 		s.logger.Warn("Failed to get script status for %s: %v", logging.Secret(secret.Key), err)
 		return &RotationStatusInfo{
 			Status:    StatusPending,
@@ -551,7 +551,7 @@ func (s *ScriptRotator) executeScript(ctx context.Context, scriptPath string, in
 	// Create command
 	cmd := exec.CommandContext(ctx, scriptPath)
 	cmd.Stdin = bytes.NewReader(inputJSON)
-	
+
 	// Set environment variables
 	cmd.Env = os.Environ()
 	for k, v := range input.Environment {

@@ -110,14 +110,14 @@ func TestParseServiceRef(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := ParseServiceRef(tt.uri)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("ParseServiceRef() expected error, got nil")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("ParseServiceRef() unexpected error: %v", err)
 				return
@@ -143,11 +143,11 @@ func TestParseServiceRef(t *testing.T) {
 			if tt.expected.Options == nil {
 				tt.expected.Options = map[string]string{}
 			}
-			
+
 			if len(result.Options) != len(tt.expected.Options) {
 				t.Errorf("Options length mismatch: got %d, want %d", len(result.Options), len(tt.expected.Options))
 			}
-			
+
 			for key, expectedValue := range tt.expected.Options {
 				if actualValue, ok := result.Options[key]; !ok || actualValue != expectedValue {
 					t.Errorf("Options[%q] = %q, want %q", key, actualValue, expectedValue)

@@ -153,12 +153,12 @@ func TestAkeylessIntegration(t *testing.T) {
 
 	// Setup mock secrets (Akeyless uses paths starting with /)
 	secrets := map[string]string{
-		"/prod/database/password":  "super-secret-password",
-		"/prod/api/key":            "api-key-12345",
-		"/staging/jwt/secret":      "jwt-secret-key",
-		"/secrets/special-chars":   "p@$$w0rd!#&*()[]{}|\\<>?",
-		"/secrets/unicode":         "Hello 世界 🌍",
-		"/secrets/json":            `{"nested": "value", "number": 42}`,
+		"/prod/database/password": "super-secret-password",
+		"/prod/api/key":           "api-key-12345",
+		"/staging/jwt/secret":     "jwt-secret-key",
+		"/secrets/special-chars":  "p@$$w0rd!#&*()[]{}|\\<>?",
+		"/secrets/unicode":        "Hello 世界 🌍",
+		"/secrets/json":           `{"nested": "value", "number": 42}`,
 	}
 
 	mockServer := mockAkeylessServer(t, secrets)

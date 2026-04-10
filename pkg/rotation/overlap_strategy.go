@@ -11,10 +11,10 @@ import (
 // OverlapRotationStrategy creates new secrets with validity overlap
 // Used for providers that support expiration dates (certificates, some API keys)
 type OverlapRotationStrategy struct {
-	baseRotator    SecretValueRotator
-	logger         *logging.Logger
-	overlapPeriod  time.Duration
-	totalValidity  time.Duration
+	baseRotator   SecretValueRotator
+	logger        *logging.Logger
+	overlapPeriod time.Duration
+	totalValidity time.Duration
 }
 
 // NewOverlapRotationStrategy creates an overlap-based rotation strategy
@@ -65,15 +65,15 @@ func (s *OverlapRotationStrategy) SupportsSecret(ctx context.Context, secret Sec
 func (s *OverlapRotationStrategy) Rotate(ctx context.Context, request RotationRequest) (*RotationResult, error) {
 	auditTrail := []AuditEntry{
 		createAuditEntry("overlap_rotation_started", "overlap_strategy", "info",
-			fmt.Sprintf("Starting overlap rotation with %v overlap period", s.overlapPeriod), 
+			fmt.Sprintf("Starting overlap rotation with %v overlap period", s.overlapPeriod),
 			map[string]interface{}{
-				"secret_key":      logging.Secret(request.Secret.Key),
-				"overlap_period":  s.overlapPeriod.String(),
-				"total_validity":  s.totalValidity.String(),
+				"secret_key":     logging.Secret(request.Secret.Key),
+				"overlap_period": s.overlapPeriod.String(),
+				"total_validity": s.totalValidity.String(),
 			}),
 	}
 
-	s.logger.Info("Starting overlap rotation for %s with %v overlap", 
+	s.logger.Info("Starting overlap rotation for %s with %v overlap",
 		logging.Secret(request.Secret.Key), s.overlapPeriod)
 
 	// Calculate timing
@@ -104,13 +104,13 @@ func (s *OverlapRotationStrategy) Rotate(ctx context.Context, request RotationRe
 	request.Config["overlap_with_previous"] = s.overlapPeriod
 
 	auditTrail = append(auditTrail, createAuditEntry("configuring_validity", "overlap_strategy", "info",
-		fmt.Sprintf("New secret valid from %v to %v", newValidFrom.Format(time.RFC3339), newValidUntil.Format(time.RFC3339)), 
+		fmt.Sprintf("New secret valid from %v to %v", newValidFrom.Format(time.RFC3339), newValidUntil.Format(time.RFC3339)),
 		nil))
 
 	if request.DryRun {
 		auditTrail = append(auditTrail, createAuditEntry("dry_run_complete", "overlap_strategy", "info",
 			fmt.Sprintf("Would create overlapping secret expiring at %v", newValidUntil), nil))
-		
+
 		return &RotationResult{
 			Secret:     request.Secret,
 			Status:     StatusPending,
@@ -124,7 +124,7 @@ func (s *OverlapRotationStrategy) Rotate(ctx context.Context, request RotationRe
 	if err != nil {
 		auditTrail = append(auditTrail, createAuditEntry("rotation_failed", "overlap_strategy", "error",
 			"Failed to create overlapping secret", map[string]interface{}{"error": err.Error()}))
-		
+
 		return &RotationResult{
 			Secret:     request.Secret,
 			Status:     StatusFailed,
@@ -136,7 +136,7 @@ func (s *OverlapRotationStrategy) Rotate(ctx context.Context, request RotationRe
 	// Step 4: Schedule old secret expiration
 	if result.OldSecretRef != nil {
 		auditTrail = append(auditTrail, createAuditEntry("scheduling_expiration", "overlap_strategy", "info",
-			fmt.Sprintf("Old secret will expire at %v", oldExpiresAt.Format(time.RFC3339)), 
+			fmt.Sprintf("Old secret will expire at %v", oldExpiresAt.Format(time.RFC3339)),
 			map[string]interface{}{
 				"old_secret_ref": result.OldSecretRef.Identifier,
 				"expires_at":     oldExpiresAt,
@@ -148,8 +148,8 @@ func (s *OverlapRotationStrategy) Rotate(ctx context.Context, request RotationRe
 	if result.Warnings == nil {
 		result.Warnings = []string{}
 	}
-	result.Warnings = append(result.Warnings, 
-		fmt.Sprintf("Overlap period active until %v. Both old and new secrets are valid during this time.", 
+	result.Warnings = append(result.Warnings,
+		fmt.Sprintf("Overlap period active until %v. Both old and new secrets are valid during this time.",
 			oldExpiresAt.Format(time.RFC3339)))
 
 	// Merge audit trails
@@ -165,7 +165,7 @@ func (s *OverlapRotationStrategy) Rotate(ctx context.Context, request RotationRe
 		result.NewSecretRef.Metadata["expires_at"] = newValidUntil.Format(time.RFC3339)
 	}
 
-	s.logger.Info("Completed overlap rotation for %s, new secret expires at %v", 
+	s.logger.Info("Completed overlap rotation for %s, new secret expires at %v",
 		logging.Secret(request.Secret.Key), newValidUntil)
 
 	return result, nil
@@ -174,20 +174,20 @@ func (s *OverlapRotationStrategy) Rotate(ctx context.Context, request RotationRe
 // Verify checks both old and new secrets during overlap
 func (s *OverlapRotationStrategy) Verify(ctx context.Context, request VerificationRequest) error {
 	s.logger.Debug("Verifying overlapping secret for %s", logging.Secret(request.Secret.Key))
-	
+
 	// During overlap, both secrets should work
 	// This could verify both if we have access to the old one
-	
+
 	return s.baseRotator.Verify(ctx, request)
 }
 
 // Rollback during overlap means revoking the new secret
 func (s *OverlapRotationStrategy) Rollback(ctx context.Context, request RollbackRequest) error {
 	s.logger.Info("Rolling back overlap rotation for %s", logging.Secret(request.Secret.Key))
-	
+
 	// During overlap period, rollback just means revoking/deleting the new secret
 	// The old one is still valid
-	
+
 	return s.baseRotator.Rollback(ctx, request)
 }
 
@@ -203,7 +203,7 @@ func (s *OverlapRotationStrategy) GetStatus(ctx context.Context, secret SecretIn
 		// Calculate when next rotation should happen
 		nextRotation := status.LastRotated.Add(s.totalValidity - s.overlapPeriod*2)
 		status.NextRotation = &nextRotation
-		
+
 		if status.Reason == "" {
 			status.Reason = fmt.Sprintf("Overlap rotation with %v overlap period", s.overlapPeriod)
 		}

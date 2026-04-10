@@ -41,7 +41,7 @@
 //	    if err != nil {
 //	        return SecretValue{}, err
 //	    }
-//	    
+//
 //	    return SecretValue{
 //	        Value:     value,
 //	        Version:   "1",
@@ -94,7 +94,7 @@ import (
 //	if err := provider.Validate(ctx); err != nil {
 //	    return fmt.Errorf("provider validation failed: %w", err)
 //	}
-//	
+//
 //	ref := Reference{Provider: "my-provider", Key: "api-key"}
 //	secret, err := provider.Resolve(ctx, ref)
 //	if err != nil {
@@ -104,7 +104,7 @@ type Provider interface {
 	// Name returns the provider's unique identifier.
 	//
 	// This should be a stable, lowercase identifier that matches the provider type
-	// used in configuration files. Examples: "aws.secretsmanager", "hashicorp.vault", 
+	// used in configuration files. Examples: "aws.secretsmanager", "hashicorp.vault",
 	// "onepassword", "literal".
 	//
 	// The name is used for logging, error messages, and provider registration.
@@ -215,7 +215,7 @@ type Provider interface {
 	//
 	//	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	//	defer cancel()
-	//	
+	//
 	//	if err := provider.Validate(ctx); err != nil {
 	//	    var authErr AuthError
 	//	    if errors.As(err, &authErr) {
@@ -323,7 +323,7 @@ type SecretValue struct {
 	// Common keys include:
 	//   - "created_by": Who created the secret
 	//   - "environment": Environment tag
-	//   - "rotation_id": Rotation tracking ID  
+	//   - "rotation_id": Rotation tracking ID
 	//   - "content_type": MIME type for binary data
 	Metadata map[string]string
 }
@@ -338,7 +338,7 @@ type SecretValue struct {
 //
 //	meta := Metadata{
 //	    Exists:      true,
-//	    Version:     "AWSCURRENT", 
+//	    Version:     "AWSCURRENT",
 //	    UpdatedAt:   time.Now(),
 //	    Size:        256, // bytes
 //	    Type:        "password",
@@ -390,7 +390,7 @@ type Metadata struct {
 //
 //	caps := Capabilities{
 //	    SupportsVersioning: true,
-//	    SupportsMetadata:   true, 
+//	    SupportsMetadata:   true,
 //	    SupportsWatching:   false,
 //	    SupportsBinary:     true,
 //	    RequiresAuth:       true,
@@ -420,7 +420,7 @@ type Capabilities struct {
 	// AuthMethods lists the authentication methods supported by this provider.
 	// Common values include:
 	//   - "api_key": API key/token authentication
-	//   - "basic": Username/password authentication  
+	//   - "basic": Username/password authentication
 	//   - "oauth2": OAuth2 flow
 	//   - "iam": Cloud IAM roles
 	//   - "certificate": Client certificate authentication
@@ -445,7 +445,7 @@ type Capabilities struct {
 type NotFoundError struct {
 	// Provider is the name of the provider where the secret was not found.
 	Provider string
-	
+
 	// Key is the secret identifier that could not be found.
 	Key string
 }
@@ -474,7 +474,7 @@ func (e NotFoundError) Error() string {
 type AuthError struct {
 	// Provider is the name of the provider that failed authentication.
 	Provider string
-	
+
 	// Message provides details about the authentication failure.
 	Message string
 }
@@ -501,9 +501,9 @@ func (e AuthError) Error() string {
 //
 // Example implementation:
 //
-//	func (p *MyProvider) CreateNewVersion(ctx context.Context, ref Reference, 
+//	func (p *MyProvider) CreateNewVersion(ctx context.Context, ref Reference,
 //	    newValue []byte, meta map[string]string) (string, error) {
-//	    
+//
 //	    version, err := p.client.CreateSecretVersion(ref.Key, newValue, meta)
 //	    if err != nil {
 //	        return "", fmt.Errorf("failed to create new version: %w", err)
@@ -543,7 +543,7 @@ type Rotator interface {
 	//	}
 	//	log.Printf("Created new version: %s", version)
 	CreateNewVersion(ctx context.Context, ref Reference, newValue []byte, meta map[string]string) (string, error)
-	
+
 	// DeprecateVersion marks an old version as deprecated, disabled, or deleted.
 	//
 	// This method is called during rotation cleanup to remove or disable old
@@ -554,7 +554,7 @@ type Rotator interface {
 	//   - Some may disable it but retain it for audit purposes
 	//
 	// Parameters:
-	//   - ctx: Context for cancellation and timeouts  
+	//   - ctx: Context for cancellation and timeouts
 	//   - ref: Reference to the secret
 	//   - version: Specific version to deprecate
 	//
@@ -569,7 +569,7 @@ type Rotator interface {
 	//	    // This might not be fatal - new version is already active
 	//	}
 	DeprecateVersion(ctx context.Context, ref Reference, version string) error
-	
+
 	// GetRotationMetadata returns information about rotation capabilities and constraints.
 	//
 	// This method provides details about what rotation operations are supported
@@ -592,7 +592,7 @@ type Rotator interface {
 	//	    return fmt.Errorf("secret %s does not support rotation", ref.Key)
 	//	}
 	//	if meta.MinValueLength > 0 && len(newValue) < meta.MinValueLength {
-	//	    return fmt.Errorf("new value too short, minimum %d characters", 
+	//	    return fmt.Errorf("new value too short, minimum %d characters",
 	//	        meta.MinValueLength)
 	//	}
 	GetRotationMetadata(ctx context.Context, ref Reference) (RotationMetadata, error)

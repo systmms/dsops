@@ -166,7 +166,7 @@ Use --env to also validate a specific environment configuration.`,
 type ProviderHealth struct {
 	Name         string
 	Type         string
-	Status       string   // healthy, error, checking
+	Status       string // healthy, error, checking
 	Error        string
 	Message      string
 	Capabilities provider.Capabilities
@@ -430,11 +430,11 @@ func checkEnvironment(ctx context.Context, resolver *resolve.Resolver, cfg *conf
 
 // Helper functions
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || 
-		(len(s) > len(substr) && 
-			(s[:len(substr)] == substr || 
-			 s[len(s)-len(substr):] == substr || 
-			 len(s) > len(substr)*2)))
+	return len(s) >= len(substr) && (s == substr ||
+		(len(s) > len(substr) &&
+			(s[:len(substr)] == substr ||
+				s[len(s)-len(substr):] == substr ||
+				len(s) > len(substr)*2)))
 }
 
 // getRegisteredProvider gets a provider from the resolver

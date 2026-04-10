@@ -247,8 +247,8 @@ func (f *FakeDsopsDataRepository) WithStandardRotationPolicy() *FakeDsopsDataRep
 			Description: "Standard 90-day rotation policy",
 		},
 		Spec: struct {
-			Strategy      string                 `yaml:"strategy" json:"strategy"`
-			Schedule      string                 `yaml:"schedule,omitempty" json:"schedule,omitempty"`
+			Strategy      string                   `yaml:"strategy" json:"strategy"`
+			Schedule      string                   `yaml:"schedule,omitempty" json:"schedule,omitempty"`
 			Verification  *dsopsdata.Verification  `yaml:"verification,omitempty" json:"verification,omitempty"`
 			Cutover       *dsopsdata.Cutover       `yaml:"cutover,omitempty" json:"cutover,omitempty"`
 			Notifications *dsopsdata.Notifications `yaml:"notifications,omitempty" json:"notifications,omitempty"`
@@ -297,13 +297,13 @@ func (f *FakeDsopsDataRepository) WithApplicationPrincipal(name string) *FakeDso
 			},
 		},
 		Spec: struct {
-			Type        string                         `yaml:"type" json:"type"`
-			Email       string                         `yaml:"email,omitempty" json:"email,omitempty"`
-			Team        string                         `yaml:"team,omitempty" json:"team,omitempty"`
-			Environment string                         `yaml:"environment,omitempty" json:"environment,omitempty"`
+			Type        string                          `yaml:"type" json:"type"`
+			Email       string                          `yaml:"email,omitempty" json:"email,omitempty"`
+			Team        string                          `yaml:"team,omitempty" json:"team,omitempty"`
+			Environment string                          `yaml:"environment,omitempty" json:"environment,omitempty"`
 			Permissions *dsopsdata.PrincipalPermissions `yaml:"permissions,omitempty" json:"permissions,omitempty"`
-			Contact     *dsopsdata.PrincipalContact    `yaml:"contact,omitempty" json:"contact,omitempty"`
-			Metadata    map[string]interface{}         `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+			Contact     *dsopsdata.PrincipalContact     `yaml:"contact,omitempty" json:"contact,omitempty"`
+			Metadata    map[string]interface{}          `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 		}{
 			Type:        "service-account",
 			Team:        "platform",
@@ -337,10 +337,10 @@ func (f *FakeDsopsDataRepository) WithServiceInstance(serviceType, id, endpoint 
 			Tags:        []string{"test", "production"},
 		},
 		Spec: struct {
-			Endpoint        string                        `yaml:"endpoint" json:"endpoint"`
-			Auth            string                        `yaml:"auth" json:"auth"`
+			Endpoint        string                         `yaml:"endpoint" json:"endpoint"`
+			Auth            string                         `yaml:"auth" json:"auth"`
 			CredentialKinds []dsopsdata.InstanceCredential `yaml:"credentialKinds" json:"credentialKinds"`
-			Config          map[string]interface{}        `yaml:"config,omitempty" json:"config,omitempty"`
+			Config          map[string]interface{}         `yaml:"config,omitempty" json:"config,omitempty"`
 		}{
 			Endpoint: endpoint,
 			Auth:     "password",

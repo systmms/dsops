@@ -29,13 +29,13 @@ func New(logger *logging.Logger) *Executor {
 
 // ExecOptions configures command execution
 type ExecOptions struct {
-	Command           []string                       // Command and arguments to run
-	Environment       map[string]string              // Plaintext environment (for backward compat + display)
+	Command           []string                        // Command and arguments to run
+	Environment       map[string]string               // Plaintext environment (for backward compat + display)
 	SecureEnvironment map[string]*secure.SecureBuffer // Secure environment (preferred for execution)
-	AllowOverride     bool                           // Allow existing env vars to override dsops values
-	PrintVars         bool                           // Print resolved variables (names only, values masked)
-	WorkingDir        string                         // Working directory for the command
-	Timeout           int                            // Timeout in seconds (0 for no timeout)
+	AllowOverride     bool                            // Allow existing env vars to override dsops values
+	PrintVars         bool                            // Print resolved variables (names only, values masked)
+	WorkingDir        string                          // Working directory for the command
+	Timeout           int                             // Timeout in seconds (0 for no timeout)
 }
 
 // Exec runs a command with the provided environment variables
@@ -246,7 +246,7 @@ func (e *Executor) printEnvironment(environment map[string]string) {
 	}
 
 	fmt.Printf("Resolved %d environment variables:\n", len(environment))
-	
+
 	// Sort keys for consistent output
 	keys := make([]string, 0, len(environment))
 	for key := range environment {
@@ -267,17 +267,17 @@ func maskValue(value string) string {
 	if len(value) == 0 {
 		return "(empty)"
 	}
-	
+
 	// Show first and last characters for very short values
 	if len(value) <= 3 {
 		return strings.Repeat("*", len(value))
 	}
-	
+
 	// Show first 2 and last 1 characters for longer values
 	if len(value) <= 8 {
 		return value[:1] + strings.Repeat("*", len(value)-2) + value[len(value)-1:]
 	}
-	
+
 	// For long values, show first 3 and last 2 with asterisks in between
 	return value[:3] + strings.Repeat("*", 8) + value[len(value)-2:]
 }
@@ -292,7 +292,7 @@ func ValidateCommand(command []string) error {
 	}
 
 	cmdName := command[0]
-	
+
 	// Check if command exists in PATH
 	if _, err := exec.LookPath(cmdName); err != nil {
 		return dserrors.WrapCommandNotFound(cmdName, err)
@@ -304,7 +304,7 @@ func ValidateCommand(command []string) error {
 		"rm", "rmdir", "del", "format", "fdisk",
 		"dd", "mkfs", "parted", "shutdown", "reboot",
 	}
-	
+
 	for _, dangerous := range dangerousCommands {
 		if cmdName == dangerous || strings.HasSuffix(cmdName, "/"+dangerous) {
 			return dserrors.UserError{

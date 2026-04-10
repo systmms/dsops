@@ -274,8 +274,8 @@ func TestBitwardenExtractField(t *testing.T) {
 			errorContains: "field 'nonexistent' not found",
 		},
 		{
-			name: "uri on item without login",
-			item: &BitwardenItem{Name: "no-login"},
+			name:          "uri on item without login",
+			item:          &BitwardenItem{Name: "no-login"},
 			field:         "uri0",
 			expectError:   true,
 			errorContains: "field 'uri0' not found",

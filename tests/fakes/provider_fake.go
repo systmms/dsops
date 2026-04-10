@@ -33,8 +33,8 @@ type FakeProvider struct {
 	capabilities provider.Capabilities
 
 	// Test data storage
-	secrets  map[string]provider.SecretValue  // key -> secret value
-	metadata map[string]provider.Metadata     // key -> metadata
+	secrets  map[string]provider.SecretValue // key -> secret value
+	metadata map[string]provider.Metadata    // key -> metadata
 
 	// Behavior control
 	failOn       map[string]error // key -> error to return

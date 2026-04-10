@@ -45,13 +45,13 @@ func (w *WebhookRotator) SupportsSecret(ctx context.Context, secret SecretInfo) 
 
 // WebhookRequest represents the request sent to the webhook
 type WebhookRequest struct {
-	Action       string                 `json:"action"`
-	SecretInfo   SecretInfo             `json:"secret_info"`
-	DryRun       bool                   `json:"dry_run"`
-	Force        bool                   `json:"force"`
-	NewValue     *NewSecretValue        `json:"new_value,omitempty"`
-	Config       map[string]interface{} `json:"config,omitempty"`
-	Timestamp    time.Time              `json:"timestamp"`
+	Action     string                 `json:"action"`
+	SecretInfo SecretInfo             `json:"secret_info"`
+	DryRun     bool                   `json:"dry_run"`
+	Force      bool                   `json:"force"`
+	NewValue   *NewSecretValue        `json:"new_value,omitempty"`
+	Config     map[string]interface{} `json:"config,omitempty"`
+	Timestamp  time.Time              `json:"timestamp"`
 }
 
 // WebhookResponse represents the expected response from the webhook
@@ -83,10 +83,10 @@ func (w *WebhookRotator) Rotate(ctx context.Context, request RotationRequest) (*
 	// Get webhook URL from metadata or config (enhanced with service instance data)
 	var webhookURL string
 	var ok bool
-	
+
 	// First try legacy webhook_url in metadata
 	webhookURL, ok = request.Secret.Metadata["webhook_url"]
-	
+
 	// Then try endpoint from service instance config
 	if !ok && request.Config != nil {
 		if endpoint, exists := request.Config["endpoint"]; exists {
@@ -97,7 +97,7 @@ func (w *WebhookRotator) Rotate(ctx context.Context, request RotationRequest) (*
 			}
 		}
 	}
-	
+
 	if !ok {
 		return &RotationResult{
 			Secret:     request.Secret,
@@ -198,7 +198,7 @@ func (w *WebhookRotator) Verify(ctx context.Context, request VerificationRequest
 	w.logger.Debug("Verifying via webhook for %s", logging.Secret(request.Secret.Key))
 
 	webhookReq := WebhookRequest{
-		Action: "verify",
+		Action:     "verify",
 		SecretInfo: request.Secret,
 		Config: map[string]interface{}{
 			"new_secret_ref": request.NewSecretRef,
@@ -229,7 +229,7 @@ func (w *WebhookRotator) Rollback(ctx context.Context, request RollbackRequest) 
 	w.logger.Info("Rolling back via webhook for %s", logging.Secret(request.Secret.Key))
 
 	webhookReq := WebhookRequest{
-		Action: "rollback",
+		Action:     "rollback",
 		SecretInfo: request.Secret,
 		Config: map[string]interface{}{
 			"old_secret_ref": request.OldSecretRef,
@@ -336,7 +336,7 @@ func (w *WebhookRotator) callWebhook(ctx context.Context, url string, request We
 	if authHeader, ok := request.SecretInfo.Metadata["webhook_auth_header"]; ok {
 		httpReq.Header.Set("Authorization", authHeader)
 	}
-	
+
 	// Add auth from service instance config (enhanced support)
 	if request.Config != nil {
 		if auth, exists := request.Config["auth"]; exists {
@@ -346,7 +346,7 @@ func (w *WebhookRotator) callWebhook(ctx context.Context, url string, request We
 				w.logger.Debug("Using service instance auth for webhook request")
 			}
 		}
-		
+
 		// Support additional headers from config
 		if headers, exists := request.Config["headers"]; exists {
 			if headersMap, isMap := headers.(map[string]interface{}); isMap {

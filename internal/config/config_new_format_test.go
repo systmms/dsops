@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/systmms/dsops/internal/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/systmms/dsops/internal/logging"
 )
 
 func TestDefinition_Load(t *testing.T) {
@@ -60,14 +60,14 @@ envs:
 	// Test Definition parsing
 	require.NotNil(t, config.Definition)
 	assert.Equal(t, 0, config.Definition.Version)
-	
+
 	// Test secret stores
 	assert.Len(t, config.Definition.SecretStores, 2)
-	
+
 	bitwardenStore, err := config.GetSecretStore("bitwarden")
 	require.NoError(t, err)
 	assert.Equal(t, "bitwarden", bitwardenStore.Type)
-	
+
 	vaultStore, err := config.GetSecretStore("vault")
 	require.NoError(t, err)
 	assert.Equal(t, "vault", vaultStore.Type)
@@ -76,7 +76,7 @@ envs:
 
 	// Test services
 	assert.Len(t, config.Definition.Services, 1)
-	
+
 	postgresService, err := config.GetService("postgres-prod")
 	require.NoError(t, err)
 	assert.Equal(t, "postgres", postgresService.Type)
@@ -84,16 +84,16 @@ envs:
 
 	// Test environments
 	assert.Len(t, config.Definition.Envs, 1)
-	
+
 	devEnv := config.Definition.Envs["development"]
 	assert.Len(t, devEnv, 3)
-	
+
 	// Test store reference
 	dbPassword := devEnv["DATABASE_PASSWORD"]
 	require.NotNil(t, dbPassword.From)
 	assert.True(t, dbPassword.From.IsStoreReference())
 	assert.Equal(t, "store://bitwarden/Platform/Database#password", dbPassword.From.Store)
-	
+
 	// Test literal value
 	nodeEnv := devEnv["NODE_ENV"]
 	assert.Equal(t, "development", nodeEnv.Literal)
@@ -102,11 +102,11 @@ envs:
 	bitwardenProvider, err := config.GetProvider("bitwarden")
 	require.NoError(t, err)
 	assert.Equal(t, "bitwarden", bitwardenProvider.Type)
-	
+
 	postgresProvider, err := config.GetProvider("postgres-prod")
 	require.NoError(t, err)
 	assert.Equal(t, "postgres", postgresProvider.Type)
-	
+
 	env, err := config.GetEnvironment("development")
 	require.NoError(t, err)
 	assert.Len(t, env, 3)
@@ -156,7 +156,7 @@ func TestReference_ToSecretRef(t *testing.T) {
 	ref := Reference{
 		Store: "store://bitwarden/Platform/Database#password?version=latest",
 	}
-	
+
 	secretRef, err := ref.ToSecretRef()
 	require.NoError(t, err)
 	assert.Equal(t, "bitwarden", secretRef.Store)
@@ -170,7 +170,7 @@ func TestReference_ToSecretRef(t *testing.T) {
 		Key:      "secret/data/mykey",
 		Version:  "v1",
 	}
-	
+
 	legacySecretRef, err := legacyRef.ToSecretRef()
 	require.NoError(t, err)
 	assert.Equal(t, "vault", legacySecretRef.Store)
@@ -181,7 +181,7 @@ func TestReference_ToSecretRef(t *testing.T) {
 	serviceRef := Reference{
 		Service: "svc://postgres/prod-db",
 	}
-	
+
 	_, err = serviceRef.ToSecretRef()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not a secret store reference")

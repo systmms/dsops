@@ -31,7 +31,7 @@ func (r *Renderer) base64Decode(s string) (string, error) {
 func (r *Renderer) indent(s, prefix string) string {
 	lines := strings.Split(s, "\n")
 	result := make([]string, len(lines))
-	
+
 	for i, line := range lines {
 		if line != "" || i < len(lines)-1 {
 			result[i] = prefix + line
@@ -39,7 +39,7 @@ func (r *Renderer) indent(s, prefix string) string {
 			result[i] = line // Don't indent empty last line
 		}
 	}
-	
+
 	return strings.Join(result, "\n")
 }
 

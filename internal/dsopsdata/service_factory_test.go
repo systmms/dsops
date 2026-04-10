@@ -344,7 +344,7 @@ func TestDataDrivenService_Capabilities(t *testing.T) {
 
 	caps := svc.Capabilities()
 
-	assert.Equal(t, 2, caps.MaxActiveKeys) // From maxActive constraint
+	assert.Equal(t, 2, caps.MaxActiveKeys)  // From maxActive constraint
 	assert.True(t, caps.SupportsExpiration) // Has TTL
 	assert.Contains(t, caps.SupportedStrategies, "two-key")
 	assert.Contains(t, caps.SupportedStrategies, "overlap")

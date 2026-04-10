@@ -224,11 +224,11 @@ func TestAWSSSMParameterStoreIntegration(t *testing.T) {
 	t.Run("hierarchical_parameters", func(t *testing.T) {
 		// Test hierarchical parameter paths
 		parameters := map[string]string{
-			"/app/prod/database/host":     "prod-db.example.com",
-			"/app/prod/database/port":     "5432",
-			"/app/dev/database/host":      "dev-db.example.com",
-			"/app/dev/database/port":      "5433",
-			"/app/shared/api_endpoint":    "https://api.example.com",
+			"/app/prod/database/host":  "prod-db.example.com",
+			"/app/prod/database/port":  "5432",
+			"/app/dev/database/host":   "dev-db.example.com",
+			"/app/dev/database/port":   "5433",
+			"/app/shared/api_endpoint": "https://api.example.com",
 		}
 
 		awsProvider, err := providers.NewAWSSSMProvider("aws-ssm-test", env.LocalStackConfig())
