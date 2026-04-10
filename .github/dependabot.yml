@@ -1,0 +1,86 @@
+version: 2
+
+updates:
+  # Go modules — all dependencies grouped into a single PR
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - dependencies
+      - go
+    groups:
+      all-go-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  # npm — documentation site dependencies
+  - package-ecosystem: npm
+    directory: /docs
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - dependencies
+      - javascript
+    groups:
+      all-npm-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  # GitHub Actions — CI/CD workflow dependencies
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - dependencies
+      - github-actions
+    groups:
+      all-actions:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  # Docker — base image dependencies
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - dependencies
+      - docker
+    groups:
+      all-docker-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch

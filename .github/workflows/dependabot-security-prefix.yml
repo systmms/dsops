@@ -1,0 +1,33 @@
+name: Dependabot Security PR Prefix
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  relabel-security:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rewrite title for security updates
+        if: steps.metadata.outputs.ghsa-id != ''
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          NEW_TITLE="${PR_TITLE/chore(deps)/fix(deps)}"
+          if [ "$NEW_TITLE" != "$PR_TITLE" ]; then
+            gh pr edit "$PR_NUMBER" --title "$NEW_TITLE" --repo "$GH_REPO"
+            echo "Renamed PR title from chore(deps) to fix(deps) for security update (GHSA: ${{ steps.metadata.outputs.ghsa-id }})"
+          fi
