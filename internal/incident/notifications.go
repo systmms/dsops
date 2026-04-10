@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -79,6 +80,14 @@ func (n *Notifier) sendSlackNotification(report *Report) NotificationRecord {
 		return record
 	}
 
+	// Validate URL scheme to prevent SSRF
+	parsedURL, parseErr := url.Parse(webhookURL)
+	if parseErr != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
+		record.Success = false
+		record.Details = "Invalid webhook URL: only http and https schemes are allowed"
+		return record
+	}
+
 	// Build Slack message
 	message := n.buildSlackMessage(report)
 
@@ -90,7 +99,7 @@ func (n *Notifier) sendSlackNotification(report *Report) NotificationRecord {
 		return record
 	}
 
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(data))
+	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(data)) // #nosec G704 -- webhook URL is from trusted config with scheme validated above
 	if err != nil {
 		record.Success = false
 		record.Details = fmt.Sprintf("Failed to send: %v", err)

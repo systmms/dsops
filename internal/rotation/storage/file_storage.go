@@ -227,8 +227,18 @@ func (fs *FileStorage) CleanupOldEntries(olderThan time.Duration) error {
 	historyDir := filepath.Join(fs.baseDir, "history")
 	cutoffTime := time.Now().Add(-olderThan)
 
+	// Use os.Root to scope filesystem operations and prevent symlink TOCTOU
+	root, err := os.OpenRoot(historyDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to open history directory: %w", err)
+	}
+	defer root.Close()
+
 	// Walk through all history directories
-	err := filepath.Walk(historyDir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(historyDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Skip errors
 		}
@@ -242,8 +252,13 @@ func (fs *FileStorage) CleanupOldEntries(olderThan time.Duration) error {
 				timestampStr := filename[:15]
 				if timestamp, err := time.Parse("20060102-150405", timestampStr); err == nil {
 					if timestamp.Before(cutoffTime) {
-						// Delete old file
-						if err := os.Remove(path); err != nil {
+						// Delete old file using root-scoped path
+						relPath, relErr := filepath.Rel(historyDir, path)
+						if relErr != nil {
+							fmt.Fprintf(os.Stderr, "Failed to compute relative path for %s: %v\n", path, relErr)
+							return nil
+						}
+						if err := root.Remove(relPath); err != nil {
 							// Log error but continue
 							fmt.Fprintf(os.Stderr, "Failed to remove old history file %s: %v\n", path, err)
 						}

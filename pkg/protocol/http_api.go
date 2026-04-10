@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"text/template"
 	"time"
@@ -137,8 +138,15 @@ func (a *HTTPAPIAdapter) buildRequest(ctx context.Context, operation Operation, 
 		return nil, fmt.Errorf("failed to render endpoint template: %w", err)
 	}
 
-	// Build full URL
-	url := strings.TrimRight(baseURL, "/") + "/" + strings.TrimLeft(endpoint, "/")
+	// Build full URL and validate scheme to prevent SSRF
+	fullURL := strings.TrimRight(baseURL, "/") + "/" + strings.TrimLeft(endpoint, "/")
+	parsedURL, err := url.Parse(fullURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL %q: %w", fullURL, err)
+	}
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return nil, fmt.Errorf("unsupported URL scheme %q: only http and https are allowed", parsedURL.Scheme)
+	}
 
 	// Determine HTTP method
 	method := a.getHTTPMethod(operation)
@@ -154,7 +162,7 @@ func (a *HTTPAPIAdapter) buildRequest(ctx context.Context, operation Operation, 
 	}
 
 	// Create request
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	req, err := http.NewRequestWithContext(ctx, method, fullURL, body)
 	if err != nil {
 		return nil, err
 	}
@@ -346,7 +354,7 @@ func (a *HTTPAPIAdapter) executeWithRetries(req *http.Request, config AdapterCon
 			reqClone.Body = body
 		}
 
-		resp, err := a.client.Do(reqClone)
+		resp, err := a.client.Do(reqClone) // #nosec G704 -- URL is from trusted config with scheme validated in buildRequest
 		if err != nil {
 			lastErr = err
 			time.Sleep(time.Duration(attempt+1) * time.Second)

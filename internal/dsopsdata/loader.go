@@ -235,7 +235,14 @@ func (l *Loader) LoadServiceTypes(ctx context.Context) (map[string]*ServiceType,
 	serviceTypes := make(map[string]*ServiceType)
 	serviceTypesDir := filepath.Join(l.dataDir, "service-types")
 
-	err := filepath.WalkDir(serviceTypesDir, func(path string, d fs.DirEntry, err error) error {
+	// Use os.Root to scope reads and prevent symlink TOCTOU in WalkDir
+	root, err := os.OpenRoot(serviceTypesDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open service types directory: %w", err)
+	}
+	defer root.Close()
+
+	err = filepath.WalkDir(serviceTypesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -244,7 +251,11 @@ func (l *Loader) LoadServiceTypes(ctx context.Context) (map[string]*ServiceType,
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		relPath, relErr := filepath.Rel(serviceTypesDir, path)
+		if relErr != nil {
+			return fmt.Errorf("failed to compute relative path for %s: %w", path, relErr)
+		}
+		data, err := root.ReadFile(relPath)
 		if err != nil {
 			return fmt.Errorf("failed to read service type file %s: %w", path, err)
 		}
@@ -279,7 +290,14 @@ func (l *Loader) LoadServiceInstances(ctx context.Context) (map[string]*ServiceI
 	instances := make(map[string]*ServiceInstance)
 	instancesDir := filepath.Join(l.dataDir, "service-instances")
 
-	err := filepath.WalkDir(instancesDir, func(path string, d fs.DirEntry, err error) error {
+	// Use os.Root to scope reads and prevent symlink TOCTOU in WalkDir
+	root, err := os.OpenRoot(instancesDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open service instances directory: %w", err)
+	}
+	defer root.Close()
+
+	err = filepath.WalkDir(instancesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -288,7 +306,11 @@ func (l *Loader) LoadServiceInstances(ctx context.Context) (map[string]*ServiceI
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		relPath, relErr := filepath.Rel(instancesDir, path)
+		if relErr != nil {
+			return fmt.Errorf("failed to compute relative path for %s: %w", path, relErr)
+		}
+		data, err := root.ReadFile(relPath)
 		if err != nil {
 			return fmt.Errorf("failed to read service instance file %s: %w", path, err)
 		}
@@ -324,7 +346,14 @@ func (l *Loader) LoadRotationPolicies(ctx context.Context) (map[string]*Rotation
 	policies := make(map[string]*RotationPolicy)
 	policiesDir := filepath.Join(l.dataDir, "rotation-policies")
 
-	err := filepath.WalkDir(policiesDir, func(path string, d fs.DirEntry, err error) error {
+	// Use os.Root to scope reads and prevent symlink TOCTOU in WalkDir
+	root, err := os.OpenRoot(policiesDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open rotation policies directory: %w", err)
+	}
+	defer root.Close()
+
+	err = filepath.WalkDir(policiesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -333,7 +362,11 @@ func (l *Loader) LoadRotationPolicies(ctx context.Context) (map[string]*Rotation
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		relPath, relErr := filepath.Rel(policiesDir, path)
+		if relErr != nil {
+			return fmt.Errorf("failed to compute relative path for %s: %w", path, relErr)
+		}
+		data, err := root.ReadFile(relPath)
 		if err != nil {
 			return fmt.Errorf("failed to read rotation policy file %s: %w", path, err)
 		}
@@ -368,7 +401,14 @@ func (l *Loader) LoadPrincipals(ctx context.Context) (map[string]*Principal, err
 	principals := make(map[string]*Principal)
 	principalsDir := filepath.Join(l.dataDir, "principals")
 
-	err := filepath.WalkDir(principalsDir, func(path string, d fs.DirEntry, err error) error {
+	// Use os.Root to scope reads and prevent symlink TOCTOU in WalkDir
+	root, err := os.OpenRoot(principalsDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open principals directory: %w", err)
+	}
+	defer root.Close()
+
+	err = filepath.WalkDir(principalsDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -377,7 +417,11 @@ func (l *Loader) LoadPrincipals(ctx context.Context) (map[string]*Principal, err
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		relPath, relErr := filepath.Rel(principalsDir, path)
+		if relErr != nil {
+			return fmt.Errorf("failed to compute relative path for %s: %w", path, relErr)
+		}
+		data, err := root.ReadFile(relPath)
 		if err != nil {
 			return fmt.Errorf("failed to read principal file %s: %w", path, err)
 		}
