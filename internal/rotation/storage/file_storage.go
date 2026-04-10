@@ -235,7 +235,7 @@ func (fs *FileStorage) CleanupOldEntries(olderThan time.Duration) error {
 		}
 		return fmt.Errorf("failed to open history directory: %w", err)
 	}
-	defer root.Close()
+	defer func() { _ = root.Close() }()
 
 	// Walk through all history directories
 	err = filepath.Walk(historyDir, func(path string, info os.FileInfo, err error) error {

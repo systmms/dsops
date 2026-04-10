@@ -240,7 +240,7 @@ func (l *Loader) LoadServiceTypes(ctx context.Context) (map[string]*ServiceType,
 	if err != nil {
 		return nil, fmt.Errorf("failed to open service types directory: %w", err)
 	}
-	defer root.Close()
+	defer func() { _ = root.Close() }()
 
 	err = filepath.WalkDir(serviceTypesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -295,7 +295,7 @@ func (l *Loader) LoadServiceInstances(ctx context.Context) (map[string]*ServiceI
 	if err != nil {
 		return nil, fmt.Errorf("failed to open service instances directory: %w", err)
 	}
-	defer root.Close()
+	defer func() { _ = root.Close() }()
 
 	err = filepath.WalkDir(instancesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -351,7 +351,7 @@ func (l *Loader) LoadRotationPolicies(ctx context.Context) (map[string]*Rotation
 	if err != nil {
 		return nil, fmt.Errorf("failed to open rotation policies directory: %w", err)
 	}
-	defer root.Close()
+	defer func() { _ = root.Close() }()
 
 	err = filepath.WalkDir(policiesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -406,7 +406,7 @@ func (l *Loader) LoadPrincipals(ctx context.Context) (map[string]*Principal, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to open principals directory: %w", err)
 	}
-	defer root.Close()
+	defer func() { _ = root.Close() }()
 
 	err = filepath.WalkDir(principalsDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
