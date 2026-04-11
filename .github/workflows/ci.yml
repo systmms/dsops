@@ -86,7 +86,7 @@ jobs:
         run: go test -short -race -coverprofile=coverage-unit.txt -covermode=atomic ./...
 
       - name: Upload unit coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-unit
           path: coverage-unit.txt
@@ -125,7 +125,7 @@ jobs:
           MONGODB_URI: mongodb://test:test-password@127.0.0.1:27017
 
       - name: Upload integration coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-integration
           path: coverage-integration.txt
