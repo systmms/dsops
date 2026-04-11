@@ -34,7 +34,7 @@ services:
 
   # LocalStack - AWS services emulation (Secrets Manager, SSM)
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:4.3
     ports:
       - "0:4566"  # Dynamic port allocation for parallel test support
     environment:
@@ -45,10 +45,10 @@ services:
       - "./localstack-init:/etc/localstack/init/ready.d"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
-      interval: 2s
-      timeout: 1s
-      retries: 15
-      start_period: 10s
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 15s
 
   # MongoDB - NoSQL database for rotation testing
   mongodb:

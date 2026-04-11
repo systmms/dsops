@@ -1,13 +1,18 @@
 package secure
 
+// Note: Tests in this file intentionally do NOT use t.Parallel().
+// memguard v0.23.0 uses a global mutex (keyMtx) protecting a global Coffer
+// with a background rekeying goroutine. When many parallel test goroutines
+// concurrently call NewEnclave() and Open(), they exhaust the mlock resource
+// limit, creating a deadlock where goroutines blocked on memory allocation
+// cannot proceed. Running tests sequentially avoids this.
+
 import (
 	"bytes"
 	"testing"
 )
 
 func TestNewSecureBuffer(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name    string
 		data    []byte
@@ -32,8 +37,6 @@ func TestNewSecureBuffer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			buf, err := NewSecureBuffer(tt.data)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewSecureBuffer() error = %v, wantErr %v", err, tt.wantErr)
@@ -52,11 +55,7 @@ func TestNewSecureBuffer(t *testing.T) {
 }
 
 func TestNewSecureBufferFromString(t *testing.T) {
-	t.Parallel()
-
 	t.Run("creates buffer from string", func(t *testing.T) {
-		t.Parallel()
-
 		input := "my-secret-password"
 		buf, err := NewSecureBufferFromString(input)
 		if err != nil {
@@ -77,8 +76,6 @@ func TestNewSecureBufferFromString(t *testing.T) {
 	})
 
 	t.Run("handles empty string", func(t *testing.T) {
-		t.Parallel()
-
 		// Empty strings can be created but should not be opened
 		// (memguard returns nil enclave for empty data)
 		buf, err := NewSecureBufferFromString("")
@@ -90,8 +87,6 @@ func TestNewSecureBufferFromString(t *testing.T) {
 	})
 
 	t.Run("handles unicode string", func(t *testing.T) {
-		t.Parallel()
-
 		input := "секрет-пароль-密码"
 		buf, err := NewSecureBufferFromString(input)
 		if err != nil {
@@ -112,8 +107,6 @@ func TestNewSecureBufferFromString(t *testing.T) {
 }
 
 func TestSecureBuffer_Open(t *testing.T) {
-	t.Parallel()
-
 	// Note: memguard may zero the source buffer, so we need a copy for comparison
 	secretStr := "super-secret-data"
 	secret := []byte(secretStr)
@@ -139,8 +132,6 @@ func TestSecureBuffer_Open(t *testing.T) {
 }
 
 func TestSecureBuffer_MultipleOpens(t *testing.T) {
-	t.Parallel()
-
 	secretStr := "test-secret"
 	secret := []byte(secretStr)
 	expected := []byte(secretStr) // Separate copy for comparison
@@ -165,8 +156,6 @@ func TestSecureBuffer_MultipleOpens(t *testing.T) {
 }
 
 func TestSecureBuffer_Destroy(t *testing.T) {
-	t.Parallel()
-
 	secret := []byte("secret-to-destroy")
 	buf, err := NewSecureBuffer(secret)
 	if err != nil {
@@ -181,8 +170,6 @@ func TestSecureBuffer_Destroy(t *testing.T) {
 }
 
 func TestSecureBuffer_OpenAfterDestroy(t *testing.T) {
-	t.Parallel()
-
 	secret := []byte("secret-to-destroy")
 	buf, err := NewSecureBuffer(secret)
 	if err != nil {
@@ -202,8 +189,6 @@ func TestSecureBuffer_OpenAfterDestroy(t *testing.T) {
 }
 
 func TestSecureBuffer_DestroyWipesMemory(t *testing.T) {
-	t.Parallel()
-
 	secretStr := "sensitive-data-to-wipe"
 	secret := []byte(secretStr)
 	expected := []byte(secretStr) // Separate copy for comparison
@@ -235,8 +220,6 @@ func TestSecureBuffer_DestroyWipesMemory(t *testing.T) {
 }
 
 func TestNewSecureBuffer_GracefulDegradation(t *testing.T) {
-	t.Parallel()
-
 	// This test verifies that NewSecureBuffer works even if mlock
 	// might fail (e.g., due to RLIMIT_MEMLOCK limits). The implementation
 	// should gracefully degrade rather than fail.
@@ -265,8 +248,6 @@ func TestNewSecureBuffer_GracefulDegradation(t *testing.T) {
 }
 
 func TestSecureBuffer_ConcurrentAccess(t *testing.T) {
-	t.Parallel()
-
 	secretStr := "concurrent-secret"
 	secret := []byte(secretStr)
 	expected := []byte(secretStr) // Separate copy for comparison

@@ -120,8 +120,8 @@ func StartDockerEnv(t *testing.T, services []string) *DockerTestEnv {
 		env.Stop()
 	})
 
-	// Wait for services to be healthy
-	if err := env.WaitForHealthy(60 * time.Second); err != nil {
+	// Wait for services to be healthy (120s to allow for heavy containers like LocalStack)
+	if err := env.WaitForHealthy(120 * time.Second); err != nil {
 		t.Fatalf("Docker services failed to become healthy: %v", err)
 	}
 

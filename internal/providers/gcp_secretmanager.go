@@ -165,7 +165,7 @@ func createGCPSecretManagerClient(config GCPSecretManagerConfig) (*secretmanager
 			config.ServiceAccountKeyPath = filepath.Join(home, config.ServiceAccountKeyPath[2:])
 		}
 
-		clientOptions = append(clientOptions, option.WithCredentialsFile(config.ServiceAccountKeyPath))
+		clientOptions = append(clientOptions, option.WithAuthCredentialsFile(option.ServiceAccount, config.ServiceAccountKeyPath))
 	}
 
 	// Service account impersonation
