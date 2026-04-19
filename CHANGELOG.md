@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6](https://github.com/systmms/dsops/compare/v0.2.5...v0.2.6) (2026-04-19)
+
+
+### Bug Fixes
+
+* **ci:** resolve test deadlock, deprecated API, and govulncheck failures ([#37](https://github.com/systmms/dsops/issues/37)) ([75f916a](https://github.com/systmms/dsops/commit/75f916a40ffb18cbc54476982385f04fd9f17223))
+
 ## [0.2.5](https://github.com/systmms/dsops/compare/v0.2.4...v0.2.5) (2026-01-11)
 
 
