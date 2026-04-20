@@ -148,7 +148,7 @@ jobs:
             ./dist/*.pem
 
       - name: Attest build provenance (checksums)
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: ./dist/dsops_*_checksums.txt
 
