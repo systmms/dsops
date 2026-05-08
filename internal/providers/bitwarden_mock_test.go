@@ -643,6 +643,154 @@ func TestBitwardenProviderWithMockExecutor_NoteItem(t *testing.T) {
 	})
 }
 
+func TestBitwardenProviderWithMockExecutor_SyncOnce(t *testing.T) {
+	t.Parallel()
+
+	itemJSON := `{
+		"id": "item-sync",
+		"name": "Sync Item",
+		"organizationId": "",
+		"folderId": "",
+		"type": 1,
+		"login": {"username": "u", "password": "syncpass", "totp": "", "uris": []},
+		"fields": [],
+		"notes": "",
+		"revisionDate": "2024-01-01T00:00:00Z"
+	}`
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw sync", `{"object": "message", "title": "Sync"}`)
+	mockExec.AddJSONResponse("bw get item item-sync", itemJSON)
+
+	cfg := map[string]interface{}{"sync": true}
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", cfg, mockExec)
+
+	for i := 0; i < 3; i++ {
+		_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-sync.password"})
+		require.NoError(t, err)
+	}
+
+	syncCalls := 0
+	for _, c := range mockExec.GetCalls("bw") {
+		if len(c.Args) > 0 && c.Args[0] == "sync" {
+			syncCalls++
+		}
+	}
+	assert.Equal(t, 1, syncCalls, "bw sync should run exactly once across multiple Resolve calls")
+}
+
+func TestBitwardenProviderWithMockExecutor_SyncDisabled(t *testing.T) {
+	t.Parallel()
+
+	itemJSON := `{
+		"id": "x",
+		"name": "x",
+		"type": 1,
+		"login": {"username": "", "password": "p", "totp": "", "uris": []},
+		"fields": [],
+		"notes": "",
+		"revisionDate": "2024-01-01T00:00:00Z"
+	}`
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw get item x", itemJSON)
+
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec)
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "x"})
+	require.NoError(t, err)
+
+	for _, c := range mockExec.GetCalls("bw") {
+		require.NotEmpty(t, c.Args)
+		assert.NotEqual(t, "sync", c.Args[0], "bw sync should not run when sync config is false")
+	}
+}
+
+func TestBitwardenProviderWithMockExecutor_HeadlessLogin(t *testing.T) {
+	restore := providers.SetBwLookPathForTesting(func() error { return nil })
+	defer restore()
+
+	t.Setenv("BW_CLIENTID", "fake-client-id")
+	t.Setenv("BW_CLIENTSECRET", "fake-client-secret")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddResponse("bw status", testutil.MockResponse{
+		Stdout: []byte(`{"status":"unauthenticated"}`),
+	})
+	mockExec.AddResponse("bw login --apikey", testutil.MockResponse{
+		Stdout: []byte(`You are logged in!`),
+	})
+
+	cfg := map[string]interface{}{"headless": true}
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", cfg, mockExec)
+
+	// Status returns unauthenticated for both calls in this test, so the
+	// final state is still unauthenticated and Validate must report that.
+	err := p.Validate(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not logged in")
+
+	// But bw login --apikey must have been attempted exactly once.
+	loginCalls := 0
+	for _, c := range mockExec.GetCalls("bw") {
+		if len(c.Args) >= 2 && c.Args[0] == "login" && c.Args[1] == "--apikey" {
+			loginCalls++
+		}
+	}
+	assert.Equal(t, 1, loginCalls, "bw login --apikey should be invoked once in headless mode")
+}
+
+func TestBitwardenProviderWithMockExecutor_HeadlessLoginMissingEnv(t *testing.T) {
+	restore := providers.SetBwLookPathForTesting(func() error { return nil })
+	defer restore()
+
+	t.Setenv("BW_CLIENTID", "")
+	t.Setenv("BW_CLIENTSECRET", "")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddResponse("bw status", testutil.MockResponse{
+		Stdout: []byte(`{"status":"unauthenticated"}`),
+	})
+
+	cfg := map[string]interface{}{"headless": true}
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", cfg, mockExec)
+
+	err := p.Validate(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "BW_CLIENTID")
+}
+
+func TestBitwardenProviderWithMockExecutor_HeadlessUnlock(t *testing.T) {
+	restore := providers.SetBwLookPathForTesting(func() error { return nil })
+	defer restore()
+
+	t.Setenv("BW_PASSWORD", "secret-master-password")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddResponse("bw status", testutil.MockResponse{
+		Stdout: []byte(`{"status":"locked"}`),
+	})
+	mockExec.AddResponse("bw unlock --passwordenv BW_PASSWORD --raw", testutil.MockResponse{
+		Stdout: []byte("captured-session-token-abc123\n"),
+	})
+
+	cfg := map[string]interface{}{"headless": true}
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", cfg, mockExec)
+
+	// Validate will: see locked, call unlock, re-check status (still locked
+	// in our mock since the same response is replayed), and then surface the
+	// locked AuthError. The contract under test is that bw unlock was
+	// attempted with the expected args.
+	_ = p.Validate(context.Background())
+
+	unlockCalls := 0
+	for _, c := range mockExec.GetCalls("bw") {
+		if len(c.Args) >= 4 && c.Args[0] == "unlock" && c.Args[1] == "--passwordenv" && c.Args[2] == "BW_PASSWORD" && c.Args[3] == "--raw" {
+			unlockCalls++
+		}
+	}
+	assert.Equal(t, 1, unlockCalls, "bw unlock --passwordenv BW_PASSWORD --raw should be invoked once")
+}
+
 func TestBitwardenProviderConstructors(t *testing.T) {
 	t.Parallel()
 

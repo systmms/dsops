@@ -7,6 +7,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// SetBwLookPathForTesting overrides the bw lookup function. Returns a restore
+// function the caller should defer.
+func SetBwLookPathForTesting(fn func() error) (restore func()) {
+	prev := bwLookPath
+	bwLookPath = fn
+	return func() { bwLookPath = prev }
+}
+
 // TestBitwardenParseKey tests the parseKey function for various input formats.
 func TestBitwardenParseKey(t *testing.T) {
 	bw := &BitwardenProvider{name: "test"}

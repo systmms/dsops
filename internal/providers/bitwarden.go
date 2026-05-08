@@ -5,20 +5,36 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	pkgexec "github.com/systmms/dsops/pkg/exec"
 	"github.com/systmms/dsops/pkg/provider"
 )
 
+// bwLookPath locates the bw CLI on disk. Overridden in tests to allow
+// mock-executor-based unit tests to run without bw installed.
+var bwLookPath = func() error {
+	_, err := exec.LookPath("bw")
+	return err
+}
+
 // BitwardenProvider implements the provider interface for Bitwarden
 type BitwardenProvider struct {
 	name     string
-	profile  string // Optional profile name
+	profile  string // Optional profile name passed via --session
+	sync     bool   // If true, runs `bw sync` once before the first Resolve/Describe
+	headless bool   // If true, Validate will attempt API-key login + passwordenv unlock
 	executor pkgexec.CommandExecutor
+
+	mu       sync.Mutex // guards session
+	session  string     // captured from `bw unlock --raw` when headless
+	syncOnce sync.Once
+	syncErr  error
 }
 
 // NewBitwardenProvider creates a new Bitwarden provider
@@ -27,12 +43,7 @@ func NewBitwardenProvider(name string, config map[string]interface{}) *Bitwarden
 		name:     name,
 		executor: pkgexec.DefaultExecutor(),
 	}
-
-	// Extract profile from config
-	if profile, ok := config["profile"].(string); ok {
-		bw.profile = profile
-	}
-
+	applyBitwardenConfig(bw, config)
 	return bw
 }
 
@@ -43,13 +54,54 @@ func NewBitwardenProviderWithExecutor(name string, config map[string]interface{}
 		name:     name,
 		executor: executor,
 	}
+	applyBitwardenConfig(bw, config)
+	return bw
+}
 
-	// Extract profile from config
+func applyBitwardenConfig(bw *BitwardenProvider, config map[string]interface{}) {
 	if profile, ok := config["profile"].(string); ok {
 		bw.profile = profile
 	}
+	if v, ok := config["sync"].(bool); ok {
+		bw.sync = v
+	}
+	if v, ok := config["headless"].(bool); ok {
+		bw.headless = v
+	}
+}
 
-	return bw
+// sessionArg returns the value to pass after --session when invoking bw, or
+// the empty string when no session is configured. Headless unlock takes
+// precedence over the profile name.
+func (bw *BitwardenProvider) sessionArg() string {
+	bw.mu.Lock()
+	defer bw.mu.Unlock()
+	if bw.session != "" {
+		return bw.session
+	}
+	return bw.profile
+}
+
+func (bw *BitwardenProvider) appendSessionArg(args []string) []string {
+	if s := bw.sessionArg(); s != "" {
+		return append(args, "--session", s)
+	}
+	return args
+}
+
+// ensureSync runs `bw sync` once per provider lifetime when sync is enabled.
+// Errors are recorded but do not block resolution; a failed sync simply means
+// resolutions may see the previously-cached vault state.
+func (bw *BitwardenProvider) ensureSync(ctx context.Context) {
+	if !bw.sync {
+		return
+	}
+	bw.syncOnce.Do(func() {
+		args := bw.appendSessionArg([]string{"sync"})
+		if _, _, err := bw.executor.Execute(ctx, "bw", args...); err != nil {
+			bw.syncErr = err
+		}
+	})
 }
 
 // Name returns the provider name
@@ -59,6 +111,8 @@ func (bw *BitwardenProvider) Name() string {
 
 // Resolve retrieves a secret from Bitwarden
 func (bw *BitwardenProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
+	bw.ensureSync(ctx)
+
 	// Parse the key format: item-id[.field], item-id.custom.<name>, or item-id.attachment.<filename>
 	itemID, field := bw.parseKey(ref.Key)
 
@@ -124,6 +178,8 @@ func (bw *BitwardenProvider) resolveAttachment(ctx context.Context, itemID, file
 
 // Describe returns metadata about a Bitwarden item
 func (bw *BitwardenProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
+	bw.ensureSync(ctx)
+
 	itemID, _ := bw.parseKey(ref.Key)
 
 	item, err := bw.getItem(ctx, itemID)
@@ -161,48 +217,122 @@ func (bw *BitwardenProvider) Capabilities() provider.Capabilities {
 	}
 }
 
-// Validate checks if Bitwarden CLI is available and authenticated
+// Validate checks if Bitwarden CLI is available and authenticated.
+//
+// When the provider is configured with headless: true, Validate will also
+// attempt to recover from unauthenticated/locked states using API-key login
+// and passwordenv unlock — see headlessLogin and headlessUnlock.
 func (bw *BitwardenProvider) Validate(ctx context.Context) error {
-	// Check if bw CLI is available
-	if _, err := exec.LookPath("bw"); err != nil {
+	if err := bwLookPath(); err != nil {
 		return fmt.Errorf("bitwarden CLI 'bw' not found in PATH. Install from: https://bitwarden.com/help/cli/")
 	}
 
-	// Check authentication status
-	args := []string{"status"}
-	if bw.profile != "" {
-		args = append(args, "--session", bw.profile)
-	}
-
-	output, _, err := bw.executor.Execute(ctx, "bw", args...)
+	status, err := bw.fetchStatus(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to check bitwarden status: %w", err)
+		return err
 	}
 
-	var status BitwardenStatus
-	if err := json.Unmarshal(output, &status); err != nil {
-		return fmt.Errorf("failed to parse bitwarden status: %w", err)
+	if status == "unauthenticated" && bw.headless {
+		if err := bw.headlessLogin(ctx); err != nil {
+			return err
+		}
+		status, err = bw.fetchStatus(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
-	switch status.Status {
+	if status == "locked" && bw.headless {
+		if err := bw.headlessUnlock(ctx); err != nil {
+			return err
+		}
+		status, err = bw.fetchStatus(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch status {
 	case "unauthenticated":
 		return provider.AuthError{
 			Provider: bw.name,
-			Message:  "not logged in. Run: bw login",
+			Message:  "not logged in. Run: bw login (or set headless: true with BW_CLIENTID / BW_CLIENTSECRET)",
 		}
 	case "locked":
 		return provider.AuthError{
 			Provider: bw.name,
-			Message:  "vault is locked. Run: bw unlock",
+			Message:  "vault is locked. Run: bw unlock (or set headless: true with BW_PASSWORD)",
 		}
 	case "unlocked":
 		return nil
 	default:
 		return provider.AuthError{
 			Provider: bw.name,
-			Message:  fmt.Sprintf("unknown status: %s", status.Status),
+			Message:  fmt.Sprintf("unknown status: %s", status),
 		}
 	}
+}
+
+// fetchStatus invokes `bw status` and returns the status string from the
+// resulting JSON, or an error.
+func (bw *BitwardenProvider) fetchStatus(ctx context.Context) (string, error) {
+	args := bw.appendSessionArg([]string{"status"})
+	output, _, err := bw.executor.Execute(ctx, "bw", args...)
+	if err != nil {
+		return "", fmt.Errorf("failed to check bitwarden status: %w", err)
+	}
+	var status BitwardenStatus
+	if err := json.Unmarshal(output, &status); err != nil {
+		return "", fmt.Errorf("failed to parse bitwarden status: %w", err)
+	}
+	return status.Status, nil
+}
+
+// headlessLogin runs `bw login --apikey`. The bw CLI itself reads the client
+// credentials from BW_CLIENTID and BW_CLIENTSECRET in the process environment.
+func (bw *BitwardenProvider) headlessLogin(ctx context.Context) error {
+	if os.Getenv("BW_CLIENTID") == "" || os.Getenv("BW_CLIENTSECRET") == "" {
+		return provider.AuthError{
+			Provider: bw.name,
+			Message:  "headless login requires BW_CLIENTID and BW_CLIENTSECRET env vars",
+		}
+	}
+	if _, _, err := bw.executor.Execute(ctx, "bw", "login", "--apikey"); err != nil {
+		return provider.AuthError{
+			Provider: bw.name,
+			Message:  fmt.Sprintf("bw login --apikey failed: %v", err),
+		}
+	}
+	return nil
+}
+
+// headlessUnlock runs `bw unlock --passwordenv BW_PASSWORD --raw` and stores
+// the resulting session token for use in subsequent calls.
+func (bw *BitwardenProvider) headlessUnlock(ctx context.Context) error {
+	if os.Getenv("BW_PASSWORD") == "" {
+		return provider.AuthError{
+			Provider: bw.name,
+			Message:  "headless unlock requires BW_PASSWORD env var",
+		}
+	}
+	stdout, _, err := bw.executor.Execute(ctx, "bw", "unlock", "--passwordenv", "BW_PASSWORD", "--raw")
+	if err != nil {
+		return provider.AuthError{
+			Provider: bw.name,
+			Message:  fmt.Sprintf("bw unlock failed: %v", err),
+		}
+	}
+	token := strings.TrimSpace(string(stdout))
+	if token == "" {
+		return provider.AuthError{
+			Provider: bw.name,
+			Message:  "bw unlock returned an empty session token",
+		}
+	}
+	bw.mu.Lock()
+	bw.session = token
+	bw.mu.Unlock()
+	return nil
 }
 
 // parseKey parses a Bitwarden key into item ID/name and field.
@@ -260,10 +390,7 @@ func defaultFieldForType(t BitwardenItemType) string {
 
 // getItem retrieves an item from Bitwarden by ID or name
 func (bw *BitwardenProvider) getItem(ctx context.Context, itemID string) (*BitwardenItem, error) {
-	args := []string{"get", "item", itemID}
-	if bw.profile != "" {
-		args = append(args, "--session", bw.profile)
-	}
+	args := bw.appendSessionArg([]string{"get", "item", itemID})
 
 	stdout, stderr, err := bw.executor.Execute(ctx, "bw", args...)
 	if err != nil {
@@ -481,10 +608,7 @@ func (bw *BitwardenProvider) extractSshKeyField(item *BitwardenItem, field strin
 // Uses `bw get attachment <filename> --itemid <id> --raw`; the --raw flag is
 // what makes bw write the attachment bytes to stdout instead of saving to a file.
 func (bw *BitwardenProvider) getAttachment(ctx context.Context, itemID, filename string) ([]byte, error) {
-	args := []string{"get", "attachment", filename, "--itemid", itemID, "--raw"}
-	if bw.profile != "" {
-		args = append(args, "--session", bw.profile)
-	}
+	args := bw.appendSessionArg([]string{"get", "attachment", filename, "--itemid", itemID, "--raw"})
 
 	stdout, stderr, err := bw.executor.Execute(ctx, "bw", args...)
 	if err != nil {

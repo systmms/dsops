@@ -4,7 +4,11 @@ version: 0
 providers:
   bitwarden:
     type: bitwarden
-    # profile: default  # Optional: if you use multiple bw profiles
+    # profile: default  # Optional: passed to bw via --session
+    # sync: true        # Optional: run `bw sync` once before the first Resolve
+    # headless: true    # Optional: in CI/CD, attempt API-key login + passwordenv unlock
+                        #   when set, the bw CLI reads BW_CLIENTID/BW_CLIENTSECRET (login)
+                        #   and BW_PASSWORD (unlock) from the environment
 
 # Environment definitions with Bitwarden secrets
 envs:

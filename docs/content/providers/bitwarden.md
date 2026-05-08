@@ -53,13 +53,44 @@ version: 0
 providers:
   bitwarden:
     type: bitwarden
-    # profile: default  # Optional: if you use multiple profiles
+    # profile: default  # Optional: pass to bw via --session
+    # sync: false       # Optional: if true, run `bw sync` once before first resolve
+    # headless: false   # Optional: if true, attempt API-key login + passwordenv unlock
 
 envs:
   development:
     DATABASE_PASSWORD:
       from: { provider: bitwarden, key: "dev-database.password" }
 ```
+
+### Headless / CI/CD
+
+When `headless: true` is set, dsops will recover from unauthenticated and locked vault states by invoking the bw CLI itself rather than asking the user to run commands manually. Three environment variables control this:
+
+| Env var | Purpose |
+|---|---|
+| `BW_CLIENTID` | Client ID for `bw login --apikey`. Required for headless login from an unauthenticated state. |
+| `BW_CLIENTSECRET` | Client secret for `bw login --apikey`. Required for headless login from an unauthenticated state. |
+| `BW_PASSWORD` | Master password used by `bw unlock --passwordenv BW_PASSWORD --raw`. Required for headless unlock from a locked state. The session token bw returns is captured in-memory and reused for subsequent calls. |
+
+These env vars are read by the bw CLI itself (via `--passwordenv`) or by dsops to gate the headless flow. dsops does not log them.
+
+```yaml
+providers:
+  bitwarden:
+    type: bitwarden
+    headless: true
+    sync: true
+```
+
+```bash
+export BW_CLIENTID="..."
+export BW_CLIENTSECRET="..."
+export BW_PASSWORD="..."
+dsops exec --env production -- ./deploy.sh
+```
+
+When `headless: false` (the default), dsops will surface clear errors telling the user to run `bw login` / `bw unlock` themselves; no CLI state is mutated.
 
 ### Key Formats
 
