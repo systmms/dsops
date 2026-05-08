@@ -326,6 +326,42 @@ func TestBitwardenSMProvider_CacheInvalidatesOnTokenChange(t *testing.T) {
 	assert.Equal(t, "value-b", s2.Value, "second tenant must NOT see first tenant's cached projects/secrets")
 }
 
+// TestBitwardenSMProvider_FailedListNotCached verifies that a transient
+// `bws project list` failure does not poison the provider for its lifetime —
+// subsequent calls must retry the CLI rather than return the cached error.
+func TestBitwardenSMProvider_FailedListNotCached(t *testing.T) {
+	// t.Parallel() omitted: t.Setenv conflicts with parallel
+	t.Setenv("BWS_ACCESS_TOKEN", "fake-token")
+
+	projectListJSON := `[{"id": "33333333-3333-4333-8333-333333333333", "name": "production"}]`
+	secretListJSON := `[{"id": "55555555-5555-4555-8555-555555555555", "key": "API_KEY", "value": "v", "note": "", "projectId": "33333333-3333-4333-8333-333333333333", "creationDate": "2024-01-01T00:00:00Z", "revisionDate": "2024-01-01T00:00:00Z"}]`
+
+	mockExec := testutil.NewMockCommandExecutor()
+	// Default response: error. Specific responses below take precedence on
+	// exact-match, but for this test we want the FIRST call to fail and the
+	// SECOND to succeed. Since the mock doesn't support sequence-aware
+	// responses, we exercise the property by calling Resolve once with no
+	// project-list response (returns no-match → empty stdout → JSON parse
+	// fails), verifying the error, then registering the success response and
+	// calling Resolve again.
+
+	p := providers.NewBitwardenSecretsManagerProviderWithExecutor("bw-sm", map[string]interface{}{}, mockExec)
+
+	// First call: no project-list mock registered → empty stdout from default
+	// non-strict mock → JSON parse error. Should NOT cache the failure.
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "production/API_KEY"})
+	require.Error(t, err, "first call should fail without project-list mock")
+
+	// Now register working mocks and retry. If the failure had been cached,
+	// the cached error would be returned without consulting the mock.
+	mockExec.AddJSONResponse("bws --output json project list", projectListJSON)
+	mockExec.AddJSONResponse("bws --output json secret list 33333333-3333-4333-8333-333333333333", secretListJSON)
+
+	s, err := p.Resolve(context.Background(), provider.Reference{Key: "production/API_KEY"})
+	require.NoError(t, err, "second call should succeed (failure must not be cached)")
+	assert.Equal(t, "v", s.Value)
+}
+
 // hasArgsPrefix returns true if args contains the given sub-sequence in order
 // (anywhere in the args slice). Used to match "subcommand arg1 arg2" patterns
 // while ignoring global flags.

@@ -38,11 +38,9 @@ type BitwardenSecretsManagerProvider struct {
 
 	mu             sync.Mutex
 	cachedToken    string                 // token under which the caches were populated; invalidates on change
-	projects       []bwsProject           // cached project list
-	projectsErr    error                  // cached project list error
-	projectsCached bool                   // true once a list attempt has been made for cachedToken
-	secrets        map[string][]bwsSecret // projectID -> secrets, cached per token
-	secretsErr     map[string]error       // projectID -> last list error
+	projects       []bwsProject           // cached project list (only populated on success)
+	projectsCached bool                   // true once a successful list has been made for cachedToken
+	secrets        map[string][]bwsSecret // projectID -> secrets, cached per token (only populated on success)
 }
 
 // bwsSecret mirrors the JSON shape of `bws secret get|list`.
@@ -70,7 +68,6 @@ func NewBitwardenSecretsManagerProvider(name string, config map[string]interface
 		accessTokenEnv: defaultBwsAccessTokenEnv,
 		executor:       pkgexec.DefaultExecutor(),
 		secrets:        map[string][]bwsSecret{},
-		secretsErr:     map[string]error{},
 	}
 	applyBwsConfig(p, config)
 	return p
@@ -84,7 +81,6 @@ func NewBitwardenSecretsManagerProviderWithExecutor(name string, config map[stri
 		accessTokenEnv: defaultBwsAccessTokenEnv,
 		executor:       executor,
 		secrets:        map[string][]bwsSecret{},
-		secretsErr:     map[string]error{},
 	}
 	applyBwsConfig(p, config)
 	return p
@@ -286,15 +282,15 @@ func (p *BitwardenSecretsManagerProvider) invalidateCacheIfTokenChanged(token st
 	}
 	p.cachedToken = token
 	p.projects = nil
-	p.projectsErr = nil
 	p.projectsCached = false
 	p.secrets = map[string][]bwsSecret{}
-	p.secretsErr = map[string]error{}
 }
 
 // listProjects returns the cached project list, fetching it on first call.
 // The mutex is held across the CLI call so concurrent callers see a single
-// fetch instead of issuing duplicate `bws project list` invocations.
+// fetch instead of issuing duplicate `bws project list` invocations. Errors
+// are NOT cached — a transient bws failure does not poison the provider for
+// its lifetime; the next call retries.
 func (p *BitwardenSecretsManagerProvider) listProjects(ctx context.Context, token string) ([]bwsProject, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -302,29 +298,29 @@ func (p *BitwardenSecretsManagerProvider) listProjects(ctx context.Context, toke
 	p.invalidateCacheIfTokenChanged(token)
 
 	if p.projectsCached {
-		return p.projects, p.projectsErr
+		return p.projects, nil
 	}
 
 	args := p.baseArgs(token)
 	args = append(args, "project", "list")
 	stdout, _, err := p.executor.Execute(ctx, "bws", args...)
-	p.projectsCached = true
 	if err != nil {
-		p.projectsErr = fmt.Errorf("bws project list: %w", err)
-		return nil, p.projectsErr
+		return nil, fmt.Errorf("bws project list: %w", err)
 	}
 	var projects []bwsProject
 	if err := json.Unmarshal(stdout, &projects); err != nil {
-		p.projectsErr = fmt.Errorf("failed to parse bws project list: %w", err)
-		return nil, p.projectsErr
+		return nil, fmt.Errorf("failed to parse bws project list: %w", err)
 	}
 	p.projects = projects
+	p.projectsCached = true
 	return projects, nil
 }
 
 // listSecrets returns the cached secret list for a project, fetching it on
 // first call. The mutex is held across the CLI call to prevent duplicate
-// fetches under concurrent resolution.
+// fetches under concurrent resolution. Errors are NOT cached — a transient
+// bws failure does not poison the provider for its lifetime; the next call
+// retries.
 func (p *BitwardenSecretsManagerProvider) listSecrets(ctx context.Context, token, projectID string) ([]bwsSecret, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -334,9 +330,6 @@ func (p *BitwardenSecretsManagerProvider) listSecrets(ctx context.Context, token
 	if cached, ok := p.secrets[projectID]; ok {
 		return cached, nil
 	}
-	if cachedErr, ok := p.secretsErr[projectID]; ok {
-		return nil, cachedErr
-	}
 
 	// `bws secret list` takes the project filter as a POSITIONAL argument
 	// (Option<Uuid>), not a --project-id flag. The flag form would error in
@@ -345,13 +338,11 @@ func (p *BitwardenSecretsManagerProvider) listSecrets(ctx context.Context, token
 	args = append(args, "secret", "list", projectID)
 	stdout, _, err := p.executor.Execute(ctx, "bws", args...)
 	if err != nil {
-		p.secretsErr[projectID] = fmt.Errorf("bws secret list %s: %w", projectID, err)
-		return nil, p.secretsErr[projectID]
+		return nil, fmt.Errorf("bws secret list %s: %w", projectID, err)
 	}
 	var secrets []bwsSecret
 	if err := json.Unmarshal(stdout, &secrets); err != nil {
-		p.secretsErr[projectID] = fmt.Errorf("failed to parse bws secret list response: %w", err)
-		return nil, p.secretsErr[projectID]
+		return nil, fmt.Errorf("failed to parse bws secret list response: %w", err)
 	}
 	p.secrets[projectID] = secrets
 	return secrets, nil

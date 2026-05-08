@@ -100,9 +100,9 @@ provider.Capabilities{
 
 1. Read access token from env var (default `BWS_ACCESS_TOKEN`); empty → `AuthError`.
 2. Detect key form: UUID (regex `^[0-9a-f]{8}-...`) → direct fetch. Otherwise treat as `<project>/<key>`.
-3. Build base args: `--access-token <token> --output json` (+ `--server-url`, `--state-file` if set).
+3. Build base args: `--output json` (+ `--server-url` if configured). For the default `BWS_ACCESS_TOKEN` env var, the token is inherited via the child process environment and NOT passed in argv. For a custom `access_token_env`, the token is passed via `--access-token`.
 4. UUID form: run `bws secret get <uuid>`, parse JSON to `bwsSecret{id,key,value,note,projectId,creationDate,revisionDate}`.
-5. Path form: ensure project list cached (`bws project list`); ensure secret list for that project cached (`bws secret list --project-id <id>`); filter by `Key`.
+5. Path form: ensure project list cached (`bws project list`); ensure secret list for that project cached (`bws secret list <PROJECT_ID>` — note: project filter is a positional argument, not a flag); filter by `Key`.
 6. Return `SecretValue{Value, Version: revisionDate, UpdatedAt, Metadata: {provider, secret_id, project_id, secret_key}}`. If `ref.Field == "note"`, return the note instead of the value.
 
 ### Token plumbing
@@ -136,7 +136,7 @@ When the default `BWS_ACCESS_TOKEN` env var is used (the common case), dsops doe
 - Resolve by path (single-match, ambiguous, empty project)
 - `ref.Field == "note"` returns note instead of value
 - Validate: token present, token absent, `bws` not in PATH (via `bwsLookPath` override)
-- Self-hosted: `--server-url` and `--state-file` are forwarded
+- Self-hosted: `--server-url` is forwarded
 - Project + secret list cache: list commands invoked at most once per project per provider lifetime
 
 **Integration (real `bws`)**:

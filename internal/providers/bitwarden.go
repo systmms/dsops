@@ -31,12 +31,10 @@ type BitwardenProvider struct {
 	headless bool   // If true, Validate will attempt API-key login + passwordenv unlock
 	executor pkgexec.CommandExecutor
 
-	mu       sync.Mutex // guards session
+	mu       sync.Mutex // guards session and authDone
 	session  string     // captured from `bw unlock --raw` when headless
+	authDone bool       // last headless auth attempt succeeded; future calls skip
 	syncOnce sync.Once
-	syncErr  error
-	authOnce sync.Once // headless auth attempted at most once per provider lifetime
-	authErr  error
 }
 
 // NewBitwardenProvider creates a new Bitwarden provider
@@ -91,18 +89,17 @@ func (bw *BitwardenProvider) appendSessionArg(args []string) []string {
 	return args
 }
 
-// ensureSync runs `bw sync` once per provider lifetime when sync is enabled.
-// Errors are recorded but do not block resolution; a failed sync simply means
-// resolutions may see the previously-cached vault state.
+// ensureSync runs `bw sync` at most once per provider lifetime when sync is
+// enabled. A failed sync is intentionally swallowed: resolutions can still
+// proceed against the previously-cached vault state, and the per-call cost of
+// retrying sync on every Resolve outweighs the benefit.
 func (bw *BitwardenProvider) ensureSync(ctx context.Context) {
 	if !bw.sync {
 		return
 	}
 	bw.syncOnce.Do(func() {
 		args := bw.appendSessionArg([]string{"sync"})
-		if _, _, err := bw.executor.Execute(ctx, "bw", args...); err != nil {
-			bw.syncErr = err
-		}
+		_, _, _ = bw.executor.Execute(ctx, "bw", args...)
 	})
 }
 
@@ -293,23 +290,36 @@ func (bw *BitwardenProvider) recoverAuthIfHeadless(ctx context.Context) (string,
 	return status, nil
 }
 
-// ensureHeadlessAuth performs the headless auth recovery flow at most once per
-// provider lifetime when headless mode is enabled. Resolve and Describe call
-// this so the headless flow runs even when the caller skips Validate.
+// ensureHeadlessAuth performs the headless auth recovery flow when headless
+// mode is enabled. Resolve and Describe call this so the headless flow runs
+// even when the caller skips Validate.
 //
-// When headless is disabled, this is a no-op — the existing behavior of letting
-// the underlying bw call surface "vault is locked" is preserved so users in
-// interactive mode still receive the actionable error message.
+// On success, future calls become no-ops. On failure, the next call retries
+// — a transient bw failure or short-lived network issue does not poison the
+// provider for its lifetime.
+//
+// When headless is disabled, this is a no-op — the underlying bw call will
+// surface "vault is locked" so interactive users still receive the actionable
+// error message.
 func (bw *BitwardenProvider) ensureHeadlessAuth(ctx context.Context) error {
 	if !bw.headless {
 		return nil
 	}
-	bw.authOnce.Do(func() {
-		if _, err := bw.recoverAuthIfHeadless(ctx); err != nil {
-			bw.authErr = err
-		}
-	})
-	return bw.authErr
+	bw.mu.Lock()
+	if bw.authDone {
+		bw.mu.Unlock()
+		return nil
+	}
+	bw.mu.Unlock()
+
+	if _, err := bw.recoverAuthIfHeadless(ctx); err != nil {
+		return err
+	}
+
+	bw.mu.Lock()
+	bw.authDone = true
+	bw.mu.Unlock()
+	return nil
 }
 
 // fetchStatus invokes `bw status` and returns the status string from the
@@ -470,13 +480,20 @@ func (bw *BitwardenProvider) extractField(item *BitwardenItem, field string) (st
 		field = defaultFieldForType(item.Type)
 	}
 
-	// Catch incomplete user-friendly forms like "item.custom" / "item.attachment"
-	// that lack the third dot-separated part, before they hit the catch-all
-	// "field not found" path.
-	if field == "custom" {
-		return "", fmt.Errorf("incomplete key: custom field name is missing (expected 'item.custom.<field-name>')")
-	}
-	if field == "attachment" {
+	// Detect incomplete user-friendly forms like "item.custom" / "item.attachment"
+	// that lack the third dot-separated part. To avoid regressing existing configs
+	// that intentionally addressed a custom field literally named "custom" or
+	// "attachment" via the bare-name fallback, only emit the incomplete-key
+	// error when no such custom field exists on the item.
+	if field == "custom" || field == "attachment" {
+		for _, customField := range item.Fields {
+			if customField.Name == field {
+				return customField.Value, nil
+			}
+		}
+		if field == "custom" {
+			return "", fmt.Errorf("incomplete key: custom field name is missing (expected 'item.custom.<field-name>')")
+		}
 		return "", fmt.Errorf("incomplete key: attachment filename is missing (expected 'item.attachment.<filename>')")
 	}
 
@@ -561,6 +578,10 @@ func (bw *BitwardenProvider) extractLoginField(item *BitwardenItem, field string
 // extractCardField returns the requested Card field. The third return value
 // indicates whether the field is a Card concept; callers should fall through
 // to other lookups (e.g. custom fields) when handled=false.
+//
+// Secret-bearing fields (Number, Code/CVV) error on empty so missing data is
+// surfaced as a configuration error rather than silently injecting an empty
+// value into a deploy environment.
 func (bw *BitwardenProvider) extractCardField(item *BitwardenItem, field string) (string, error, bool) {
 	if item.Card == nil {
 		// Field names below are Card-specific; if we see one, surface a clearer error.
@@ -572,8 +593,14 @@ func (bw *BitwardenProvider) extractCardField(item *BitwardenItem, field string)
 	}
 	switch field {
 	case "number":
+		if item.Card.Number == "" {
+			return "", fmt.Errorf("no card number found"), true
+		}
 		return item.Card.Number, nil, true
 	case "code", "cvv":
+		if item.Card.Code == "" {
+			return "", fmt.Errorf("no card cvv found"), true
+		}
 		return item.Card.Code, nil, true
 	case "cardholderName":
 		return item.Card.CardholderName, nil, true
@@ -588,6 +615,11 @@ func (bw *BitwardenProvider) extractCardField(item *BitwardenItem, field string)
 }
 
 // extractIdentityField returns the requested Identity field.
+//
+// "email" (the per-type default) and other secret-bearing fields (ssn,
+// passportNumber, licenseNumber) error on empty so missing data is surfaced
+// as a configuration error. Address/name fragments are returned as-is — they
+// can legitimately be partially populated.
 func (bw *BitwardenProvider) extractIdentityField(item *BitwardenItem, field string) (string, error, bool) {
 	if item.Identity == nil {
 		return "", nil, false
@@ -618,22 +650,36 @@ func (bw *BitwardenProvider) extractIdentityField(item *BitwardenItem, field str
 	case "company":
 		return item.Identity.Company, nil, true
 	case "email":
+		if item.Identity.Email == "" {
+			return "", fmt.Errorf("no email field found"), true
+		}
 		return item.Identity.Email, nil, true
 	case "phone":
 		return item.Identity.Phone, nil, true
 	case "ssn":
+		if item.Identity.SSN == "" {
+			return "", fmt.Errorf("no SSN field found"), true
+		}
 		return item.Identity.SSN, nil, true
 	case "username":
 		return item.Identity.Username, nil, true
 	case "passportNumber":
+		if item.Identity.PassportNumber == "" {
+			return "", fmt.Errorf("no passport number found"), true
+		}
 		return item.Identity.PassportNumber, nil, true
 	case "licenseNumber":
+		if item.Identity.LicenseNumber == "" {
+			return "", fmt.Errorf("no license number found"), true
+		}
 		return item.Identity.LicenseNumber, nil, true
 	}
 	return "", nil, false
 }
 
-// extractSshKeyField returns the requested SshKey field.
+// extractSshKeyField returns the requested SshKey field. All three fields are
+// secret-bearing or derived from one, so empty values are reported as errors
+// to prevent silently injecting blank credentials into deploy environments.
 func (bw *BitwardenProvider) extractSshKeyField(item *BitwardenItem, field string) (string, error, bool) {
 	if item.SshKey == nil {
 		switch field {
@@ -644,10 +690,19 @@ func (bw *BitwardenProvider) extractSshKeyField(item *BitwardenItem, field strin
 	}
 	switch field {
 	case "privateKey":
+		if item.SshKey.PrivateKey == "" {
+			return "", fmt.Errorf("no SSH private key found"), true
+		}
 		return item.SshKey.PrivateKey, nil, true
 	case "publicKey":
+		if item.SshKey.PublicKey == "" {
+			return "", fmt.Errorf("no SSH public key found"), true
+		}
 		return item.SshKey.PublicKey, nil, true
 	case "keyFingerprint":
+		if item.SshKey.KeyFingerprint == "" {
+			return "", fmt.Errorf("no SSH key fingerprint found"), true
+		}
 		return item.SshKey.KeyFingerprint, nil, true
 	}
 	return "", nil, false

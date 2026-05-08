@@ -796,6 +796,140 @@ func TestBitwardenProviderWithMockExecutor_HeadlessUnlock(t *testing.T) {
 	assert.Equal(t, 1, unlockCalls, "bw unlock --passwordenv BW_PASSWORD --raw should be invoked once")
 }
 
+// TestBitwardenProviderEmptyDefaultFields locks in the contract that empty
+// secret-bearing default fields surface as errors rather than silently
+// returning a blank string into a deploy environment.
+func TestBitwardenProviderEmptyDefaultFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		itemJSON string
+		key      string
+		errMatch string
+	}{
+		{
+			name: "empty card number (default field)",
+			itemJSON: `{
+				"id": "card-1", "name": "Empty Card", "type": 3,
+				"login": null,
+				"card": {"number": "", "code": "", "cardholderName": "", "brand": "", "expMonth": "", "expYear": ""},
+				"fields": [], "notes": "", "revisionDate": "2024-01-01T00:00:00Z"
+			}`,
+			key:      "card-1",
+			errMatch: "no card number found",
+		},
+		{
+			name: "empty identity email (default field)",
+			itemJSON: `{
+				"id": "id-1", "name": "Empty Identity", "type": 4,
+				"login": null,
+				"identity": {"email": "", "firstName": "", "lastName": ""},
+				"fields": [], "notes": "", "revisionDate": "2024-01-01T00:00:00Z"
+			}`,
+			key:      "id-1",
+			errMatch: "no email field found",
+		},
+		{
+			name: "empty ssh private key (default field)",
+			itemJSON: `{
+				"id": "ssh-1", "name": "Empty SSH", "type": 5,
+				"login": null,
+				"sshKey": {"privateKey": "", "publicKey": "", "keyFingerprint": ""},
+				"fields": [], "notes": "", "revisionDate": "2024-01-01T00:00:00Z"
+			}`,
+			key:      "ssh-1",
+			errMatch: "no SSH private key found",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mockExec := testutil.NewMockCommandExecutor()
+			mockExec.AddJSONResponse("bw get item "+tt.key, tt.itemJSON)
+			p := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec)
+			_, err := p.Resolve(context.Background(), provider.Reference{Key: tt.key})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.errMatch)
+		})
+	}
+}
+
+// TestBitwardenProviderHeadlessAuthRetriesOnFailure verifies the headless
+// auth flow does NOT poison the provider permanently after a transient
+// failure: a subsequent Resolve call must re-attempt the recovery flow.
+func TestBitwardenProviderHeadlessAuthRetriesOnFailure(t *testing.T) {
+	restore := providers.SetBwLookPathForTesting(func() error { return nil })
+	defer restore()
+
+	t.Setenv("BW_CLIENTID", "fake-client-id")
+	t.Setenv("BW_CLIENTSECRET", "fake-client-secret")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	// Status returns unauthenticated permanently (mock doesn't transition).
+	// `bw login --apikey` succeeds.
+	// We're not asserting Validate succeeds — only that the recovery flow
+	// is attempted MORE THAN ONCE across calls when the prior attempt
+	// returned an error to the caller.
+	mockExec.AddResponse("bw status", testutil.MockResponse{Stdout: []byte(`{"status":"unauthenticated"}`)})
+	mockExec.AddResponse("bw login --apikey", testutil.MockResponse{Stdout: []byte(`logged in`)})
+
+	cfg := map[string]interface{}{"headless": true}
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", cfg, mockExec)
+
+	_ = p.Validate(context.Background())
+	_ = p.Validate(context.Background())
+
+	loginCalls := 0
+	for _, c := range mockExec.GetCalls("bw") {
+		if len(c.Args) >= 2 && c.Args[0] == "login" && c.Args[1] == "--apikey" {
+			loginCalls++
+		}
+	}
+	assert.GreaterOrEqual(t, loginCalls, 2,
+		"headless auth should retry on each call until it succeeds (was %d)", loginCalls)
+}
+
+// TestBitwardenProviderCustomFieldNamedCustom verifies the back-compat
+// fallback: a custom field literally named "custom" must resolve via the
+// flat key form `item.custom` instead of triggering the incomplete-key error.
+func TestBitwardenProviderCustomFieldNamedCustom(t *testing.T) {
+	t.Parallel()
+
+	itemJSON := `{
+		"id": "edge-1", "name": "Edge Item",
+		"organizationId": "", "folderId": "",
+		"type": 1,
+		"login": {"username": "u", "password": "p", "totp": "", "uris": []},
+		"fields": [
+			{"name": "custom", "value": "literal-custom-value", "type": 0}
+		],
+		"notes": "", "revisionDate": "2024-01-01T00:00:00Z"
+	}`
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw get item edge-1", itemJSON)
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec)
+
+	t.Run("flat key resolves field literally named custom", func(t *testing.T) {
+		s, err := p.Resolve(context.Background(), provider.Reference{Key: "edge-1.custom"})
+		require.NoError(t, err)
+		assert.Equal(t, "literal-custom-value", s.Value)
+	})
+
+	t.Run("incomplete-key error when no such field exists", func(t *testing.T) {
+		emptyJSON := `{"id":"e2","name":"E2","type":1,"login":{"password":"p","username":"u","totp":"","uris":[]},"fields":[],"notes":"","revisionDate":"2024-01-01T00:00:00Z"}`
+		mockExec2 := testutil.NewMockCommandExecutor()
+		mockExec2.AddJSONResponse("bw get item e2", emptyJSON)
+		p2 := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec2)
+		_, err := p2.Resolve(context.Background(), provider.Reference{Key: "e2.custom"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "incomplete key")
+	})
+}
+
 func TestBitwardenProviderConstructors(t *testing.T) {
 	t.Parallel()
 
