@@ -101,6 +101,30 @@ func TestBitwardenParseKey(t *testing.T) {
 			expectedItem:  "",
 			expectedField: "password",
 		},
+		{
+			name:          "explicit custom field prefix",
+			key:           "abc123.custom.api_key",
+			expectedItem:  "abc123",
+			expectedField: "custom:api_key",
+		},
+		{
+			name:          "custom field name preserves dots",
+			key:           "abc123.custom.aws.region",
+			expectedItem:  "abc123",
+			expectedField: "custom:aws.region",
+		},
+		{
+			name:          "attachment with simple filename",
+			key:           "abc123.attachment.kubeconfig",
+			expectedItem:  "abc123",
+			expectedField: "attachment:kubeconfig",
+		},
+		{
+			name:          "attachment filename preserves dots",
+			key:           "abc123.attachment.fullchain.pem",
+			expectedItem:  "abc123",
+			expectedField: "attachment:fullchain.pem",
+		},
 	}
 
 	for _, tt := range tests {
@@ -272,6 +296,19 @@ func TestBitwardenExtractField(t *testing.T) {
 			field:         "nonexistent",
 			expectError:   true,
 			errorContains: "field 'nonexistent' not found",
+		},
+		{
+			name:          "explicit custom prefix matches custom field",
+			item:          testItem,
+			field:         "custom:api_key",
+			expectedValue: "sk-live-123456",
+		},
+		{
+			name:          "explicit custom prefix with non-existent field",
+			item:          testItem,
+			field:         "custom:does_not_exist",
+			expectError:   true,
+			errorContains: "custom field 'does_not_exist' not found",
 		},
 		{
 			name:          "uri on item without login",

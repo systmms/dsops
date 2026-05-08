@@ -2,6 +2,7 @@ package providers_test
 
 import (
 	"context"
+	"encoding/base64"
 	osExec "os/exec"
 	"testing"
 
@@ -384,6 +385,98 @@ func TestBitwardenProviderWithMockExecutor_FieldExtraction(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBitwardenProviderWithMockExecutor_CustomFieldExplicitPrefix(t *testing.T) {
+	t.Parallel()
+
+	itemJSON := `{
+		"id": "item-cust",
+		"name": "Custom Field Item",
+		"organizationId": "",
+		"folderId": "",
+		"type": 1,
+		"login": {"username": "u", "password": "p", "totp": "", "uris": []},
+		"fields": [
+			{"name": "aws.region", "value": "us-east-1", "type": 0},
+			{"name": "shared", "value": "explicit-wins", "type": 0}
+		],
+		"notes": "",
+		"revisionDate": "2024-01-01T00:00:00Z"
+	}`
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw get item item-cust", itemJSON)
+
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec)
+
+	t.Run("custom field name with dots is preserved", func(t *testing.T) {
+		ref := provider.Reference{Key: "item-cust.custom.aws.region"}
+		secret, err := p.Resolve(context.Background(), ref)
+		require.NoError(t, err)
+		assert.Equal(t, "us-east-1", secret.Value)
+	})
+
+	t.Run("explicit custom prefix returns custom field", func(t *testing.T) {
+		ref := provider.Reference{Key: "item-cust.custom.shared"}
+		secret, err := p.Resolve(context.Background(), ref)
+		require.NoError(t, err)
+		assert.Equal(t, "explicit-wins", secret.Value)
+	})
+
+	t.Run("flat custom field still works for back-compat", func(t *testing.T) {
+		ref := provider.Reference{Key: "item-cust.shared"}
+		secret, err := p.Resolve(context.Background(), ref)
+		require.NoError(t, err)
+		assert.Equal(t, "explicit-wins", secret.Value)
+	})
+}
+
+func TestBitwardenProviderWithMockExecutor_Attachment(t *testing.T) {
+	t.Parallel()
+
+	itemJSON := `{
+		"id": "item-att",
+		"name": "Item With Attachment",
+		"organizationId": "org-1",
+		"folderId": "folder-1",
+		"type": 2,
+		"login": null,
+		"fields": [],
+		"notes": "",
+		"revisionDate": "2024-05-01T12:00:00Z"
+	}`
+
+	rawBytes := []byte("-----BEGIN CERTIFICATE-----\nMIIBkTCB+w==\n-----END CERTIFICATE-----\n")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw get item item-att", itemJSON)
+	mockExec.AddResponse("bw get attachment fullchain.pem --itemid item-att --raw", testutil.MockResponse{
+		Stdout: rawBytes,
+	})
+
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec)
+
+	t.Run("attachment is base64-encoded with metadata", func(t *testing.T) {
+		ref := provider.Reference{Key: "item-att.attachment.fullchain.pem"}
+		secret, err := p.Resolve(context.Background(), ref)
+		require.NoError(t, err)
+		assert.Equal(t, base64.StdEncoding.EncodeToString(rawBytes), secret.Value)
+		assert.Equal(t, "fullchain.pem", secret.Metadata["attachment"])
+		assert.Equal(t, "application/octet-stream", secret.Metadata["content_type"])
+		assert.Equal(t, "item-att", secret.Metadata["item_id"])
+	})
+
+	t.Run("missing attachment returns NotFoundError", func(t *testing.T) {
+		mockExec2 := testutil.NewMockCommandExecutor()
+		mockExec2.AddJSONResponse("bw get item item-att", itemJSON)
+		mockExec2.AddErrorResponse("bw get attachment ghost.pem --itemid item-att --raw", "Attachment `ghost.pem` was not found.", 1)
+
+		p2 := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec2)
+		_, err := p2.Resolve(context.Background(), provider.Reference{Key: "item-att.attachment.ghost.pem"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+	})
 }
 
 func TestBitwardenProviderConstructors(t *testing.T) {

@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -58,8 +59,13 @@ func (bw *BitwardenProvider) Name() string {
 
 // Resolve retrieves a secret from Bitwarden
 func (bw *BitwardenProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
-	// Parse the key format: item-id or item-name or item-id.field or item-name.field
+	// Parse the key format: item-id[.field], item-id.custom.<name>, or item-id.attachment.<filename>
 	itemID, field := bw.parseKey(ref.Key)
+
+	// Attachments are fetched via a separate bw command and returned base64-encoded.
+	if filename, ok := strings.CutPrefix(field, "attachment:"); ok {
+		return bw.resolveAttachment(ctx, itemID, filename)
+	}
 
 	// Get the item from Bitwarden
 	item, err := bw.getItem(ctx, itemID)
@@ -83,6 +89,35 @@ func (bw *BitwardenProvider) Resolve(ctx context.Context, ref provider.Reference
 			"item_name":    item.Name,
 			"organization": item.OrganizationID,
 			"folder":       item.FolderID,
+		},
+	}, nil
+}
+
+// resolveAttachment fetches an attachment by filename for the given item and
+// returns it base64-encoded (per the SecretValue.Value contract for binary data).
+func (bw *BitwardenProvider) resolveAttachment(ctx context.Context, itemID, filename string) (provider.SecretValue, error) {
+	item, err := bw.getItem(ctx, itemID)
+	if err != nil {
+		return provider.SecretValue{}, err
+	}
+
+	data, err := bw.getAttachment(ctx, itemID, filename)
+	if err != nil {
+		return provider.SecretValue{}, fmt.Errorf("failed to retrieve attachment '%s': %w", filename, err)
+	}
+
+	return provider.SecretValue{
+		Value:     base64.StdEncoding.EncodeToString(data),
+		Version:   item.RevisionDate,
+		UpdatedAt: parseTimestamp(item.RevisionDate),
+		Metadata: map[string]string{
+			"provider":     bw.name,
+			"item_id":      item.ID,
+			"item_name":    item.Name,
+			"organization": item.OrganizationID,
+			"folder":       item.FolderID,
+			"attachment":   filename,
+			"content_type": "application/octet-stream",
 		},
 	}, nil
 }
@@ -120,7 +155,7 @@ func (bw *BitwardenProvider) Capabilities() provider.Capabilities {
 		SupportsVersioning: false, // Bitwarden doesn't have explicit versioning
 		SupportsMetadata:   true,
 		SupportsWatching:   false,
-		SupportsBinary:     false,
+		SupportsBinary:     true, // Attachments are returned base64-encoded
 		RequiresAuth:       true,
 		AuthMethods:        []string{"cli-session", "api-key"},
 	}
@@ -170,23 +205,34 @@ func (bw *BitwardenProvider) Validate(ctx context.Context) error {
 	}
 }
 
-// parseKey parses a Bitwarden key into item ID/name and field
+// parseKey parses a Bitwarden key into item ID/name and field.
+//
 // Formats supported:
-// - "item-id" -> returns item-id, "password"
-// - "item-name" -> returns item-name, "password"
-// - "item-id.field" -> returns item-id, field
-// - "item-name.field" -> returns item-name, field
+//   - "item"                       -> ("item", "password")
+//   - "item.field"                 -> ("item", "field")           // direct field on the item
+//   - "item.custom.<name>"         -> ("item", "custom:<name>")   // explicit custom field; allows dots in <name>
+//   - "item.attachment.<filename>" -> ("item", "attachment:<filename>") // attachment retrieval; preserves filename dots
+//
+// Item names may not contain dots; this is a known limitation also present
+// before this change.
 func (bw *BitwardenProvider) parseKey(key string) (itemID, field string) {
-	parts := strings.Split(key, ".")
+	parts := strings.SplitN(key, ".", 3)
 	itemID = parts[0]
 
-	if len(parts) > 1 {
-		field = parts[1]
-	} else {
-		field = "password" // Default field
+	if len(parts) == 1 {
+		return itemID, "password"
 	}
 
-	return itemID, field
+	if len(parts) == 3 {
+		switch parts[1] {
+		case "custom":
+			return itemID, "custom:" + parts[2]
+		case "attachment":
+			return itemID, "attachment:" + parts[2]
+		}
+	}
+
+	return itemID, parts[1]
 }
 
 // getItem retrieves an item from Bitwarden by ID or name
@@ -218,8 +264,26 @@ func (bw *BitwardenProvider) getItem(ctx context.Context, itemID string) (*Bitwa
 	return &item, nil
 }
 
-// extractField extracts a specific field from a Bitwarden item
+// extractField extracts a specific field from a Bitwarden item.
+//
+// Field handling:
+//   - well-known names (password, username, totp, notes, name) hit the typed branches
+//   - "custom:<name>" looks up a custom field by name (explicit form)
+//   - bare names fall back to custom-field-by-name lookup for backward compatibility
+//   - "uri", "uri0", "uri1"... select indexed URIs from a Login item
+//
+// Attachment retrieval is handled in Resolve, not here, since it requires a
+// separate bw command and returns binary data.
 func (bw *BitwardenProvider) extractField(item *BitwardenItem, field string) (string, error) {
+	if name, ok := strings.CutPrefix(field, "custom:"); ok {
+		for _, customField := range item.Fields {
+			if customField.Name == name {
+				return customField.Value, nil
+			}
+		}
+		return "", fmt.Errorf("custom field '%s' not found", name)
+	}
+
 	switch field {
 	case "password":
 		if item.Login != nil && item.Login.Password != "" {
@@ -249,7 +313,7 @@ func (bw *BitwardenProvider) extractField(item *BitwardenItem, field string) (st
 		return item.Name, nil
 
 	default:
-		// Check custom fields
+		// Check custom fields (back-compat: bare field name without "custom:" prefix)
 		for _, customField := range item.Fields {
 			if customField.Name == field {
 				return customField.Value, nil
@@ -263,6 +327,32 @@ func (bw *BitwardenProvider) extractField(item *BitwardenItem, field string) (st
 
 		return "", fmt.Errorf("field '%s' not found", field)
 	}
+}
+
+// getAttachment retrieves the raw bytes of a named attachment on a Bitwarden item.
+// Uses `bw get attachment <filename> --itemid <id> --raw`; the --raw flag is
+// what makes bw write the attachment bytes to stdout instead of saving to a file.
+func (bw *BitwardenProvider) getAttachment(ctx context.Context, itemID, filename string) ([]byte, error) {
+	args := []string{"get", "attachment", filename, "--itemid", itemID, "--raw"}
+	if bw.profile != "" {
+		args = append(args, "--session", bw.profile)
+	}
+
+	stdout, stderr, err := bw.executor.Execute(ctx, "bw", args...)
+	if err != nil {
+		stderrStr := string(stderr)
+		errStr := err.Error()
+		if strings.Contains(stderrStr, "Not found") || strings.Contains(stderrStr, "not found") ||
+			strings.Contains(errStr, "Not found") || strings.Contains(errStr, "not found") {
+			return nil, &provider.NotFoundError{
+				Provider: bw.name,
+				Key:      itemID + " attachment:" + filename,
+			}
+		}
+		return nil, fmt.Errorf("failed to get bitwarden attachment '%s' from item '%s': %w", filename, itemID, err)
+	}
+
+	return stdout, nil
 }
 
 // extractUriField extracts URI-related fields

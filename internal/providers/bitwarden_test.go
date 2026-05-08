@@ -91,7 +91,7 @@ func TestBitwardenProviderCapabilities(t *testing.T) {
 	assert.False(t, caps.SupportsVersioning, "Bitwarden doesn't support versioning via CLI")
 	assert.True(t, caps.SupportsMetadata, "Bitwarden supports metadata")
 	assert.False(t, caps.SupportsWatching, "Bitwarden doesn't support watching")
-	assert.False(t, caps.SupportsBinary, "Bitwarden stores text secrets")
+	assert.True(t, caps.SupportsBinary, "Bitwarden supports binary attachments (base64-encoded)")
 	assert.True(t, caps.RequiresAuth, "Bitwarden requires authentication")
 	assert.NotEmpty(t, caps.AuthMethods, "Bitwarden should have auth methods")
 	// Bitwarden supports both CLI session and API key authentication

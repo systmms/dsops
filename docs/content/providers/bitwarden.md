@@ -66,9 +66,12 @@ envs:
 Bitwarden keys follow these patterns:
 
 - **Simple**: `item-name` - Returns the password field
-- **Field specific**: `item-name.field` - Returns a specific field
-- **Custom field**: `item-name.custom.field-name` - Returns custom field value
-- **Attachment**: `item-name.attachment.filename` - Returns attachment content
+- **Field specific**: `item-name.field` - Returns a built-in field (`password`, `username`, `totp`, `notes`, `name`) or, as a back-compat fallback, a custom field whose name matches `field`
+- **Custom field (explicit)**: `item-name.custom.field-name` - Returns the value of the custom field whose `Name` matches `field-name`. Names containing dots are preserved (e.g. `item.custom.aws.region` looks up custom field named `aws.region`).
+- **Attachment**: `item-name.attachment.filename` - Returns the attachment bytes, base64-encoded. The `content_type` metadata is set to `application/octet-stream`. Filenames containing dots are preserved (e.g. `item.attachment.cert.pem`).
+- **URI**: `item-name.uri`, `item-name.uri0`, `item-name.uri1`, ... - Returns an indexed URI from a Login item
+
+> Item names cannot contain `.` characters. If your item name contains a dot, address it by item ID instead (`bw list items | jq -r '.[] | "\(.id)\t\(.name)"'`).
 
 ### Examples
 
@@ -83,25 +86,17 @@ envs:
     DB_USER:
       from: { provider: bitwarden, key: "Production Database.username" }
     
-    # Custom field
+    # Custom field (explicit form recommended)
     DB_HOST:
       from: { provider: bitwarden, key: "Production Database.custom.hostname" }
     
     # Notes field
     DB_CONNECTION:
       from: { provider: bitwarden, key: "Production Database.notes" }
-```
 
-## Collections and Folders
-
-If you use Bitwarden collections or folders:
-
-```yaml
-providers:
-  bitwarden:
-    type: bitwarden
-    collection: "Development Team"  # Optional: filter by collection
-    folder: "Databases"            # Optional: filter by folder
+    # Attachment (base64-encoded)
+    TLS_CERT:
+      from: { provider: bitwarden, key: "tls-bundle.attachment.fullchain.pem" }
 ```
 
 ## Security Best Practices
