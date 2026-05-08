@@ -2,7 +2,7 @@ module github.com/systmms/dsops
 
 go 1.25.0
 
-toolchain go1.25.9
+toolchain go1.25.10
 
 require (
 	cloud.google.com/go/secretmanager v1.18.0
