@@ -83,8 +83,9 @@ func TestBitwardenSMProvider_ResolveByPath(t *testing.T) {
 	]`
 
 	mockExec := testutil.NewMockCommandExecutor()
-	mockExec.AddJSONResponse("bws --access-token fake-token --output json project list", projectListJSON)
-	mockExec.AddJSONResponse("bws --access-token fake-token --output json secret list --project-id 33333333-3333-4333-8333-333333333333", secretListJSON)
+	// Default BWS_ACCESS_TOKEN env var: token is inherited via env, not flag.
+	mockExec.AddJSONResponse("bws --output json project list", projectListJSON)
+	mockExec.AddJSONResponse("bws --output json secret list --project-id 33333333-3333-4333-8333-333333333333", secretListJSON)
 
 	p := providers.NewBitwardenSecretsManagerProviderWithExecutor("bw-sm", map[string]interface{}{}, mockExec)
 
@@ -137,7 +138,8 @@ func TestBitwardenSMProvider_ResolveCustomTokenEnv(t *testing.T) {
 	t.Setenv("BWS_ACCESS_TOKEN", "wrong-default")
 
 	mockExec := testutil.NewMockCommandExecutor()
-	mockExec.AddJSONResponse("bws --access-token custom-token --output json secret get", secretJSONByUUID)
+	// Custom env var: token IS passed via --access-token flag.
+	mockExec.AddJSONResponse("bws --output json --access-token custom-token secret get", secretJSONByUUID)
 
 	cfg := map[string]interface{}{"access_token_env": "MY_CUSTOM_BWS"}
 	p := providers.NewBitwardenSecretsManagerProviderWithExecutor("bw-sm", cfg, mockExec)
@@ -145,12 +147,34 @@ func TestBitwardenSMProvider_ResolveCustomTokenEnv(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestBitwardenSMProvider_DefaultTokenEnvNotInArgv(t *testing.T) {
+	// t.Parallel() omitted: t.Setenv conflicts with parallel
+	t.Setenv("BWS_ACCESS_TOKEN", "fake-token")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bws", secretJSONByUUID)
+
+	p := providers.NewBitwardenSecretsManagerProviderWithExecutor("bw-sm", map[string]interface{}{}, mockExec)
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "11111111-1111-4111-8111-111111111111"})
+	require.NoError(t, err)
+
+	// Token must NOT appear in argv when default env var is used: bws inherits
+	// BWS_ACCESS_TOKEN from the process environment.
+	calls := mockExec.GetCalls("bws")
+	require.NotEmpty(t, calls)
+	for _, c := range calls {
+		for _, arg := range c.Args {
+			assert.NotEqual(t, "fake-token", arg, "access token must not appear in argv when default env var is used")
+		}
+	}
+}
+
 func TestBitwardenSMProvider_ResolveNotFound(t *testing.T) {
 	// t.Parallel() omitted: t.Setenv conflicts with parallel
 	t.Setenv("BWS_ACCESS_TOKEN", "fake-token")
 
 	mockExec := testutil.NewMockCommandExecutor()
-	mockExec.AddErrorResponse("bws --access-token fake-token --output json secret get", "404: Resource not found", 1)
+	mockExec.AddErrorResponse("bws --output json secret get", "404: Resource not found", 1)
 
 	p := providers.NewBitwardenSecretsManagerProviderWithExecutor("bw-sm", map[string]interface{}{}, mockExec)
 	_, err := p.Resolve(context.Background(), provider.Reference{Key: "11111111-1111-4111-8111-111111111111"})
@@ -170,7 +194,7 @@ func TestBitwardenSMProvider_ResolveAmbiguousProjectName(t *testing.T) {
 	]`
 
 	mockExec := testutil.NewMockCommandExecutor()
-	mockExec.AddJSONResponse("bws --access-token fake-token --output json project list", projectListJSON)
+	mockExec.AddJSONResponse("bws --output json project list", projectListJSON)
 
 	p := providers.NewBitwardenSecretsManagerProviderWithExecutor("bw-sm", map[string]interface{}{}, mockExec)
 	_, err := p.Resolve(context.Background(), provider.Reference{Key: "shared/SOMETHING"})
@@ -196,7 +220,7 @@ func TestBitwardenSMProvider_DescribeNotFoundReturnsExistsFalse(t *testing.T) {
 	t.Setenv("BWS_ACCESS_TOKEN", "fake-token")
 
 	mockExec := testutil.NewMockCommandExecutor()
-	mockExec.AddErrorResponse("bws --access-token fake-token --output json secret get", "404: Resource not found", 1)
+	mockExec.AddErrorResponse("bws --output json secret get", "404: Resource not found", 1)
 
 	p := providers.NewBitwardenSecretsManagerProviderWithExecutor("bw-sm", map[string]interface{}{}, mockExec)
 	meta, err := p.Describe(context.Background(), provider.Reference{Key: "11111111-1111-4111-8111-111111111111"})
@@ -245,14 +269,14 @@ func TestBitwardenSMProvider_ValidateOK(t *testing.T) {
 	defer restore()
 
 	mockExec := testutil.NewMockCommandExecutor()
-	mockExec.AddJSONResponse("bws --access-token fake-token --output json project list", `[]`)
+	mockExec.AddJSONResponse("bws --output json project list", `[]`)
 
 	p := providers.NewBitwardenSecretsManagerProviderWithExecutor("bw-sm", map[string]interface{}{}, mockExec)
 	err := p.Validate(context.Background())
 	require.NoError(t, err)
 }
 
-func TestBitwardenSMProvider_ServerURLAndStateFileForwarded(t *testing.T) {
+func TestBitwardenSMProvider_ServerURLForwarded(t *testing.T) {
 	// t.Parallel() omitted: t.Setenv conflicts with parallel
 	t.Setenv("BWS_ACCESS_TOKEN", "fake-token")
 
@@ -261,7 +285,6 @@ func TestBitwardenSMProvider_ServerURLAndStateFileForwarded(t *testing.T) {
 
 	cfg := map[string]interface{}{
 		"server_url": "https://self-hosted.example.com",
-		"state_file": "/var/lib/bws/state",
 	}
 	p := providers.NewBitwardenSecretsManagerProviderWithExecutor("bw-sm", cfg, mockExec)
 	_, err := p.Resolve(context.Background(), provider.Reference{Key: "11111111-1111-4111-8111-111111111111"})
@@ -273,8 +296,34 @@ func TestBitwardenSMProvider_ServerURLAndStateFileForwarded(t *testing.T) {
 
 	assert.Contains(t, args, "--server-url")
 	assert.Contains(t, args, "https://self-hosted.example.com")
-	assert.Contains(t, args, "--state-file")
-	assert.Contains(t, args, "/var/lib/bws/state")
+}
+
+func TestBitwardenSMProvider_CacheInvalidatesOnTokenChange(t *testing.T) {
+	// t.Parallel() omitted: t.Setenv conflicts with parallel
+	projectListA := `[{"id": "aaaa1111-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "name": "tenant-a"}]`
+	projectListB := `[{"id": "bbbb2222-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "name": "tenant-b"}]`
+	secretListA := `[{"id": "11111111-1111-4111-8111-111111111111", "key": "K", "value": "value-a", "note": "", "projectId": "aaaa1111-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "creationDate": "2024-01-01T00:00:00Z", "revisionDate": "2024-01-01T00:00:00Z"}]`
+	secretListB := `[{"id": "22222222-2222-4222-8222-222222222222", "key": "K", "value": "value-b", "note": "", "projectId": "bbbb2222-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "creationDate": "2024-01-01T00:00:00Z", "revisionDate": "2024-01-01T00:00:00Z"}]`
+
+	cfg := map[string]interface{}{"access_token_env": "MY_BWS"}
+	mockExec := testutil.NewMockCommandExecutor()
+	// With custom env var, --access-token IS in argv, so we can match by token.
+	mockExec.AddJSONResponse("bws --output json --access-token tenant-a-token project list", projectListA)
+	mockExec.AddJSONResponse("bws --output json --access-token tenant-a-token secret list --project-id aaaa1111-aaaa-4aaa-8aaa-aaaaaaaaaaaa", secretListA)
+	mockExec.AddJSONResponse("bws --output json --access-token tenant-b-token project list", projectListB)
+	mockExec.AddJSONResponse("bws --output json --access-token tenant-b-token secret list --project-id bbbb2222-bbbb-4bbb-8bbb-bbbbbbbbbbbb", secretListB)
+
+	p := providers.NewBitwardenSecretsManagerProviderWithExecutor("bw-sm", cfg, mockExec)
+
+	t.Setenv("MY_BWS", "tenant-a-token")
+	s1, err := p.Resolve(context.Background(), provider.Reference{Key: "tenant-a/K"})
+	require.NoError(t, err)
+	assert.Equal(t, "value-a", s1.Value)
+
+	t.Setenv("MY_BWS", "tenant-b-token")
+	s2, err := p.Resolve(context.Background(), provider.Reference{Key: "tenant-b/K"})
+	require.NoError(t, err)
+	assert.Equal(t, "value-b", s2.Value, "second tenant must NOT see first tenant's cached projects/secrets")
 }
 
 // hasArgsPrefix returns true if args contains the given sub-sequence in order

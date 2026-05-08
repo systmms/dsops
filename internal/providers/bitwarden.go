@@ -35,6 +35,8 @@ type BitwardenProvider struct {
 	session  string     // captured from `bw unlock --raw` when headless
 	syncOnce sync.Once
 	syncErr  error
+	authOnce sync.Once // headless auth attempted at most once per provider lifetime
+	authErr  error
 }
 
 // NewBitwardenProvider creates a new Bitwarden provider
@@ -111,6 +113,9 @@ func (bw *BitwardenProvider) Name() string {
 
 // Resolve retrieves a secret from Bitwarden
 func (bw *BitwardenProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
+	if err := bw.ensureHeadlessAuth(ctx); err != nil {
+		return provider.SecretValue{}, err
+	}
 	bw.ensureSync(ctx)
 
 	// Parse the key format: item-id[.field], item-id.custom.<name>, or item-id.attachment.<filename>
@@ -155,7 +160,7 @@ func (bw *BitwardenProvider) resolveAttachment(ctx context.Context, itemID, file
 		return provider.SecretValue{}, err
 	}
 
-	data, err := bw.getAttachment(ctx, itemID, filename)
+	data, err := bw.getAttachment(ctx, item.ID, filename)
 	if err != nil {
 		return provider.SecretValue{}, fmt.Errorf("failed to retrieve attachment '%s': %w", filename, err)
 	}
@@ -178,6 +183,9 @@ func (bw *BitwardenProvider) resolveAttachment(ctx context.Context, itemID, file
 
 // Describe returns metadata about a Bitwarden item
 func (bw *BitwardenProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
+	if err := bw.ensureHeadlessAuth(ctx); err != nil {
+		return provider.Metadata{}, err
+	}
 	bw.ensureSync(ctx)
 
 	itemID, _ := bw.parseKey(ref.Key)
@@ -227,29 +235,9 @@ func (bw *BitwardenProvider) Validate(ctx context.Context) error {
 		return fmt.Errorf("bitwarden CLI 'bw' not found in PATH. Install from: https://bitwarden.com/help/cli/")
 	}
 
-	status, err := bw.fetchStatus(ctx)
+	status, err := bw.recoverAuthIfHeadless(ctx)
 	if err != nil {
 		return err
-	}
-
-	if status == "unauthenticated" && bw.headless {
-		if err := bw.headlessLogin(ctx); err != nil {
-			return err
-		}
-		status, err = bw.fetchStatus(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
-	if status == "locked" && bw.headless {
-		if err := bw.headlessUnlock(ctx); err != nil {
-			return err
-		}
-		status, err = bw.fetchStatus(ctx)
-		if err != nil {
-			return err
-		}
 	}
 
 	switch status {
@@ -271,6 +259,57 @@ func (bw *BitwardenProvider) Validate(ctx context.Context) error {
 			Message:  fmt.Sprintf("unknown status: %s", status),
 		}
 	}
+}
+
+// recoverAuthIfHeadless checks bw status, optionally drives `bw login --apikey`
+// and `bw unlock --passwordenv` when headless is enabled, and returns the final
+// status string.
+func (bw *BitwardenProvider) recoverAuthIfHeadless(ctx context.Context) (string, error) {
+	status, err := bw.fetchStatus(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	if status == "unauthenticated" && bw.headless {
+		if err := bw.headlessLogin(ctx); err != nil {
+			return "", err
+		}
+		status, err = bw.fetchStatus(ctx)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if status == "locked" && bw.headless {
+		if err := bw.headlessUnlock(ctx); err != nil {
+			return "", err
+		}
+		status, err = bw.fetchStatus(ctx)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return status, nil
+}
+
+// ensureHeadlessAuth performs the headless auth recovery flow at most once per
+// provider lifetime when headless mode is enabled. Resolve and Describe call
+// this so the headless flow runs even when the caller skips Validate.
+//
+// When headless is disabled, this is a no-op — the existing behavior of letting
+// the underlying bw call surface "vault is locked" is preserved so users in
+// interactive mode still receive the actionable error message.
+func (bw *BitwardenProvider) ensureHeadlessAuth(ctx context.Context) error {
+	if !bw.headless {
+		return nil
+	}
+	bw.authOnce.Do(func() {
+		if _, err := bw.recoverAuthIfHeadless(ctx); err != nil {
+			bw.authErr = err
+		}
+	})
+	return bw.authErr
 }
 
 // fetchStatus invokes `bw status` and returns the status string from the
@@ -429,6 +468,16 @@ func (bw *BitwardenProvider) getItem(ctx context.Context, itemID string) (*Bitwa
 func (bw *BitwardenProvider) extractField(item *BitwardenItem, field string) (string, error) {
 	if field == "" {
 		field = defaultFieldForType(item.Type)
+	}
+
+	// Catch incomplete user-friendly forms like "item.custom" / "item.attachment"
+	// that lack the third dot-separated part, before they hit the catch-all
+	// "field not found" path.
+	if field == "custom" {
+		return "", fmt.Errorf("incomplete key: custom field name is missing (expected 'item.custom.<field-name>')")
+	}
+	if field == "attachment" {
+		return "", fmt.Errorf("incomplete key: attachment filename is missing (expected 'item.attachment.<filename>')")
 	}
 
 	if name, ok := strings.CutPrefix(field, "custom:"); ok {

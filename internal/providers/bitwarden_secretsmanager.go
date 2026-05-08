@@ -34,14 +34,15 @@ type BitwardenSecretsManagerProvider struct {
 	name           string
 	accessTokenEnv string // env var name to read the access token from
 	serverURL      string
-	stateFile      string
 	executor       pkgexec.CommandExecutor
 
-	mu          sync.Mutex
-	projects    []bwsProject              // cached project list
-	projectsErr error                     // cached project list error (sticky)
-	secrets     map[string][]bwsSecret    // projectID -> secrets, cached per provider lifetime
-	secretsErr  map[string]error          // projectID -> last list error
+	mu             sync.Mutex
+	cachedToken    string                 // token under which the caches were populated; invalidates on change
+	projects       []bwsProject           // cached project list
+	projectsErr    error                  // cached project list error
+	projectsCached bool                   // true once a list attempt has been made for cachedToken
+	secrets        map[string][]bwsSecret // projectID -> secrets, cached per token
+	secretsErr     map[string]error       // projectID -> last list error
 }
 
 // bwsSecret mirrors the JSON shape of `bws secret get|list`.
@@ -95,9 +96,6 @@ func applyBwsConfig(p *BitwardenSecretsManagerProvider, config map[string]interf
 	}
 	if v, ok := config["server_url"].(string); ok {
 		p.serverURL = v
-	}
-	if v, ok := config["state_file"].(string); ok {
-		p.stateFile = v
 	}
 }
 
@@ -278,22 +276,39 @@ func (p *BitwardenSecretsManagerProvider) getByPath(ctx context.Context, token, 
 	return &matched, nil
 }
 
+// invalidateCacheIfTokenChanged clears the project/secret caches when a
+// different access token is observed than the one used to populate them. This
+// prevents long-lived processes from reusing one tenant's cache for another.
+// Caller must hold p.mu.
+func (p *BitwardenSecretsManagerProvider) invalidateCacheIfTokenChanged(token string) {
+	if p.cachedToken == token {
+		return
+	}
+	p.cachedToken = token
+	p.projects = nil
+	p.projectsErr = nil
+	p.projectsCached = false
+	p.secrets = map[string][]bwsSecret{}
+	p.secretsErr = map[string]error{}
+}
+
 // listProjects returns the cached project list, fetching it on first call.
+// The mutex is held across the CLI call so concurrent callers see a single
+// fetch instead of issuing duplicate `bws project list` invocations.
 func (p *BitwardenSecretsManagerProvider) listProjects(ctx context.Context, token string) ([]bwsProject, error) {
 	p.mu.Lock()
-	if p.projects != nil || p.projectsErr != nil {
-		projects, err := p.projects, p.projectsErr
-		p.mu.Unlock()
-		return projects, err
+	defer p.mu.Unlock()
+
+	p.invalidateCacheIfTokenChanged(token)
+
+	if p.projectsCached {
+		return p.projects, p.projectsErr
 	}
-	p.mu.Unlock()
 
 	args := p.baseArgs(token)
 	args = append(args, "project", "list")
 	stdout, _, err := p.executor.Execute(ctx, "bws", args...)
-
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	p.projectsCached = true
 	if err != nil {
 		p.projectsErr = fmt.Errorf("bws project list: %w", err)
 		return nil, p.projectsErr
@@ -308,25 +323,24 @@ func (p *BitwardenSecretsManagerProvider) listProjects(ctx context.Context, toke
 }
 
 // listSecrets returns the cached secret list for a project, fetching it on
-// first call.
+// first call. The mutex is held across the CLI call to prevent duplicate
+// fetches under concurrent resolution.
 func (p *BitwardenSecretsManagerProvider) listSecrets(ctx context.Context, token, projectID string) ([]bwsSecret, error) {
 	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.invalidateCacheIfTokenChanged(token)
+
 	if cached, ok := p.secrets[projectID]; ok {
-		p.mu.Unlock()
 		return cached, nil
 	}
 	if cachedErr, ok := p.secretsErr[projectID]; ok {
-		p.mu.Unlock()
 		return nil, cachedErr
 	}
-	p.mu.Unlock()
 
 	args := p.baseArgs(token)
 	args = append(args, "secret", "list", "--project-id", projectID)
 	stdout, _, err := p.executor.Execute(ctx, "bws", args...)
-
-	p.mu.Lock()
-	defer p.mu.Unlock()
 	if err != nil {
 		p.secretsErr[projectID] = fmt.Errorf("bws secret list --project-id %s: %w", projectID, err)
 		return nil, p.secretsErr[projectID]
@@ -340,16 +354,21 @@ func (p *BitwardenSecretsManagerProvider) listSecrets(ctx context.Context, token
 	return secrets, nil
 }
 
-// baseArgs returns the global flags every bws invocation needs (server URL,
-// state file, access token, json output). Returns a fresh slice each call so
-// callers can append safely.
+// baseArgs returns the global flags every bws invocation needs. Returns a
+// fresh slice each call so callers can append safely.
+//
+// When the access token comes from the default BWS_ACCESS_TOKEN env var, the
+// flag is omitted: bws inherits the variable from this process and reads it
+// natively, keeping the secret out of /proc/PID/cmdline. When a custom env
+// var name is configured, the token is passed via --access-token (visible in
+// `ps`); this trade-off is documented.
 func (p *BitwardenSecretsManagerProvider) baseArgs(token string) []string {
-	args := []string{"--access-token", token, "--output", "json"}
+	args := []string{"--output", "json"}
 	if p.serverURL != "" {
 		args = append(args, "--server-url", p.serverURL)
 	}
-	if p.stateFile != "" {
-		args = append(args, "--state-file", p.stateFile)
+	if p.accessTokenEnv != defaultBwsAccessTokenEnv {
+		args = append(args, "--access-token", token)
 	}
 	return args
 }

@@ -40,7 +40,6 @@ secretStores:
     type: bitwarden.secretsmanager
     # access_token_env: BWS_ACCESS_TOKEN     # default
     # server_url: https://vault.bitwarden.com  # for self-hosted
-    # state_file: /var/lib/bws/state
 
 envs:
   production:
@@ -83,8 +82,9 @@ DB_ROTATION_INFO:
 
 ## Security notes
 
-- The access token is currently passed to `bws` via the `--access-token` flag. This is **visible in `ps`** on shared hosts. Future work will pass it via the child-process environment instead. Until then, prefer running dsops on dedicated CI runners.
-- dsops does not write the token to disk. The bws CLI itself may persist a state file under `~/.config/bws/` (override with `state_file:`).
+- When the default `BWS_ACCESS_TOKEN` env var is used, dsops does **not** pass the token in `argv`. The `bws` child process inherits the variable from the parent environment and reads it natively, so the secret stays out of `/proc/PID/cmdline`.
+- When a custom `access_token_env` is configured, the token is passed via `--access-token` (visible in `ps`). Avoid this on shared hosts.
+- dsops does not write the token to disk. The `bws` CLI itself may persist an encrypted state file under `~/.config/bws/`; override its location via the `BWS_CONFIG_FILE` env var or by setting `bws config state-dir <path>` (managed outside dsops).
 
 ## Troubleshooting
 

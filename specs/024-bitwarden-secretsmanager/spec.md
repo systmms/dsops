@@ -51,7 +51,6 @@ Users running self-hosted Bitwarden override the server URL.
 
 **Acceptance Criteria**:
 1. **Given** `server_url: https://...`, **Then** all `bws` invocations include `--server-url <value>`.
-2. **Given** `state_file: /custom/path`, **Then** invocations include `--state-file <value>`.
 
 ## Implementation
 
@@ -73,10 +72,9 @@ secretStores:
     type: bitwarden.secretsmanager
     # access_token_env: BWS_ACCESS_TOKEN  # default
     # server_url: https://vault.bitwarden.com
-    # state_file: ~/.config/bws/state
 ```
 
-Tokens are NEVER read from yaml. The `access_token_env` setting names an env var, not a value.
+Tokens are NEVER read from yaml. The `access_token_env` setting names an env var, not a value. The bws state directory is configured outside dsops via `bws config state-dir <path>` or `BWS_CONFIG_FILE`.
 
 ### Reference Key syntax
 
@@ -109,7 +107,7 @@ provider.Capabilities{
 
 ### Token plumbing
 
-For v1, the access token is passed via the `--access-token` flag. This is visible in `ps`; the docs note this caveat. A follow-up may extend `pkgexec.CommandExecutor` to support passing env vars to child processes, after which the token will be passed via env (the `bws` CLI also reads `BWS_ACCESS_TOKEN` natively).
+When the default `BWS_ACCESS_TOKEN` env var is used (the common case), dsops does NOT pass `--access-token` in argv. The `bws` child process inherits the variable from the parent environment and reads it natively, keeping the token out of `/proc/PID/cmdline`. When a custom `access_token_env` is configured, the token is passed via `--access-token` and is visible in `ps` — this trade-off is documented and recommends sticking to the default env var on shared hosts.
 
 ## Capabilities Table
 

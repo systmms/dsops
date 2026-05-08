@@ -435,8 +435,11 @@ func TestBitwardenProviderWithMockExecutor_CustomFieldExplicitPrefix(t *testing.
 func TestBitwardenProviderWithMockExecutor_Attachment(t *testing.T) {
 	t.Parallel()
 
+	// Note: id and Name differ, simulating a name-based key lookup. The
+	// attachment fetch must use the canonical id, not the user-supplied name,
+	// because `bw get attachment --itemid` requires the exact UUID.
 	itemJSON := `{
-		"id": "item-att",
+		"id": "item-att-uuid",
 		"name": "Item With Attachment",
 		"organizationId": "org-1",
 		"folderId": "folder-1",
@@ -450,30 +453,32 @@ func TestBitwardenProviderWithMockExecutor_Attachment(t *testing.T) {
 	rawBytes := []byte("-----BEGIN CERTIFICATE-----\nMIIBkTCB+w==\n-----END CERTIFICATE-----\n")
 
 	mockExec := testutil.NewMockCommandExecutor()
-	mockExec.AddJSONResponse("bw get item item-att", itemJSON)
-	mockExec.AddResponse("bw get attachment fullchain.pem --itemid item-att --raw", testutil.MockResponse{
+	// User addresses the item by name; bw get item resolves it to the canonical id.
+	mockExec.AddJSONResponse("bw get item Item With Attachment", itemJSON)
+	// The attachment fetch MUST use the canonical id, not the original name.
+	mockExec.AddResponse("bw get attachment fullchain.pem --itemid item-att-uuid --raw", testutil.MockResponse{
 		Stdout: rawBytes,
 	})
 
 	p := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec)
 
 	t.Run("attachment is base64-encoded with metadata", func(t *testing.T) {
-		ref := provider.Reference{Key: "item-att.attachment.fullchain.pem"}
+		ref := provider.Reference{Key: "Item With Attachment.attachment.fullchain.pem"}
 		secret, err := p.Resolve(context.Background(), ref)
 		require.NoError(t, err)
 		assert.Equal(t, base64.StdEncoding.EncodeToString(rawBytes), secret.Value)
 		assert.Equal(t, "fullchain.pem", secret.Metadata["attachment"])
 		assert.Equal(t, "application/octet-stream", secret.Metadata["content_type"])
-		assert.Equal(t, "item-att", secret.Metadata["item_id"])
+		assert.Equal(t, "item-att-uuid", secret.Metadata["item_id"])
 	})
 
 	t.Run("missing attachment returns NotFoundError", func(t *testing.T) {
 		mockExec2 := testutil.NewMockCommandExecutor()
-		mockExec2.AddJSONResponse("bw get item item-att", itemJSON)
-		mockExec2.AddErrorResponse("bw get attachment ghost.pem --itemid item-att --raw", "Attachment `ghost.pem` was not found.", 1)
+		mockExec2.AddJSONResponse("bw get item Item With Attachment", itemJSON)
+		mockExec2.AddErrorResponse("bw get attachment ghost.pem --itemid item-att-uuid --raw", "Attachment `ghost.pem` was not found.", 1)
 
 		p2 := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec2)
-		_, err := p2.Resolve(context.Background(), provider.Reference{Key: "item-att.attachment.ghost.pem"})
+		_, err := p2.Resolve(context.Background(), provider.Reference{Key: "Item With Attachment.attachment.ghost.pem"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not found")
 	})
