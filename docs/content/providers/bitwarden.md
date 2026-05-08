@@ -99,6 +99,36 @@ envs:
       from: { provider: bitwarden, key: "tls-bundle.attachment.fullchain.pem" }
 ```
 
+### Item Types
+
+Bitwarden has five item types. The dsops provider supports all of them. When you address an item without a trailing field, dsops applies a per-type default.
+
+| Type | Default field | Available fields |
+|---|---|---|
+| Login (1) | `password` | `password`, `username`, `totp`, `notes`, `name`, `uri`, `uri0..uriN`, custom fields |
+| Note (2) | `notes` | `notes`, `name`, custom fields |
+| Card (3) | `number` | `number`, `code` (alias `cvv`), `cardholderName`, `brand`, `expMonth`, `expYear`, `notes`, `name`, custom fields |
+| Identity (4) | `email` | `title`, `firstName`, `middleName`, `lastName`, `address1`, `address2`, `address3`, `city`, `state`, `postalCode`, `country`, `company`, `email`, `phone`, `ssn`, `username`, `passportNumber`, `licenseNumber`, `notes`, `name`, custom fields |
+| SSH Key (5) | `privateKey` | `privateKey`, `publicKey`, `keyFingerprint`, `notes`, `name`, custom fields |
+
+Examples:
+
+```yaml
+envs:
+  production:
+    # SSH key (default field is privateKey)
+    DEPLOY_KEY:
+      from: { provider: bitwarden, key: "deploy-key" }
+
+    # Card CVV
+    CARD_CVV:
+      from: { provider: bitwarden, key: "company-card.cvv" }
+
+    # Identity email
+    SUPPORT_EMAIL:
+      from: { provider: bitwarden, key: "support-contact.email" }
+```
+
 ## Security Best Practices
 
 1. **Session Management**

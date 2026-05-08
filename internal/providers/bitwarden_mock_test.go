@@ -479,6 +479,170 @@ func TestBitwardenProviderWithMockExecutor_Attachment(t *testing.T) {
 	})
 }
 
+func TestBitwardenProviderWithMockExecutor_CardItem(t *testing.T) {
+	t.Parallel()
+
+	itemJSON := `{
+		"id": "item-card",
+		"name": "My Card",
+		"organizationId": "",
+		"folderId": "",
+		"type": 3,
+		"login": null,
+		"card": {
+			"cardholderName": "Ada Lovelace",
+			"brand": "Visa",
+			"number": "4111111111111111",
+			"expMonth": "12",
+			"expYear": "2030",
+			"code": "123"
+		},
+		"fields": [],
+		"notes": "",
+		"revisionDate": "2024-04-01T00:00:00Z"
+	}`
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw get item item-card", itemJSON)
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec)
+
+	cases := []struct{ key, want string }{
+		{"item-card", "4111111111111111"}, // default for Card is number
+		{"item-card.number", "4111111111111111"},
+		{"item-card.code", "123"},
+		{"item-card.cvv", "123"}, // alias
+		{"item-card.cardholderName", "Ada Lovelace"},
+		{"item-card.brand", "Visa"},
+		{"item-card.expMonth", "12"},
+		{"item-card.expYear", "2030"},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.key, func(t *testing.T) {
+			s, err := p.Resolve(context.Background(), provider.Reference{Key: tc.key})
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, s.Value)
+		})
+	}
+}
+
+func TestBitwardenProviderWithMockExecutor_IdentityItem(t *testing.T) {
+	t.Parallel()
+
+	itemJSON := `{
+		"id": "item-id",
+		"name": "Personal Identity",
+		"organizationId": "",
+		"folderId": "",
+		"type": 4,
+		"login": null,
+		"identity": {
+			"title": "Dr",
+			"firstName": "Grace",
+			"lastName": "Hopper",
+			"email": "grace@example.com",
+			"phone": "+1-555-0100",
+			"city": "Arlington",
+			"country": "US"
+		},
+		"fields": [],
+		"notes": "",
+		"revisionDate": "2024-04-02T00:00:00Z"
+	}`
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw get item item-id", itemJSON)
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec)
+
+	cases := []struct{ key, want string }{
+		{"item-id", "grace@example.com"}, // default for Identity is email
+		{"item-id.email", "grace@example.com"},
+		{"item-id.firstName", "Grace"},
+		{"item-id.lastName", "Hopper"},
+		{"item-id.title", "Dr"},
+		{"item-id.phone", "+1-555-0100"},
+		{"item-id.city", "Arlington"},
+		{"item-id.country", "US"},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.key, func(t *testing.T) {
+			s, err := p.Resolve(context.Background(), provider.Reference{Key: tc.key})
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, s.Value)
+		})
+	}
+}
+
+func TestBitwardenProviderWithMockExecutor_SshKeyItem(t *testing.T) {
+	t.Parallel()
+
+	itemJSON := `{
+		"id": "item-ssh",
+		"name": "Deploy Key",
+		"organizationId": "",
+		"folderId": "",
+		"type": 5,
+		"login": null,
+		"sshKey": {
+			"privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nXXXXXXXX\n-----END OPENSSH PRIVATE KEY-----",
+			"publicKey": "ssh-ed25519 AAAA... user@host",
+			"keyFingerprint": "SHA256:abc123def456"
+		},
+		"fields": [],
+		"notes": "",
+		"revisionDate": "2024-04-03T00:00:00Z"
+	}`
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw get item item-ssh", itemJSON)
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec)
+
+	cases := []struct {
+		key      string
+		contains string
+	}{
+		{"item-ssh", "BEGIN OPENSSH PRIVATE KEY"}, // default for SshKey is privateKey
+		{"item-ssh.privateKey", "BEGIN OPENSSH PRIVATE KEY"},
+		{"item-ssh.publicKey", "ssh-ed25519"},
+		{"item-ssh.keyFingerprint", "SHA256:abc123"},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.key, func(t *testing.T) {
+			s, err := p.Resolve(context.Background(), provider.Reference{Key: tc.key})
+			require.NoError(t, err)
+			assert.Contains(t, s.Value, tc.contains)
+		})
+	}
+}
+
+func TestBitwardenProviderWithMockExecutor_NoteItem(t *testing.T) {
+	t.Parallel()
+
+	itemJSON := `{
+		"id": "item-note",
+		"name": "Runbook",
+		"organizationId": "",
+		"folderId": "",
+		"type": 2,
+		"login": null,
+		"fields": [],
+		"notes": "step 1: don't panic\nstep 2: read the runbook",
+		"revisionDate": "2024-04-04T00:00:00Z"
+	}`
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw get item item-note", itemJSON)
+	p := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec)
+
+	t.Run("default field is notes for Note items", func(t *testing.T) {
+		s, err := p.Resolve(context.Background(), provider.Reference{Key: "item-note"})
+		require.NoError(t, err)
+		assert.Contains(t, s.Value, "don't panic")
+	})
+}
+
 func TestBitwardenProviderConstructors(t *testing.T) {
 	t.Parallel()
 

@@ -208,19 +208,22 @@ func (bw *BitwardenProvider) Validate(ctx context.Context) error {
 // parseKey parses a Bitwarden key into item ID/name and field.
 //
 // Formats supported:
-//   - "item"                       -> ("item", "password")
-//   - "item.field"                 -> ("item", "field")           // direct field on the item
-//   - "item.custom.<name>"         -> ("item", "custom:<name>")   // explicit custom field; allows dots in <name>
+//   - "item"                       -> ("item", "")               // per-type default applied in extractField
+//   - "item.field"                 -> ("item", "field")          // direct field on the item
+//   - "item.custom.<name>"         -> ("item", "custom:<name>")  // explicit custom field; preserves dots in <name>
 //   - "item.attachment.<filename>" -> ("item", "attachment:<filename>") // attachment retrieval; preserves filename dots
 //
-// Item names may not contain dots; this is a known limitation also present
-// before this change.
+// Item names may not contain dots; this is a known limitation.
+//
+// When no field is specified the empty string is returned. extractField then
+// applies a per-item-type default (Login→password, Card→number,
+// Identity→email, SshKey→privateKey, Note→notes).
 func (bw *BitwardenProvider) parseKey(key string) (itemID, field string) {
 	parts := strings.SplitN(key, ".", 3)
 	itemID = parts[0]
 
 	if len(parts) == 1 {
-		return itemID, "password"
+		return itemID, ""
 	}
 
 	if len(parts) == 3 {
@@ -233,6 +236,26 @@ func (bw *BitwardenProvider) parseKey(key string) (itemID, field string) {
 	}
 
 	return itemID, parts[1]
+}
+
+// defaultFieldForType returns the field name extractField uses when the user
+// addresses an item without specifying a field (e.g. "my-card" with no
+// trailing ".field").
+func defaultFieldForType(t BitwardenItemType) string {
+	switch t {
+	case TypeLogin:
+		return "password"
+	case TypeNote:
+		return "notes"
+	case TypeCard:
+		return "number"
+	case TypeIdentity:
+		return "email"
+	case TypeSshKey:
+		return "privateKey"
+	default:
+		return "password"
+	}
 }
 
 // getItem retrieves an item from Bitwarden by ID or name
@@ -267,14 +290,20 @@ func (bw *BitwardenProvider) getItem(ctx context.Context, itemID string) (*Bitwa
 // extractField extracts a specific field from a Bitwarden item.
 //
 // Field handling:
-//   - well-known names (password, username, totp, notes, name) hit the typed branches
-//   - "custom:<name>" looks up a custom field by name (explicit form)
-//   - bare names fall back to custom-field-by-name lookup for backward compatibility
-//   - "uri", "uri0", "uri1"... select indexed URIs from a Login item
+//   - "" (empty)            -> per-item-type default (see defaultFieldForType)
+//   - "custom:<name>"       -> custom field by name (explicit form)
+//   - "name"                -> the item display name
+//   - type-specific names   -> dispatched to extractLoginField / extractCardField / extractIdentityField / extractSshKeyField
+//   - bare names            -> fall back to custom-field-by-name lookup for backward compatibility
+//   - "uri", "uri0"...      -> indexed URIs from a Login item
 //
 // Attachment retrieval is handled in Resolve, not here, since it requires a
 // separate bw command and returns binary data.
 func (bw *BitwardenProvider) extractField(item *BitwardenItem, field string) (string, error) {
+	if field == "" {
+		field = defaultFieldForType(item.Type)
+	}
+
 	if name, ok := strings.CutPrefix(field, "custom:"); ok {
 		for _, customField := range item.Fields {
 			if customField.Name == name {
@@ -284,49 +313,168 @@ func (bw *BitwardenProvider) extractField(item *BitwardenItem, field string) (st
 		return "", fmt.Errorf("custom field '%s' not found", name)
 	}
 
-	switch field {
-	case "password":
-		if item.Login != nil && item.Login.Password != "" {
-			return item.Login.Password, nil
-		}
-		return "", fmt.Errorf("no password field found")
+	if field == "name" {
+		return item.Name, nil
+	}
 
-	case "username":
-		if item.Login != nil && item.Login.Username != "" {
-			return item.Login.Username, nil
-		}
-		return "", fmt.Errorf("no username field found")
-
-	case "totp":
-		if item.Login != nil && item.Login.Totp != "" {
-			return item.Login.Totp, nil
-		}
-		return "", fmt.Errorf("no TOTP field found")
-
-	case "notes":
+	if field == "notes" {
 		if item.Notes != "" {
 			return item.Notes, nil
 		}
 		return "", fmt.Errorf("no notes field found")
-
-	case "name":
-		return item.Name, nil
-
-	default:
-		// Check custom fields (back-compat: bare field name without "custom:" prefix)
-		for _, customField := range item.Fields {
-			if customField.Name == field {
-				return customField.Value, nil
-			}
-		}
-
-		// Check if it's a URI field reference
-		if strings.HasPrefix(field, "uri") && item.Login != nil {
-			return bw.extractUriField(item, field)
-		}
-
-		return "", fmt.Errorf("field '%s' not found", field)
 	}
+
+	switch item.Type {
+	case TypeCard:
+		if v, err, handled := bw.extractCardField(item, field); handled {
+			return v, err
+		}
+	case TypeIdentity:
+		if v, err, handled := bw.extractIdentityField(item, field); handled {
+			return v, err
+		}
+	case TypeSshKey:
+		if v, err, handled := bw.extractSshKeyField(item, field); handled {
+			return v, err
+		}
+	}
+
+	// Login fields work for any item that has a Login object (which is rare
+	// outside TypeLogin) and are also the default branch for TypeLogin.
+	if v, err, handled := bw.extractLoginField(item, field); handled {
+		return v, err
+	}
+
+	// Back-compat: bare field name matches a custom field
+	for _, customField := range item.Fields {
+		if customField.Name == field {
+			return customField.Value, nil
+		}
+	}
+
+	return "", fmt.Errorf("field '%s' not found", field)
+}
+
+// extractLoginField returns the requested Login field, or (handled=false) if
+// the field name is not a Login concept.
+func (bw *BitwardenProvider) extractLoginField(item *BitwardenItem, field string) (string, error, bool) {
+	switch field {
+	case "password":
+		if item.Login != nil && item.Login.Password != "" {
+			return item.Login.Password, nil, true
+		}
+		return "", fmt.Errorf("no password field found"), true
+	case "username":
+		if item.Login != nil && item.Login.Username != "" {
+			return item.Login.Username, nil, true
+		}
+		return "", fmt.Errorf("no username field found"), true
+	case "totp":
+		if item.Login != nil && item.Login.Totp != "" {
+			return item.Login.Totp, nil, true
+		}
+		return "", fmt.Errorf("no TOTP field found"), true
+	}
+	if strings.HasPrefix(field, "uri") && item.Login != nil {
+		v, err := bw.extractUriField(item, field)
+		return v, err, true
+	}
+	return "", nil, false
+}
+
+// extractCardField returns the requested Card field. The third return value
+// indicates whether the field is a Card concept; callers should fall through
+// to other lookups (e.g. custom fields) when handled=false.
+func (bw *BitwardenProvider) extractCardField(item *BitwardenItem, field string) (string, error, bool) {
+	if item.Card == nil {
+		// Field names below are Card-specific; if we see one, surface a clearer error.
+		switch field {
+		case "number", "code", "cvv", "cardholderName", "brand", "expMonth", "expYear":
+			return "", fmt.Errorf("no card data on item"), true
+		}
+		return "", nil, false
+	}
+	switch field {
+	case "number":
+		return item.Card.Number, nil, true
+	case "code", "cvv":
+		return item.Card.Code, nil, true
+	case "cardholderName":
+		return item.Card.CardholderName, nil, true
+	case "brand":
+		return item.Card.Brand, nil, true
+	case "expMonth":
+		return item.Card.ExpMonth, nil, true
+	case "expYear":
+		return item.Card.ExpYear, nil, true
+	}
+	return "", nil, false
+}
+
+// extractIdentityField returns the requested Identity field.
+func (bw *BitwardenProvider) extractIdentityField(item *BitwardenItem, field string) (string, error, bool) {
+	if item.Identity == nil {
+		return "", nil, false
+	}
+	switch field {
+	case "title":
+		return item.Identity.Title, nil, true
+	case "firstName":
+		return item.Identity.FirstName, nil, true
+	case "middleName":
+		return item.Identity.MiddleName, nil, true
+	case "lastName":
+		return item.Identity.LastName, nil, true
+	case "address1":
+		return item.Identity.Address1, nil, true
+	case "address2":
+		return item.Identity.Address2, nil, true
+	case "address3":
+		return item.Identity.Address3, nil, true
+	case "city":
+		return item.Identity.City, nil, true
+	case "state":
+		return item.Identity.State, nil, true
+	case "postalCode":
+		return item.Identity.PostalCode, nil, true
+	case "country":
+		return item.Identity.Country, nil, true
+	case "company":
+		return item.Identity.Company, nil, true
+	case "email":
+		return item.Identity.Email, nil, true
+	case "phone":
+		return item.Identity.Phone, nil, true
+	case "ssn":
+		return item.Identity.SSN, nil, true
+	case "username":
+		return item.Identity.Username, nil, true
+	case "passportNumber":
+		return item.Identity.PassportNumber, nil, true
+	case "licenseNumber":
+		return item.Identity.LicenseNumber, nil, true
+	}
+	return "", nil, false
+}
+
+// extractSshKeyField returns the requested SshKey field.
+func (bw *BitwardenProvider) extractSshKeyField(item *BitwardenItem, field string) (string, error, bool) {
+	if item.SshKey == nil {
+		switch field {
+		case "privateKey", "publicKey", "keyFingerprint":
+			return "", fmt.Errorf("no ssh key data on item"), true
+		}
+		return "", nil, false
+	}
+	switch field {
+	case "privateKey":
+		return item.SshKey.PrivateKey, nil, true
+	case "publicKey":
+		return item.SshKey.PublicKey, nil, true
+	case "keyFingerprint":
+		return item.SshKey.KeyFingerprint, nil, true
+	}
+	return "", nil, false
 }
 
 // getAttachment retrieves the raw bytes of a named attachment on a Bitwarden item.
@@ -411,23 +559,27 @@ const (
 	TypeNote     BitwardenItemType = 2
 	TypeCard     BitwardenItemType = 3
 	TypeIdentity BitwardenItemType = 4
+	TypeSshKey   BitwardenItemType = 5
 )
 
 // BitwardenItem represents a Bitwarden vault item
 type BitwardenItem struct {
-	ID             string            `json:"id"`
-	OrganizationID string            `json:"organizationId"`
-	FolderID       string            `json:"folderId"`
-	Type           BitwardenItemType `json:"type"`
-	Name           string            `json:"name"`
-	Notes          string            `json:"notes"`
-	Favorite       bool              `json:"favorite"`
-	Fields         []BitwardenField  `json:"fields"`
-	Login          *BitwardenLogin   `json:"login"`
-	CollectionIds  []string          `json:"collectionIds"`
-	RevisionDate   string            `json:"revisionDate"`
-	CreationDate   string            `json:"creationDate"`
-	DeletedDate    string            `json:"deletedDate"`
+	ID             string             `json:"id"`
+	OrganizationID string             `json:"organizationId"`
+	FolderID       string             `json:"folderId"`
+	Type           BitwardenItemType  `json:"type"`
+	Name           string             `json:"name"`
+	Notes          string             `json:"notes"`
+	Favorite       bool               `json:"favorite"`
+	Fields         []BitwardenField   `json:"fields"`
+	Login          *BitwardenLogin    `json:"login"`
+	Card           *BitwardenCard     `json:"card"`
+	Identity       *BitwardenIdentity `json:"identity"`
+	SshKey         *BitwardenSshKey   `json:"sshKey"`
+	CollectionIds  []string           `json:"collectionIds"`
+	RevisionDate   string             `json:"revisionDate"`
+	CreationDate   string             `json:"creationDate"`
+	DeletedDate    string             `json:"deletedDate"`
 }
 
 // BitwardenLogin represents login-specific data
@@ -449,4 +601,43 @@ type BitwardenField struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
 	Type  int    `json:"type"`
+}
+
+// BitwardenCard represents card-specific data. The Code field is the CVV.
+type BitwardenCard struct {
+	CardholderName string `json:"cardholderName"`
+	Brand          string `json:"brand"`
+	Number         string `json:"number"`
+	ExpMonth       string `json:"expMonth"`
+	ExpYear        string `json:"expYear"`
+	Code           string `json:"code"`
+}
+
+// BitwardenIdentity represents identity-specific data
+type BitwardenIdentity struct {
+	Title          string `json:"title"`
+	FirstName      string `json:"firstName"`
+	MiddleName     string `json:"middleName"`
+	LastName       string `json:"lastName"`
+	Address1       string `json:"address1"`
+	Address2       string `json:"address2"`
+	Address3       string `json:"address3"`
+	City           string `json:"city"`
+	State          string `json:"state"`
+	PostalCode     string `json:"postalCode"`
+	Country        string `json:"country"`
+	Company        string `json:"company"`
+	Email          string `json:"email"`
+	Phone          string `json:"phone"`
+	SSN            string `json:"ssn"`
+	Username       string `json:"username"`
+	PassportNumber string `json:"passportNumber"`
+	LicenseNumber  string `json:"licenseNumber"`
+}
+
+// BitwardenSshKey represents an SSH key item. Field names mirror the bw CLI JSON.
+type BitwardenSshKey struct {
+	PrivateKey     string `json:"privateKey"`
+	PublicKey      string `json:"publicKey"`
+	KeyFingerprint string `json:"keyFingerprint"`
 }

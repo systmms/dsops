@@ -18,10 +18,10 @@ func TestBitwardenParseKey(t *testing.T) {
 		expectedField string
 	}{
 		{
-			name:          "simple item ID returns password",
+			name:          "simple item ID returns empty (per-type default applied later)",
 			key:           "abc123",
 			expectedItem:  "abc123",
-			expectedField: "password",
+			expectedField: "",
 		},
 		{
 			name:          "item ID with password field",
@@ -87,7 +87,7 @@ func TestBitwardenParseKey(t *testing.T) {
 			name:          "item name with hyphens",
 			key:           "my-test-item",
 			expectedItem:  "my-test-item",
-			expectedField: "password",
+			expectedField: "",
 		},
 		{
 			name:          "item name with underscores",
@@ -96,10 +96,10 @@ func TestBitwardenParseKey(t *testing.T) {
 			expectedField: "username",
 		},
 		{
-			name:          "empty key defaults to password",
+			name:          "empty key returns empty (per-type default applied later)",
 			key:           "",
 			expectedItem:  "",
-			expectedField: "password",
+			expectedField: "",
 		},
 		{
 			name:          "explicit custom field prefix",
