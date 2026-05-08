@@ -338,11 +338,14 @@ func (p *BitwardenSecretsManagerProvider) listSecrets(ctx context.Context, token
 		return nil, cachedErr
 	}
 
+	// `bws secret list` takes the project filter as a POSITIONAL argument
+	// (Option<Uuid>), not a --project-id flag. The flag form would error in
+	// real bws invocations even though prefix-matching mocks would still pass.
 	args := p.baseArgs(token)
-	args = append(args, "secret", "list", "--project-id", projectID)
+	args = append(args, "secret", "list", projectID)
 	stdout, _, err := p.executor.Execute(ctx, "bws", args...)
 	if err != nil {
-		p.secretsErr[projectID] = fmt.Errorf("bws secret list --project-id %s: %w", projectID, err)
+		p.secretsErr[projectID] = fmt.Errorf("bws secret list %s: %w", projectID, err)
 		return nil, p.secretsErr[projectID]
 	}
 	var secrets []bwsSecret

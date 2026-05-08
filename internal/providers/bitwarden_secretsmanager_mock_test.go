@@ -85,7 +85,7 @@ func TestBitwardenSMProvider_ResolveByPath(t *testing.T) {
 	mockExec := testutil.NewMockCommandExecutor()
 	// Default BWS_ACCESS_TOKEN env var: token is inherited via env, not flag.
 	mockExec.AddJSONResponse("bws --output json project list", projectListJSON)
-	mockExec.AddJSONResponse("bws --output json secret list --project-id 33333333-3333-4333-8333-333333333333", secretListJSON)
+	mockExec.AddJSONResponse("bws --output json secret list 33333333-3333-4333-8333-333333333333", secretListJSON)
 
 	p := providers.NewBitwardenSecretsManagerProviderWithExecutor("bw-sm", map[string]interface{}{}, mockExec)
 
@@ -110,7 +110,7 @@ func TestBitwardenSMProvider_ResolveByPath(t *testing.T) {
 		if hasArgsPrefix(c.Args, "project", "list") {
 			projectListCalls++
 		}
-		if hasArgsPrefix(c.Args, "secret", "list", "--project-id") {
+		if hasArgsPrefix(c.Args, "secret", "list") {
 			secretListCalls++
 		}
 	}
@@ -309,9 +309,9 @@ func TestBitwardenSMProvider_CacheInvalidatesOnTokenChange(t *testing.T) {
 	mockExec := testutil.NewMockCommandExecutor()
 	// With custom env var, --access-token IS in argv, so we can match by token.
 	mockExec.AddJSONResponse("bws --output json --access-token tenant-a-token project list", projectListA)
-	mockExec.AddJSONResponse("bws --output json --access-token tenant-a-token secret list --project-id aaaa1111-aaaa-4aaa-8aaa-aaaaaaaaaaaa", secretListA)
+	mockExec.AddJSONResponse("bws --output json --access-token tenant-a-token secret list aaaa1111-aaaa-4aaa-8aaa-aaaaaaaaaaaa", secretListA)
 	mockExec.AddJSONResponse("bws --output json --access-token tenant-b-token project list", projectListB)
-	mockExec.AddJSONResponse("bws --output json --access-token tenant-b-token secret list --project-id bbbb2222-bbbb-4bbb-8bbb-bbbbbbbbbbbb", secretListB)
+	mockExec.AddJSONResponse("bws --output json --access-token tenant-b-token secret list bbbb2222-bbbb-4bbb-8bbb-bbbbbbbbbbbb", secretListB)
 
 	p := providers.NewBitwardenSecretsManagerProviderWithExecutor("bw-sm", cfg, mockExec)
 
