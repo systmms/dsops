@@ -15,6 +15,14 @@ func SetBwLookPathForTesting(fn func() error) (restore func()) {
 	return func() { bwLookPath = prev }
 }
 
+// SetBwsLookPathForTesting overrides the bws lookup function. Returns a
+// restore function the caller should defer.
+func SetBwsLookPathForTesting(fn func() error) (restore func()) {
+	prev := bwsLookPath
+	bwsLookPath = fn
+	return func() { bwsLookPath = prev }
+}
+
 // TestBitwardenParseKey tests the parseKey function for various input formats.
 func TestBitwardenParseKey(t *testing.T) {
 	bw := &BitwardenProvider{name: "test"}

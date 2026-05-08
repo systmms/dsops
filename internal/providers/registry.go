@@ -27,6 +27,7 @@ func NewRegistry() *Registry {
 	registry.RegisterFactory("mock", NewMockProviderFactory)
 	registry.RegisterFactory("json", NewJSONProviderFactory)
 	registry.RegisterFactory("bitwarden", NewBitwardenProviderFactory)
+	registry.RegisterFactory("bitwarden.secretsmanager", NewBitwardenSecretsManagerProviderFactory)
 	registry.RegisterFactory("aws.secretsmanager", NewAWSSecretsManagerProviderFactory)
 	registry.RegisterFactory("aws.ssm", NewAWSSSMProviderFactory)
 	registry.RegisterFactory("aws.sts", NewAWSSTSProviderFactory)
@@ -121,6 +122,12 @@ func NewJSONProviderFactory(name string, config map[string]interface{}) (provide
 // NewBitwardenProviderFactory creates a Bitwarden provider factory
 func NewBitwardenProviderFactory(name string, config map[string]interface{}) (provider.Provider, error) {
 	return NewBitwardenProvider(name, config), nil
+}
+
+// NewBitwardenSecretsManagerProviderFactory creates a Bitwarden Secrets
+// Manager provider factory.
+func NewBitwardenSecretsManagerProviderFactory(name string, config map[string]interface{}) (provider.Provider, error) {
+	return NewBitwardenSecretsManagerProvider(name, config), nil
 }
 
 // NewAWSSecretsManagerProviderFactory creates an AWS Secrets Manager provider factory
