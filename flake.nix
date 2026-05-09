@@ -38,7 +38,8 @@
 
             # Provider CLI tools for integration (install separately if needed)
             # _1password-cli
-            # bitwarden-cli
+            # bitwarden-cli            # bw — Bitwarden Password Manager
+            # bitwarden-sdk-secrets    # bws — Bitwarden Secrets Manager
             # awscli2
             # google-cloud-sdk
             # azure-cli

@@ -7,6 +7,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// SetBwLookPathForTesting overrides the bw lookup function. Returns a restore
+// function the caller should defer.
+func SetBwLookPathForTesting(fn func() error) (restore func()) {
+	prev := bwLookPath
+	bwLookPath = fn
+	return func() { bwLookPath = prev }
+}
+
+// SetBwsLookPathForTesting overrides the bws lookup function. Returns a
+// restore function the caller should defer.
+func SetBwsLookPathForTesting(fn func() error) (restore func()) {
+	prev := bwsLookPath
+	bwsLookPath = fn
+	return func() { bwsLookPath = prev }
+}
+
 // TestBitwardenParseKey tests the parseKey function for various input formats.
 func TestBitwardenParseKey(t *testing.T) {
 	bw := &BitwardenProvider{name: "test"}
@@ -18,10 +34,10 @@ func TestBitwardenParseKey(t *testing.T) {
 		expectedField string
 	}{
 		{
-			name:          "simple item ID returns password",
+			name:          "simple item ID returns empty (per-type default applied later)",
 			key:           "abc123",
 			expectedItem:  "abc123",
-			expectedField: "password",
+			expectedField: "",
 		},
 		{
 			name:          "item ID with password field",
@@ -87,7 +103,7 @@ func TestBitwardenParseKey(t *testing.T) {
 			name:          "item name with hyphens",
 			key:           "my-test-item",
 			expectedItem:  "my-test-item",
-			expectedField: "password",
+			expectedField: "",
 		},
 		{
 			name:          "item name with underscores",
@@ -96,10 +112,34 @@ func TestBitwardenParseKey(t *testing.T) {
 			expectedField: "username",
 		},
 		{
-			name:          "empty key defaults to password",
+			name:          "empty key returns empty (per-type default applied later)",
 			key:           "",
 			expectedItem:  "",
-			expectedField: "password",
+			expectedField: "",
+		},
+		{
+			name:          "explicit custom field prefix",
+			key:           "abc123.custom.api_key",
+			expectedItem:  "abc123",
+			expectedField: "custom:api_key",
+		},
+		{
+			name:          "custom field name preserves dots",
+			key:           "abc123.custom.aws.region",
+			expectedItem:  "abc123",
+			expectedField: "custom:aws.region",
+		},
+		{
+			name:          "attachment with simple filename",
+			key:           "abc123.attachment.kubeconfig",
+			expectedItem:  "abc123",
+			expectedField: "attachment:kubeconfig",
+		},
+		{
+			name:          "attachment filename preserves dots",
+			key:           "abc123.attachment.fullchain.pem",
+			expectedItem:  "abc123",
+			expectedField: "attachment:fullchain.pem",
 		},
 	}
 
@@ -272,6 +312,19 @@ func TestBitwardenExtractField(t *testing.T) {
 			field:         "nonexistent",
 			expectError:   true,
 			errorContains: "field 'nonexistent' not found",
+		},
+		{
+			name:          "explicit custom prefix matches custom field",
+			item:          testItem,
+			field:         "custom:api_key",
+			expectedValue: "sk-live-123456",
+		},
+		{
+			name:          "explicit custom prefix with non-existent field",
+			item:          testItem,
+			field:         "custom:does_not_exist",
+			expectError:   true,
+			errorContains: "custom field 'does_not_exist' not found",
 		},
 		{
 			name:          "uri on item without login",
