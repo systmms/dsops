@@ -304,6 +304,18 @@ func (bw *BitwardenProvider) ensureAccount(ctx context.Context) error {
 		bw.observedStatus = status.Status
 		bw.mu.Unlock()
 
+		// SPEC-026 US2: reconcile server URL if configured and mismatched.
+		// Unset `server` is left alone (FR-008 / research.md R4).
+		if bw.server != "" && bw.server != status.ServerURL {
+			if _, _, err := bw.run(ctx, "config", "server", bw.server); err != nil {
+				bw.accountErr = fmt.Errorf("provider %q: bw config server %q failed: %w", bw.name, bw.server, err)
+				return
+			}
+			bw.mu.Lock()
+			bw.observedServer = bw.server
+			bw.mu.Unlock()
+		}
+
 		if bw.email != "" && !strings.EqualFold(bw.email, status.UserEmail) {
 			bw.accountErr = provider.AuthError{
 				Provider: bw.name,

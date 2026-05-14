@@ -78,15 +78,15 @@ description: "Task list for SPEC-026: Bitwarden Multi-Account Support"
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Write failing test `TestEnsureServer_MismatchTriggersConfig` in `internal/providers/bitwarden_mock_test.go`: configure `server: https://vw.example.com`, mock `bw status` with `serverUrl: https://vault.bitwarden.com`, run two Resolves, assert exactly one `bw config server https://vw.example.com` call (and that it carries the correct env from Phase 2).
-- [ ] T019 [P] [US2] Write failing test `TestEnsureServer_MatchSkipsConfig` in `internal/providers/bitwarden_mock_test.go`: configure `server: https://vw.example.com`, mock `bw status` already at that URL, assert zero `bw config server` calls.
-- [ ] T020 [P] [US2] Write failing test `TestEnsureServer_OncePerProcess` in `internal/providers/bitwarden_mock_test.go`: even with five concurrent `Resolve` calls (goroutines), at most one `bw config server` is invoked.
-- [ ] T021 [P] [US2] Write failing test `TestApplyBitwardenConfig_RejectsMalformedServer` in `internal/providers/bitwarden_internal_test.go`: empty scheme, missing host, and non-http schemes are rejected at config-load time with an error naming the provider instance.
+- [X] T018 [P] [US2] Write failing test `TestEnsureServer_MismatchTriggersConfig` in `internal/providers/bitwarden_mock_test.go`: configure `server: https://vw.example.com`, mock `bw status` with `serverUrl: https://vault.bitwarden.com`, run two Resolves, assert exactly one `bw config server https://vw.example.com` call (and that it carries the correct env from Phase 2).
+- [X] T019 [P] [US2] Write failing test `TestEnsureServer_MatchSkipsConfig` in `internal/providers/bitwarden_mock_test.go`: configure `server: https://vw.example.com`, mock `bw status` already at that URL, assert zero `bw config server` calls.
+- [X] T020 [P] [US2] Write failing test `TestEnsureServer_OncePerProcess` in `internal/providers/bitwarden_mock_test.go`: even with five concurrent `Resolve` calls (goroutines), at most one `bw config server` is invoked.
+- [X] T021 [P] [US2] Write failing test `TestApplyBitwardenConfig_RejectsMalformedServer` in `internal/providers/bitwarden_internal_test.go`: empty scheme, missing host, and non-http schemes are rejected at config-load time with an error naming the provider instance.
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Implement `func (bw *BitwardenProvider) ensureServer(ctx context.Context) error` in `internal/providers/bitwarden.go`: when `bw.server != ""` and `bw.observedServer` (populated by `ensureAccount`) differs from `bw.server`, run `bw.run(ctx, "config", "server", bw.server)` and update `bw.observedServer`. Call it from `ensureAccount` immediately after parsing `bw status` and before email verification. T018, T019, T020 must pass.
-- [ ] T023 [US2] Add URL parse + scheme check to `applyBitwardenConfig` in `internal/providers/bitwarden.go`. T021 must pass.
+- [X] T022 [US2] Implement `func (bw *BitwardenProvider) ensureServer(ctx context.Context) error` in `internal/providers/bitwarden.go`: when `bw.server != ""` and `bw.observedServer` (populated by `ensureAccount`) differs from `bw.server`, run `bw.run(ctx, "config", "server", bw.server)` and update `bw.observedServer`. Call it from `ensureAccount` immediately after parsing `bw status` and before email verification. T018, T019, T020 must pass.
+- [X] T023 [US2] Add URL parse + scheme check to `applyBitwardenConfig` in `internal/providers/bitwarden.go`. T021 must pass.
 
 **Checkpoint**: User Story 2 is independently demonstrable — self-hosted and cloud Bitwarden accounts coexist in one config; doctor output reflects the configured `server` per instance.
 

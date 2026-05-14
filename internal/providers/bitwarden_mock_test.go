@@ -1129,6 +1129,98 @@ func ensureDirs(root string, names ...string) error {
 	return nil
 }
 
+// TestBitwarden_EnsureServer_MismatchTriggersConfig (SPEC-026 US2, T018)
+func TestBitwarden_EnsureServer_MismatchTriggersConfig(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@x.com", "https://vault.bitwarden.com", "unlocked"))
+	mockExec.AddResponse("bw config server https://vw.example.com", testutil.MockResponse{Stdout: []byte("Saved.\n")})
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+		"server":     "https://vw.example.com",
+	}, mockExec)
+
+	ctx := context.Background()
+	for i := 0; i < 2; i++ {
+		_, err := p.Resolve(ctx, provider.Reference{Key: "item-1"})
+		require.NoError(t, err)
+	}
+
+	configCalls := 0
+	for _, c := range mockExec.RecordedCalls {
+		if c.Command != "bw" || len(c.Args) < 3 {
+			continue
+		}
+		if c.Args[0] == "config" && c.Args[1] == "server" && c.Args[2] == "https://vw.example.com" {
+			configCalls++
+		}
+	}
+	assert.Equal(t, 1, configCalls, "expected exactly one `bw config server` call across two Resolves")
+}
+
+// TestBitwarden_EnsureServer_MatchSkipsConfig (SPEC-026 US2, T019)
+func TestBitwarden_EnsureServer_MatchSkipsConfig(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@x.com", "https://vw.example.com", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+		"server":     "https://vw.example.com",
+	}, mockExec)
+
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.NoError(t, err)
+
+	for _, c := range mockExec.RecordedCalls {
+		if c.Command == "bw" && len(c.Args) >= 2 && c.Args[0] == "config" && c.Args[1] == "server" {
+			t.Errorf("expected no `bw config server` call when server already matches, got %v", c.Args)
+		}
+	}
+}
+
+// TestBitwarden_EnsureServer_UnsetSkipsReconciliation (SPEC-026 US2, FR-008)
+// Verifies the research.md R4 fix: an unset `server` does NOT clobber a
+// pre-existing self-hosted setting via `bw config server`.
+func TestBitwarden_EnsureServer_UnsetSkipsReconciliation(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@x.com", "https://vw.example.com", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+		// server intentionally unset
+	}, mockExec)
+
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.NoError(t, err)
+
+	for _, c := range mockExec.RecordedCalls {
+		if c.Command == "bw" && len(c.Args) >= 2 && c.Args[0] == "config" && c.Args[1] == "server" {
+			t.Errorf("server unset must not reconcile, got %v", c.Args)
+		}
+	}
+}
+
 func assertEnvOnAllCalls(t *testing.T, calls []testutil.RecordedCall, want string) {
 	t.Helper()
 	for i, c := range calls {
