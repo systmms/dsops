@@ -2,7 +2,7 @@
 
 **Feature Branch**: `claude/multi-account-desktop-support-eS7zI`
 **Created**: 2026-05-11
-**Status**: Draft
+**Status**: In Progress (Phases 1–5 implemented on this branch; awaiting merge)
 **Input**: User description: "do we support multi account desktop gui bitwarden installations?"
 
 ## Summary

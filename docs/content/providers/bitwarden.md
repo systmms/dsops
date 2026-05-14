@@ -217,3 +217,80 @@ For GitHub Actions:
   run: |
     dsops exec --env production -- ./deploy.sh
 ```
+## Multiple accounts (SPEC-026)
+
+The Bitwarden desktop app supports keeping multiple accounts logged in at
+once. To mirror that setup in dsops, declare one `type: bitwarden` provider
+per account and pin each to its own `appDataDir`. dsops sets
+`BITWARDENCLI_APPDATA_DIR` on every `bw` subprocess so each provider
+operates against an isolated on-disk state — sessions, server URL, and
+cached vault data don't bleed across.
+
+Three optional per-instance fields enable this:
+
+| Field        | Purpose                                                                            |
+|--------------|------------------------------------------------------------------------------------|
+| `appDataDir` | Absolute (or `~`-prefixed) path; injected as `BITWARDENCLI_APPDATA_DIR` per call.  |
+| `server`     | Bitwarden server URL; reconciled via `bw config server` only when set + mismatched.|
+| `email`      | Expected user email; verified case-insensitively against `bw status`'s userEmail.  |
+
+Omitting all three is equivalent to the pre-SPEC-026 single-account
+behavior (FR-008).
+
+### Example
+
+```yaml
+version: 0
+
+providers:
+  bw-personal:
+    type: bitwarden
+    appDataDir: ~/.config/dsops/bw-personal
+    email: alice@example.com
+
+  bw-work:
+    type: bitwarden
+    appDataDir: ~/.config/dsops/bw-work
+    server: https://vw.corp.example.com
+    email: alice@corp.example.com
+
+envs:
+  dev:
+    PERSONAL_API_KEY:
+      from: { provider: bw-personal, key: "<personal-item-id>.password" }
+    WORK_DB_URL:
+      from: { provider: bw-work,     key: "<work-item-id>.custom.database_url" }
+```
+
+See [`examples/bitwarden-multi-account.yaml`](https://github.com/systmms/dsops/blob/main/examples/bitwarden-multi-account.yaml)
+for the runnable worked example.
+
+### Diagnostics with `dsops doctor`
+
+`dsops doctor` adds a per-Bitwarden-instance block showing the resolved
+`appDataDir`, configured `server`, and observed account email/status. If
+two providers point at the same `appDataDir`, a `⚠ shared with:` warning
+flags the collision under each block.
+
+### Headless CI (one account per process)
+
+`bw` reads `BW_CLIENTID`, `BW_CLIENTSECRET`, and `BW_PASSWORD` from its
+own process environment, which is process-wide. SPEC-026 isolates
+*state directories*, not *credential env vars*: two `headless: true`
+providers in the same process cannot hold distinct identities. The
+realistic CI shape is one dsops invocation per identity, each with its
+own credential env vars and its own `appDataDir`.
+
+Two headless providers sharing an `appDataDir` is a configuration error
+(their `bw login` / `bw unlock` calls would race the same on-disk
+state). dsops fails fast and names both providers plus the shared dir.
+
+### Explicitly out of scope
+
+- Reading the Bitwarden desktop app's local data file or any GUI-internal
+  storage.
+- Native messaging / IPC integration with a running Bitwarden desktop
+  process.
+- `bw serve` REST-API fast path.
+- Per-variable account override (selecting an account at the `store://`
+  reference level rather than the provider level).

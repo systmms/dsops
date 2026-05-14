@@ -117,12 +117,18 @@ description: "Task list for SPEC-026: Bitwarden Multi-Account Support"
 
 **Purpose**: Examples, docs, and final verification.
 
-- [ ] T029 [P] Create `examples/bitwarden-multi-account.yaml` with two providers (one cloud, one self-hosted Vaultwarden) mirroring the example in `specs/026-bitwarden-multi-account/contracts/config-schema.md`.
-- [ ] T030 [P] Add a "Multiple accounts" subsection to `docs/content/providers/bitwarden.md` covering `appDataDir` / `server` / `email`, the multi-instance pattern, and a pointer to the quickstart.
-- [ ] T031 [P] Add a SPEC-026 row to `docs/content/reference/status.md` reflecting Implemented status when the feature lands.
-- [ ] T032 [P] Update the frontmatter of `specs/026-bitwarden-multi-account/spec.md` from `Status: Draft` → `Status: In Progress` at start of implementation, then `Implemented` once merged.
-- [ ] T033 Run `make check` (lint + vet + race + coverage) from repo root; confirm `internal/providers` coverage is ≥85% (constitution VII / SC-005) and that the pre-feature baseline captured in T001 has not regressed.
+- [X] T029 [P] Create `examples/bitwarden-multi-account.yaml` with two providers (one cloud, one self-hosted Vaultwarden) mirroring the example in `specs/026-bitwarden-multi-account/contracts/config-schema.md`.
+- [X] T030 [P] Add a "Multiple accounts" subsection to `docs/content/providers/bitwarden.md` covering `appDataDir` / `server` / `email`, the multi-instance pattern, and a pointer to the quickstart.
+- [X] T031 [P] Add a SPEC-026 row to `docs/content/reference/status.md` reflecting Implemented status when the feature lands.
+- [X] T032 [P] Update the frontmatter of `specs/026-bitwarden-multi-account/spec.md` from `Status: Draft` → `Status: In Progress` at start of implementation, then `Implemented` once merged.
+- [X] T033 Run `make check` (lint + vet + race + coverage) from repo root; confirm `internal/providers` coverage is ≥85% (constitution VII / SC-005) and that the pre-feature baseline captured in T001 has not regressed.
 - [ ] T034 Walk through `specs/026-bitwarden-multi-account/quickstart.md` against a real `bw` install (or a `Vaultwarden`-in-Docker fixture) end-to-end: Steps 1–6, including the negative tests. Record any deviation from documented behavior as a follow-up issue rather than silently editing the spec.
+
+> **T034 deferred**: not exercised inside this development environment — no
+> real Bitwarden accounts available here. The mock-executor tests in
+> Phases 3–5 cover the documented behaviors at the unit-test layer; the
+> end-to-end quickstart walkthrough should be run on the reviewer's
+> machine before merge.
 
 ---
 
