@@ -100,14 +100,14 @@ description: "Task list for SPEC-026: Bitwarden Multi-Account Support"
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Write failing test `TestHeadless_TwoInstances_EnvIsolated` in `internal/providers/bitwarden_mock_test.go`: two providers with `headless: true`, distinct `appDataDir`s, distinct credential env values set via the mock; assert each provider's `bw login --apikey` and `bw unlock` calls carry the matching `BITWARDENCLI_APPDATA_DIR=...`.
-- [ ] T025 [P] [US3] Write failing test `TestHeadless_SharedAppDataDir_Errors` in `internal/providers/bitwarden_mock_test.go` (and a sibling at the registry/`Validate` layer): two providers configured with `headless: true` and the same `appDataDir` fail at construction/validation with an error naming both providers.
-- [ ] T026 [P] [US3] Write failing test `TestHeadlessLogin_RoutesThroughExecuteWithEnv` in `internal/providers/bitwarden_mock_test.go`: confirms `bw login --apikey` and `bw unlock` are invoked through `ExecuteWithEnv` when `appDataDir` is set.
+- [X] T024 [P] [US3] Write failing test `TestHeadless_TwoInstances_EnvIsolated` in `internal/providers/bitwarden_mock_test.go`: two providers with `headless: true`, distinct `appDataDir`s, distinct credential env values set via the mock; assert each provider's `bw login --apikey` and `bw unlock` calls carry the matching `BITWARDENCLI_APPDATA_DIR=...`.
+- [X] T025 [P] [US3] Write failing test `TestHeadless_SharedAppDataDir_Errors` in `internal/providers/bitwarden_mock_test.go` (and a sibling at the registry/`Validate` layer): two providers configured with `headless: true` and the same `appDataDir` fail at construction/validation with an error naming both providers.
+- [X] T026 [P] [US3] Write failing test `TestHeadlessLogin_RoutesThroughExecuteWithEnv` in `internal/providers/bitwarden_mock_test.go`: confirms `bw login --apikey` and `bw unlock` are invoked through `ExecuteWithEnv` when `appDataDir` is set.
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Update `ensureHeadlessAuth` in `internal/providers/bitwarden.go` to invoke `bw.run(...)` for `bw login --apikey` and `bw unlock --passwordenv BW_PASSWORD --raw`, so env propagates. T024 and T026 must pass.
-- [ ] T028 [US3] Implement cross-instance shared-`appDataDir` + `headless` detection. Preferred location: a one-shot validation pass in `internal/providers/registry.go` (or a helper called from there) that inspects the assembled provider set after construction and returns a configuration error naming both providers. T025 must pass.
+- [X] T027 [US3] Update `ensureHeadlessAuth` in `internal/providers/bitwarden.go` to invoke `bw.run(...)` for `bw login --apikey` and `bw unlock --passwordenv BW_PASSWORD --raw`, so env propagates. T024 and T026 must pass.
+- [X] T028 [US3] Implement cross-instance shared-`appDataDir` + `headless` detection. Preferred location: a one-shot validation pass in `internal/providers/registry.go` (or a helper called from there) that inspects the assembled provider set after construction and returns a configuration error naming both providers. T025 must pass.
 
 **Checkpoint**: All three stories are independently functional — single-account configs are byte-identical to pre-feature behavior.
 

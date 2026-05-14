@@ -26,6 +26,28 @@ var bwLookPath = func() error {
 	return err
 }
 
+// headlessAppDataDirs records which provider instance has claimed each
+// appDataDir under headless mode, per SPEC-026 FR-007. The collision check
+// is performed on first use (ensureHeadlessAuth); since two headless
+// providers driving the same on-disk state would race each other's bw
+// login/unlock state, the second claimant fails fast with a configuration
+// error.
+//
+// Keyed by absolute appDataDir; value is the claiming provider's name.
+// sync.Map keeps the registry lock-free for concurrent multi-provider
+// resolves. ResetHeadlessAppDataDirsForTesting clears it for test
+// isolation.
+var headlessAppDataDirs sync.Map
+
+// ResetHeadlessAppDataDirsForTesting clears the package-level headless
+// appDataDir registry. For test use only.
+func ResetHeadlessAppDataDirsForTesting() {
+	headlessAppDataDirs.Range(func(k, _ any) bool {
+		headlessAppDataDirs.Delete(k)
+		return true
+	})
+}
+
 // BitwardenProvider implements the provider interface for Bitwarden
 type BitwardenProvider struct {
 	name     string
@@ -560,6 +582,17 @@ func (bw *BitwardenProvider) recoverAuthIfHeadless(ctx context.Context) (string,
 func (bw *BitwardenProvider) ensureHeadlessAuth(ctx context.Context) error {
 	if !bw.headless {
 		return nil
+	}
+	// SPEC-026 FR-007: two headless providers cannot share an appDataDir
+	// because their `bw login`/`bw unlock` calls would race each other's
+	// on-disk session state. Fail fast on the second claimant.
+	if bw.appDataDir != "" {
+		if prev, loaded := headlessAppDataDirs.LoadOrStore(bw.appDataDir, bw.name); loaded && prev.(string) != bw.name {
+			return fmt.Errorf(
+				"bitwarden provider %q cannot share appDataDir %q with headless provider %q",
+				bw.name, bw.appDataDir, prev.(string),
+			)
+		}
 	}
 	bw.mu.Lock()
 	if bw.authDone {

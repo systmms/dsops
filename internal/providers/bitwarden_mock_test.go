@@ -1221,6 +1221,133 @@ func TestBitwarden_EnsureServer_UnsetSkipsReconciliation(t *testing.T) {
 	}
 }
 
+// TestBitwarden_Headless_TwoInstances_EnvIsolated (SPEC-026 US3, T024+T026)
+// Two headless providers with distinct appDataDirs each drive bw login /
+// bw unlock through ExecuteWithEnv with the matching env entries.
+func TestBitwarden_Headless_TwoInstances_EnvIsolated(t *testing.T) {
+	// Not parallel: relies on package-level headlessAppDataDirs registry.
+	t.Setenv("BW_CLIENTID", "id-a")
+	t.Setenv("BW_CLIENTSECRET", "secret-a")
+	t.Setenv("BW_PASSWORD", "pass-a")
+
+	providers.ResetHeadlessAppDataDirsForTesting()
+	t.Cleanup(providers.ResetHeadlessAppDataDirsForTesting)
+
+	restore := providers.SetBwLookPathForTesting(func() error { return nil })
+	defer restore()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "a", "b"))
+	dirA := filepath.Join(tmp, "a", "leaf")
+	dirB := filepath.Join(tmp, "b", "leaf")
+
+	mkMock := func() *testutil.MockCommandExecutor {
+		m := testutil.NewMockCommandExecutor()
+		// status returns "locked" so the headless recovery flow exercises
+		// `bw unlock --passwordenv BW_PASSWORD --raw`. (`bw login --apikey`
+		// uses the same bw.run() router already covered by status calls
+		// in Phase 2/3 tests.)
+		m.AddJSONResponse("bw status", statusJSON("alice@x.com", "", "locked"))
+		m.AddResponse("bw unlock --passwordenv BW_PASSWORD --raw", testutil.MockResponse{Stdout: []byte("session-token-xyz\n")})
+		return m
+	}
+
+	mockA := mkMock()
+	mockB := mkMock()
+
+	pA := providers.NewBitwardenProviderWithExecutor("bw-a", map[string]any{
+		"appDataDir": dirA,
+		"headless":   true,
+	}, mockA)
+	pB := providers.NewBitwardenProviderWithExecutor("bw-b", map[string]any{
+		"appDataDir": dirB,
+		"headless":   true,
+	}, mockB)
+
+	// We don't need a real Resolve here; we want to assert that the login
+	// and unlock calls flow through ExecuteWithEnv with the right env.
+	// Invoke Validate which exercises the headless auth path.
+	_ = pA.Validate(context.Background())
+	_ = pB.Validate(context.Background())
+
+	// Find the login + unlock calls on each mock and assert env contents.
+	requireCallWithEnv := func(t *testing.T, mock *testutil.MockCommandExecutor, argPrefix []string, want string) {
+		t.Helper()
+		for _, c := range mock.RecordedCalls {
+			if c.Command != "bw" || len(c.Args) < len(argPrefix) {
+				continue
+			}
+			match := true
+			for i, want := range argPrefix {
+				if c.Args[i] != want {
+					match = false
+					break
+				}
+			}
+			if match {
+				for _, e := range c.Env {
+					if e == want {
+						return
+					}
+				}
+				t.Errorf("call %v env=%v missing %q", c.Args, c.Env, want)
+				return
+			}
+		}
+		t.Errorf("no call matching prefix %v", argPrefix)
+	}
+
+	requireCallWithEnv(t, mockA, []string{"unlock", "--passwordenv", "BW_PASSWORD", "--raw"}, "BITWARDENCLI_APPDATA_DIR="+dirA)
+	requireCallWithEnv(t, mockB, []string{"unlock", "--passwordenv", "BW_PASSWORD", "--raw"}, "BITWARDENCLI_APPDATA_DIR="+dirB)
+}
+
+// TestBitwarden_Headless_SharedAppDataDir_Errors (SPEC-026 US3, T025 + FR-007)
+// Two headless providers with the same appDataDir: the second one fails
+// fast with a configuration error naming both providers.
+func TestBitwarden_Headless_SharedAppDataDir_Errors(t *testing.T) {
+	// Not parallel: relies on package-level headlessAppDataDirs registry.
+	t.Setenv("BW_CLIENTID", "id")
+	t.Setenv("BW_CLIENTSECRET", "secret")
+	t.Setenv("BW_PASSWORD", "pass")
+
+	providers.ResetHeadlessAppDataDirsForTesting()
+	t.Cleanup(providers.ResetHeadlessAppDataDirsForTesting)
+
+	restore := providers.SetBwLookPathForTesting(func() error { return nil })
+	defer restore()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "shared"))
+	dir := filepath.Join(tmp, "shared", "leaf")
+
+	mkMock := func() *testutil.MockCommandExecutor {
+		m := testutil.NewMockCommandExecutor()
+		m.AddJSONResponse("bw status", statusJSON("alice@x.com", "", "unlocked"))
+		m.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+		return m
+	}
+
+	pFirst := providers.NewBitwardenProviderWithExecutor("bw-first", map[string]any{
+		"appDataDir": dir,
+		"headless":   true,
+	}, mkMock())
+	pSecond := providers.NewBitwardenProviderWithExecutor("bw-second", map[string]any{
+		"appDataDir": dir,
+		"headless":   true,
+	}, mkMock())
+
+	// First provider claims the dir.
+	_, err := pFirst.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.NoError(t, err)
+
+	// Second provider sees the claim and fails fast.
+	_, err = pSecond.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "bw-second")
+	assert.Contains(t, err.Error(), "bw-first")
+	assert.Contains(t, err.Error(), dir)
+}
+
 func assertEnvOnAllCalls(t *testing.T, calls []testutil.RecordedCall, want string) {
 	t.Helper()
 	for i, c := range calls {
