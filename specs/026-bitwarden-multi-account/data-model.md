@@ -33,9 +33,9 @@ pinned to. Lives in `BitwardenProvider` struct fields; never serialized.
 |------|---------|---------|
 | `appDataDir` must be an absolute path or expandable to one | config load | reject config with clear error naming provider instance |
 | `appDataDir` parent directory must exist (the leaf may be created by `bw`) | first use | error if not present, citing the configured path |
-| Two provider instances must not share `appDataDir` unless both are non-`headless` and the user has explicitly opted in | doctor pass / config load | warning at `doctor` time; error at first use if both are `headless` |
+| Two provider instances sharing `appDataDir` are reported per FR-007 | doctor pass / first use | warning at `doctor` time (always); configuration error at first use only if both instances are also `headless: true` |
 | `server` (if set) must be a parseable URL with `http` or `https` scheme | config load | reject with clear error |
-| `email` (if set) must contain exactly one `@` and a non-empty local-part and domain-part | config load | reject with clear error |
+| `email` (if set) must be a valid email address as parsed by `net/mail.ParseAddress` | config load | reject with clear error |
 | `bw status`'s `userEmail` must match configured `email` case-insensitively | first auth check | `AuthError` naming provider, expected, and observed values |
 
 ### State Transitions (observedStatus)

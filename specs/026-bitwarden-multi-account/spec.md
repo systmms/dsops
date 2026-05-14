@@ -92,19 +92,38 @@ interaction.
 multi-account isolation. It is valuable but smaller in audience than US1/US2
 and depends on both.
 
-**Independent Test**: Run the existing headless test matrix twice in the same
-process with distinct state directories and distinct `BW_CLIENTID` /
-`BW_CLIENTSECRET` / `BW_PASSWORD` environment variable sets per provider.
+**Independent Test**: In a unit test, drive two `headless: true` providers
+with distinct `appDataDir`s through a mock executor and confirm each
+provider's `bw login --apikey` and `bw unlock --passwordenv` invocations
+carry the matching `BITWARDENCLI_APPDATA_DIR` and the credential env vars
+present at call time. In a real CI run, split the secret resolutions across
+two dsops invocations (one per account) so each invocation can carry its
+own `BW_CLIENTID` / `BW_CLIENTSECRET` / `BW_PASSWORD` env values.
+
+**Note on credentials in a single CI process**: `bw` reads its API-key and
+master-password env values (`BW_CLIENTID`, `BW_CLIENTSECRET`, `BW_PASSWORD`)
+from its own environment, which is process-wide. dsops mirrors that
+contract in v1: running two `headless: true` providers with **different
+identities** inside a single `dsops` process is not supported. The
+realistic CI shape is one of:
+- Two CI steps, each invoking dsops once with its own credentials.
+- Same-identity multi-vault: both providers headless, same credentials,
+  different `appDataDir`s — useful for separating org vaults.
+
+Adding per-instance credential-env-var overrides (so one process can hold
+two identities) is out of scope for SPEC-026 and would be a follow-up.
 
 **Acceptance Scenarios**:
 
-1. **Given** two providers configured with `headless: true`, distinct state
-   directories, and distinct credential environment variable groups, **When**
-   dsops runs in CI, **Then** each provider logs in and unlocks against its
-   own account without leaking state into the other.
-2. **Given** US3 configured providers that share the same state directory,
-   **When** dsops runs, **Then** dsops fails fast with a configuration error
-   rather than silently overwriting the first login.
+1. **Given** two providers configured with `headless: true`, distinct
+   `appDataDir`s, and credential env vars set at invocation time, **When**
+   the providers run under a mock executor (unit test) or in their own CI
+   step (production), **Then** each provider's `bw login` / `bw unlock` is
+   isolated to its own state directory.
+2. **Given** two providers configured with `headless: true` that share the
+   same `appDataDir`, **When** dsops starts, **Then** dsops fails fast with
+   a configuration error naming both providers rather than silently
+   overwriting the first login.
 
 ---
 

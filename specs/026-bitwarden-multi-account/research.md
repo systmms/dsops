@@ -79,12 +79,18 @@ type-asserts to the optional interface and falls back to the env-free
 
 ## R4. How does `bw config server` behave?
 
-**Decision**: Call `bw config server <url>` once per process when the
-configured `server` differs from the current `serverUrl` in `bw status`.
-Treat empty configured value as "use default cloud" → call
-`bw config server https://bitwarden.com` (the documented default) if and
-only if `bw status` reports a non-empty `serverUrl` other than the cloud
-default.
+**Decision**: Call `bw config server <url>` at most once per process **only
+when `server` is explicitly configured and differs from the current
+`serverUrl` in `bw status`**. When `server` is unset in dsops.yaml, dsops
+performs no server reconciliation: whatever the state directory already had
+configured (cloud default, self-hosted URL, or otherwise) is left alone.
+
+This matches the contract in `contracts/config-schema.md`
+("Default: unset → don't reconcile") and FR-008 in spec.md (omitting the
+new fields must be byte-identical to pre-feature behavior). The earlier
+draft of this section reconciled empty `server` to the cloud default;
+that would have clobbered a pre-existing self-hosted setting on upgrade
+and is explicitly rejected.
 
 **Rationale**:
 - `bw config server <url>` mutates the state directory's `data.json` to

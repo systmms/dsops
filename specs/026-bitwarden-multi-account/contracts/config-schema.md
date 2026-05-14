@@ -57,12 +57,14 @@ providers:
 - **Effect**: at first use per process, dsops compares `bw status`'s
   `userEmail` (case-insensitive) against the configured value and returns an
   auth error on mismatch.
-- **Validation**: must contain a single `@`; both sides non-empty.
+- **Validation**: must parse cleanly via Go's `net/mail.ParseAddress` (which
+  implements the relevant subset of RFC 5322). dsops does not impose
+  additional address-shape rules beyond that.
 
 ## Example: two accounts side-by-side
 
 ```yaml
-version: 1
+version: 0   # current dsops loader only accepts version: 0
 
 providers:
   bw-personal:
@@ -82,7 +84,7 @@ envs:
     PERSONAL_API_KEY:
       from: store://bw-personal/<item-id>.password
     WORK_DB_URL:
-      from: store://bw-work/<item-id>.fields.database_url
+      from: store://bw-work/<item-id>.custom.database_url
 ```
 
 ## Backwards compatibility

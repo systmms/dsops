@@ -34,7 +34,7 @@ BITWARDENCLI_APPDATA_DIR=~/.config/dsops/bw-work     bw status | jq '.serverUrl,
 
 ```yaml
 # ~/dsops-demo.yaml
-version: 1
+version: 0   # current dsops loader only accepts version: 0
 
 providers:
   bw-personal:
@@ -53,8 +53,12 @@ envs:
     PERSONAL_API_KEY:
       from: store://bw-personal/<personal-item-id>.password
     WORK_DB_URL:
-      from: store://bw-work/<work-item-id>.fields.database_url
+      from: store://bw-work/<work-item-id>.custom.database_url
 ```
+
+> The Bitwarden provider parser recognises `item.<field>` for built-in
+> Login/Card/Identity fields, `item.custom.<name>` for custom fields, and
+> `item.attachment.<filename>` for binary attachments.
 
 Replace the `<...-item-id>` placeholders with real item IDs from each
 account (`bw list items | jq '.[].id'` against the corresponding state dir).
@@ -93,9 +97,17 @@ the other (this is the SC-001 acceptance signal).
 
 ## Step 5 — Headless / CI shape (US3)
 
-Replace the example with:
+`bw` reads its API-key + master-password env values (`BW_CLIENTID`,
+`BW_CLIENTSECRET`, `BW_PASSWORD`) from its own process environment, which
+is process-wide. SPEC-026 isolates *state directories*, not *credential
+env vars*. The realistic CI shape is therefore **one dsops invocation per
+account identity**, each in its own CI step with its own credentials.
+
+Personal account config (`~/dsops-personal.yaml`):
 
 ```yaml
+version: 0
+
 providers:
   bw-personal:
     type: bitwarden
@@ -103,35 +115,53 @@ providers:
     email: alice@example.com
     headless: true
 
+envs:
+  dev:
+    PERSONAL_API_KEY:
+      from: store://bw-personal/<personal-item-id>.password
+```
+
+Work account config (`~/dsops-work.yaml`):
+
+```yaml
+version: 0
+
+providers:
   bw-work:
     type: bitwarden
     appDataDir: /tmp/ci/bw-work
     server: https://vw.corp.example.com
     email: alice@corp.example.com
     headless: true
+
+envs:
+  dev:
+    WORK_DB_URL:
+      from: store://bw-work/<work-item-id>.custom.database_url
 ```
 
-Drive it with per-account credentials. dsops reads the *same* env-var names
-that `bw` itself reads, so you need one set per account at the time of
-invocation:
+Drive each in its own step:
 
 ```bash
-# Account A (personal) login + unlock for the first provider.
+# CI step A — personal account
 BW_CLIENTID=$PERSONAL_CLIENT_ID \
 BW_CLIENTSECRET=$PERSONAL_CLIENT_SECRET \
 BW_PASSWORD=$PERSONAL_PASSWORD \
-  dsops exec --config ~/dsops-demo.yaml --env dev --only bw-personal -- env | grep PERSONAL_API_KEY
+  dsops exec --config ~/dsops-personal.yaml --env dev -- \
+    sh -c 'echo "$PERSONAL_API_KEY" | …'
 
-# Account B (work).
+# CI step B — work account
 BW_CLIENTID=$WORK_CLIENT_ID \
 BW_CLIENTSECRET=$WORK_CLIENT_SECRET \
 BW_PASSWORD=$WORK_PASSWORD \
-  dsops exec --config ~/dsops-demo.yaml --env dev --only bw-work -- env | grep WORK_DB_URL
+  dsops exec --config ~/dsops-work.yaml --env dev -- \
+    sh -c 'echo "$WORK_DB_URL" | …'
 ```
 
-In CI where both must resolve in one process, follow your CI provider's
-docs on per-step env scoping; the dsops side will inject whichever values
-are present on each `bw` subprocess.
+Holding two distinct headless identities in a single dsops process is
+explicitly out of scope for SPEC-026 (see the spec's "Note on credentials
+in a single CI process"). A future per-instance credential-env-var
+override would unblock that, but it's not implemented here.
 
 ## Step 6 — Negative tests
 

@@ -63,12 +63,29 @@ on the child).
 func (bw *BitwardenProvider) run(ctx context.Context, args ...string) ([]byte, []byte, error) {
     env := bw.bwEnv() // returns []string like {"BITWARDENCLI_APPDATA_DIR=/..."} or nil
 
-    if eExec, ok := bw.executor.(pkgexec.EnvCommandExecutor); ok && len(env) > 0 {
+    if len(env) > 0 {
+        eExec, ok := bw.executor.(pkgexec.EnvCommandExecutor)
+        if !ok {
+            return nil, nil, fmt.Errorf(
+                "bitwarden provider %q requires environment isolation "+
+                "(appDataDir is configured) but the executor does not "+
+                "implement pkgexec.EnvCommandExecutor",
+                bw.name,
+            )
+        }
         return eExec.ExecuteWithEnv(ctx, env, "bw", args...)
     }
     return bw.executor.Execute(ctx, "bw", args...)
 }
 ```
+
+**Why error instead of fall back**: silently routing through `Execute` when
+`appDataDir` is configured would re-bind the `bw` subprocess to the
+platform-default state directory, defeating the multi-account isolation the
+user asked for and risking secret resolution against the wrong account.
+`RealCommandExecutor` always satisfies `EnvCommandExecutor`, so this branch
+is only reachable from a test mock that hasn't been updated; the right
+response is to surface that as a setup error.
 
 All existing call sites in `bitwarden.go` route through `bw.run(...)` after
 this refactor.
@@ -76,9 +93,10 @@ this refactor.
 ## Backwards compatibility
 
 - Any `CommandExecutor` mock used in tests (e.g. `tests/fakes`) is unaffected
-  unless that mock opts in to also implementing `EnvCommandExecutor`. When
-  `bw.bwEnv()` returns nil (no `appDataDir` configured), the provider takes
-  the non-`Env` branch and behavior is byte-identical to today.
+  **when the provider does not have `appDataDir` configured** — `bw.bwEnv()`
+  returns nil, the provider takes the non-`Env` branch, and behavior is
+  byte-identical to today. Mocks only need to grow `ExecuteWithEnv` for the
+  new multi-account tests that explicitly configure `appDataDir`.
 - No other provider is touched. AWS Secrets Manager, 1Password, etc. keep
   using `CommandExecutor.Execute` unchanged.
 
@@ -95,8 +113,9 @@ assertions. The provider unit tests in this feature MUST cover:
 3. The provider takes the `ExecuteWithEnv` branch only when both
    `appDataDir` is configured **and** the executor satisfies
    `EnvCommandExecutor`.
-4. When the executor does **not** satisfy `EnvCommandExecutor`, the provider
-   logs a single warning at provider construction time and falls back to
-   `Execute` (this allows tests using legacy mocks to keep working without
-   becoming silently broken; the warning is suppressed when `appDataDir`
-   is unset).
+4. When `appDataDir` is configured but the executor does **not** satisfy
+   `EnvCommandExecutor`, `run(...)` MUST return an error (see the
+   "Why error instead of fall back" note above). Tests that need to exercise
+   the multi-account path must use a mock that implements
+   `ExecuteWithEnv`. Tests with no `appDataDir` configured continue to use
+   the legacy `Execute`-only mock unchanged.
