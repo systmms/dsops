@@ -5,8 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/mail"
+	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,34 +34,84 @@ type BitwardenProvider struct {
 	headless bool   // If true, Validate will attempt API-key login + passwordenv unlock
 	executor pkgexec.CommandExecutor
 
-	mu       sync.Mutex // guards session and authDone
-	session  string     // captured from `bw unlock --raw` when headless
-	authDone bool       // last headless auth attempt succeeded; future calls skip
-	syncOnce sync.Once
+	// SPEC-026 multi-account fields (all optional; nil/empty when unset).
+	appDataDir string // value of BITWARDENCLI_APPDATA_DIR injected on every bw subprocess
+	server     string // Bitwarden server URL; reconciled via `bw config server` if mismatched
+	email      string // Expected userEmail; verified against `bw status` once per process
+
+	// configErr captures errors from applyBitwardenConfig when the provider is
+	// built via the legacy public constructors (NewBitwardenProvider /
+	// NewBitwardenProviderWithExecutor) which historically did not return an
+	// error. Surfaced by Resolve/Describe/Validate so misconfigured providers
+	// fail loudly at first use rather than running with partial state.
+	configErr error
+
+	mu             sync.Mutex // guards session, authDone, observed* fields
+	session        string     // captured from `bw unlock --raw` when headless
+	authDone       bool       // last headless auth attempt succeeded; future calls skip
+	observedEmail  string     // userEmail reported by `bw status`
+	observedServer string     // serverUrl reported by `bw status`
+	observedStatus string     // status reported by `bw status` (e.g. unlocked)
+	syncOnce       sync.Once
+	accountOnce    sync.Once // gates ensureAccount: at most one `bw status` per process
+	accountErr     error     // sticky result of the first ensureAccount call
 }
 
-// NewBitwardenProvider creates a new Bitwarden provider
+// NewBitwardenProvider creates a new Bitwarden provider.
+//
+// Invalid multi-account config (e.g. non-absolute appDataDir, malformed
+// server URL, invalid email) is captured and surfaced lazily by Resolve,
+// Describe, and Validate so this constructor remains source-compatible
+// with pre-SPEC-026 callers that don't expect an error return. Production
+// callers should construct via the factory (`NewBitwardenProviderFactory`)
+// which propagates the error eagerly.
 func NewBitwardenProvider(name string, config map[string]interface{}) *BitwardenProvider {
-	bw := &BitwardenProvider{
-		name:     name,
-		executor: pkgexec.DefaultExecutor(),
+	bw, err := newBitwardenProviderFromConfig(name, config)
+	if err != nil {
+		// Legacy callers don't get an error return; record it instead.
+		if bw == nil {
+			bw = &BitwardenProvider{name: name, executor: pkgexec.DefaultExecutor()}
+		}
+		bw.configErr = err
 	}
-	applyBitwardenConfig(bw, config)
 	return bw
 }
 
-// NewBitwardenProviderWithExecutor creates a new Bitwarden provider with a custom executor.
-// This is primarily for testing, allowing command execution to be mocked.
+// NewBitwardenProviderWithExecutor creates a new Bitwarden provider with a
+// custom executor. This is primarily for testing, allowing command
+// execution to be mocked. See NewBitwardenProvider for error-handling
+// semantics.
 func NewBitwardenProviderWithExecutor(name string, config map[string]interface{}, executor pkgexec.CommandExecutor) *BitwardenProvider {
+	bw, err := newBitwardenProviderFromConfigWithExecutor(name, config, executor)
+	if err != nil {
+		if bw == nil {
+			bw = &BitwardenProvider{name: name, executor: executor}
+		}
+		bw.configErr = err
+	}
+	return bw
+}
+
+// newBitwardenProviderFromConfig is the validating constructor used by the
+// production factory and by tests that exercise config-parse error paths.
+// Returns the constructed provider on success or a *partially-initialized*
+// provider plus error on failure (so callers can still inspect bw.name).
+func newBitwardenProviderFromConfig(name string, config map[string]interface{}) (*BitwardenProvider, error) {
+	return newBitwardenProviderFromConfigWithExecutor(name, config, pkgexec.DefaultExecutor())
+}
+
+func newBitwardenProviderFromConfigWithExecutor(name string, config map[string]interface{}, executor pkgexec.CommandExecutor) (*BitwardenProvider, error) {
 	bw := &BitwardenProvider{
 		name:     name,
 		executor: executor,
 	}
-	applyBitwardenConfig(bw, config)
-	return bw
+	if err := applyBitwardenConfig(bw, config); err != nil {
+		return bw, err
+	}
+	return bw, nil
 }
 
-func applyBitwardenConfig(bw *BitwardenProvider, config map[string]interface{}) {
+func applyBitwardenConfig(bw *BitwardenProvider, config map[string]interface{}) error {
 	if profile, ok := config["profile"].(string); ok {
 		bw.profile = profile
 	}
@@ -68,6 +121,109 @@ func applyBitwardenConfig(bw *BitwardenProvider, config map[string]interface{}) 
 	if v, ok := config["headless"].(bool); ok {
 		bw.headless = v
 	}
+	if raw, ok := config["appDataDir"].(string); ok && raw != "" {
+		abs, err := resolveAppDataDir(raw)
+		if err != nil {
+			return fmt.Errorf("provider %q: appDataDir %q: %w", bw.name, raw, err)
+		}
+		bw.appDataDir = abs
+	}
+	if raw, ok := config["server"].(string); ok && raw != "" {
+		if err := validateBitwardenServerURL(raw); err != nil {
+			return fmt.Errorf("provider %q: server %q: %w", bw.name, raw, err)
+		}
+		bw.server = raw
+	}
+	if raw, ok := config["email"].(string); ok && raw != "" {
+		if _, err := mail.ParseAddress(raw); err != nil {
+			return fmt.Errorf("provider %q: email %q is not a valid address: %w", bw.name, raw, err)
+		}
+		bw.email = raw
+	}
+	return nil
+}
+
+// resolveAppDataDir validates and normalizes a configured appDataDir.
+// Accepts absolute paths and ~-prefixed paths (which are expanded against
+// the current user's home directory). Returns an error if the result is
+// not absolute or if the parent directory does not exist.
+func resolveAppDataDir(raw string) (string, error) {
+	expanded := raw
+	if strings.HasPrefix(raw, "~") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("could not expand ~: %w", err)
+		}
+		if raw == "~" {
+			expanded = home
+		} else if strings.HasPrefix(raw, "~/") {
+			expanded = filepath.Join(home, raw[2:])
+		} else {
+			return "", fmt.Errorf("unsupported ~user expansion (only ~ and ~/ are supported)")
+		}
+	}
+	if !filepath.IsAbs(expanded) {
+		return "", fmt.Errorf("must be an absolute path or ~-prefixed")
+	}
+	parent := filepath.Dir(expanded)
+	info, err := os.Stat(parent)
+	if err != nil {
+		return "", fmt.Errorf("parent directory %q must exist: %w", parent, err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("parent path %q is not a directory", parent)
+	}
+	return expanded, nil
+}
+
+// validateBitwardenServerURL rejects values that are not parseable HTTP(S)
+// URLs with a non-empty host.
+func validateBitwardenServerURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	switch u.Scheme {
+	case "http", "https":
+		// ok
+	default:
+		return fmt.Errorf("scheme must be http or https (got %q)", u.Scheme)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("host is required")
+	}
+	return nil
+}
+
+// bwEnv returns the environment variable entries dsops injects into every
+// bw subprocess for this provider instance. Returns nil when no
+// per-instance env is needed (the common single-account case), so callers
+// can still take the env-free Execute branch.
+func (bw *BitwardenProvider) bwEnv() []string {
+	if bw.appDataDir == "" {
+		return nil
+	}
+	return []string{"BITWARDENCLI_APPDATA_DIR=" + bw.appDataDir}
+}
+
+// run is the single point through which every `bw` subprocess is spawned by
+// this provider. It routes via the EnvCommandExecutor branch when an
+// appDataDir is configured (so per-instance state isolation takes effect)
+// and returns a clear error if the configured executor cannot honor the
+// requested isolation (per SPEC-026 contracts/executor-interface.md).
+func (bw *BitwardenProvider) run(ctx context.Context, args ...string) ([]byte, []byte, error) {
+	env := bw.bwEnv()
+	if len(env) == 0 {
+		return bw.executor.Execute(ctx, "bw", args...)
+	}
+	eExec, ok := bw.executor.(pkgexec.EnvCommandExecutor)
+	if !ok {
+		return nil, nil, fmt.Errorf(
+			"bitwarden provider %q requires environment isolation (appDataDir is configured) but the executor does not implement pkgexec.EnvCommandExecutor",
+			bw.name,
+		)
+	}
+	return eExec.ExecuteWithEnv(ctx, env, "bw", args...)
 }
 
 // sessionArg returns the value to pass after --session when invoking bw, or
@@ -99,7 +255,7 @@ func (bw *BitwardenProvider) ensureSync(ctx context.Context) {
 	}
 	bw.syncOnce.Do(func() {
 		args := bw.appendSessionArg([]string{"sync"})
-		_, _, _ = bw.executor.Execute(ctx, "bw", args...)
+		_, _, _ = bw.run(ctx, args...)
 	})
 }
 
@@ -110,6 +266,9 @@ func (bw *BitwardenProvider) Name() string {
 
 // Resolve retrieves a secret from Bitwarden
 func (bw *BitwardenProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
+	if bw.configErr != nil {
+		return provider.SecretValue{}, bw.configErr
+	}
 	if err := bw.ensureHeadlessAuth(ctx); err != nil {
 		return provider.SecretValue{}, err
 	}
@@ -180,6 +339,9 @@ func (bw *BitwardenProvider) resolveAttachment(ctx context.Context, itemID, file
 
 // Describe returns metadata about a Bitwarden item
 func (bw *BitwardenProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
+	if bw.configErr != nil {
+		return provider.Metadata{}, bw.configErr
+	}
 	if err := bw.ensureHeadlessAuth(ctx); err != nil {
 		return provider.Metadata{}, err
 	}
@@ -228,6 +390,9 @@ func (bw *BitwardenProvider) Capabilities() provider.Capabilities {
 // attempt to recover from unauthenticated/locked states using API-key login
 // and passwordenv unlock — see headlessLogin and headlessUnlock.
 func (bw *BitwardenProvider) Validate(ctx context.Context) error {
+	if bw.configErr != nil {
+		return bw.configErr
+	}
 	if err := bwLookPath(); err != nil {
 		return fmt.Errorf("bitwarden CLI 'bw' not found in PATH. Install from: https://bitwarden.com/help/cli/")
 	}
@@ -326,7 +491,7 @@ func (bw *BitwardenProvider) ensureHeadlessAuth(ctx context.Context) error {
 // resulting JSON, or an error.
 func (bw *BitwardenProvider) fetchStatus(ctx context.Context) (string, error) {
 	args := bw.appendSessionArg([]string{"status"})
-	output, _, err := bw.executor.Execute(ctx, "bw", args...)
+	output, _, err := bw.run(ctx, args...)
 	if err != nil {
 		return "", fmt.Errorf("failed to check bitwarden status: %w", err)
 	}
@@ -346,7 +511,7 @@ func (bw *BitwardenProvider) headlessLogin(ctx context.Context) error {
 			Message:  "headless login requires BW_CLIENTID and BW_CLIENTSECRET env vars",
 		}
 	}
-	if _, _, err := bw.executor.Execute(ctx, "bw", "login", "--apikey"); err != nil {
+	if _, _, err := bw.run(ctx, "login", "--apikey"); err != nil {
 		return provider.AuthError{
 			Provider: bw.name,
 			Message:  fmt.Sprintf("bw login --apikey failed: %v", err),
@@ -364,7 +529,7 @@ func (bw *BitwardenProvider) headlessUnlock(ctx context.Context) error {
 			Message:  "headless unlock requires BW_PASSWORD env var",
 		}
 	}
-	stdout, _, err := bw.executor.Execute(ctx, "bw", "unlock", "--passwordenv", "BW_PASSWORD", "--raw")
+	stdout, _, err := bw.run(ctx, "unlock", "--passwordenv", "BW_PASSWORD", "--raw")
 	if err != nil {
 		return provider.AuthError{
 			Provider: bw.name,
@@ -441,7 +606,7 @@ func defaultFieldForType(t BitwardenItemType) string {
 func (bw *BitwardenProvider) getItem(ctx context.Context, itemID string) (*BitwardenItem, error) {
 	args := bw.appendSessionArg([]string{"get", "item", itemID})
 
-	stdout, stderr, err := bw.executor.Execute(ctx, "bw", args...)
+	stdout, stderr, err := bw.run(ctx, args...)
 	if err != nil {
 		stderrStr := string(stderr)
 		errStr := err.Error()
@@ -714,7 +879,7 @@ func (bw *BitwardenProvider) extractSshKeyField(item *BitwardenItem, field strin
 func (bw *BitwardenProvider) getAttachment(ctx context.Context, itemID, filename string) ([]byte, error) {
 	args := bw.appendSessionArg([]string{"get", "attachment", filename, "--itemid", itemID, "--raw"})
 
-	stdout, stderr, err := bw.executor.Execute(ctx, "bw", args...)
+	stdout, stderr, err := bw.run(ctx, args...)
 	if err != nil {
 		stderrStr := string(stderr)
 		errStr := err.Error()

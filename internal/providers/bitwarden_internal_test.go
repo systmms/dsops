@@ -1,6 +1,9 @@
 package providers
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -517,4 +520,118 @@ func TestBitwardenParseTimestamp(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestApplyBitwardenConfig_NewFields verifies parsing of the SPEC-026
+// multi-account fields: appDataDir, server, email.
+func TestApplyBitwardenConfig_NewFields(t *testing.T) {
+	home, err := os.UserHomeDir()
+	require.NoError(t, err)
+
+	tmp := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(tmp, "parent"), 0o755))
+	absPath := filepath.Join(tmp, "parent", "bw-state")
+
+	t.Run("all new fields unset keeps zero values", func(t *testing.T) {
+		bw, err := newBitwardenProviderFromConfig("test", map[string]any{
+			"profile": "p",
+		})
+		require.NoError(t, err)
+		assert.Empty(t, bw.appDataDir)
+		assert.Empty(t, bw.server)
+		assert.Empty(t, bw.email)
+	})
+
+	t.Run("absolute appDataDir accepted", func(t *testing.T) {
+		bw, err := newBitwardenProviderFromConfig("test", map[string]any{
+			"appDataDir": absPath,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, absPath, bw.appDataDir)
+	})
+
+	t.Run("appDataDir with ~ is expanded to absolute path", func(t *testing.T) {
+		// Use the home directory itself (guaranteed to exist) as the parent
+		// of a synthetic leaf so the parent-exists check passes.
+		bw, err := newBitwardenProviderFromConfig("test", map[string]any{
+			"appDataDir": "~/.dsops-test-bw-state",
+		})
+		require.NoError(t, err)
+		assert.True(t, filepath.IsAbs(bw.appDataDir), "expected absolute path, got %q", bw.appDataDir)
+		assert.True(t, strings.HasPrefix(bw.appDataDir, home), "expected path under home %q, got %q", home, bw.appDataDir)
+	})
+
+	t.Run("relative non-tilde appDataDir is rejected", func(t *testing.T) {
+		_, err := newBitwardenProviderFromConfig("test", map[string]any{
+			"appDataDir": "relative/path",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "appDataDir")
+	})
+
+	t.Run("appDataDir with missing parent dir is rejected", func(t *testing.T) {
+		_, err := newBitwardenProviderFromConfig("test", map[string]any{
+			"appDataDir": filepath.Join(tmp, "no-such-parent", "leaf"),
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "appDataDir")
+	})
+
+	t.Run("https server accepted", func(t *testing.T) {
+		bw, err := newBitwardenProviderFromConfig("test", map[string]any{
+			"server": "https://vault.bitwarden.com",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "https://vault.bitwarden.com", bw.server)
+	})
+
+	t.Run("server with missing host is rejected", func(t *testing.T) {
+		_, err := newBitwardenProviderFromConfig("test", map[string]any{
+			"server": "https://",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "server")
+	})
+
+	t.Run("non-http server scheme is rejected", func(t *testing.T) {
+		_, err := newBitwardenProviderFromConfig("test", map[string]any{
+			"server": "ftp://vault.example.com",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "server")
+	})
+
+	t.Run("valid email accepted", func(t *testing.T) {
+		bw, err := newBitwardenProviderFromConfig("test", map[string]any{
+			"email": "Alice@Example.com",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "Alice@Example.com", bw.email)
+	})
+
+	t.Run("malformed email is rejected", func(t *testing.T) {
+		_, err := newBitwardenProviderFromConfig("test", map[string]any{
+			"email": "not-an-email",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "email")
+	})
+}
+
+// TestBwEnv verifies that bwEnv returns the BITWARDENCLI_APPDATA_DIR
+// entry exactly when appDataDir is configured, and nil otherwise.
+func TestBwEnv(t *testing.T) {
+	tmp := t.TempDir()
+
+	t.Run("no appDataDir => nil env", func(t *testing.T) {
+		bw := &BitwardenProvider{name: "test"}
+		assert.Nil(t, bw.bwEnv())
+	})
+
+	t.Run("appDataDir => single BITWARDENCLI_APPDATA_DIR entry", func(t *testing.T) {
+		bw := &BitwardenProvider{name: "test", appDataDir: tmp}
+		env := bw.bwEnv()
+		require.Len(t, env, 1)
+		assert.Equal(t, "BITWARDENCLI_APPDATA_DIR="+tmp, env[0])
+	})
 }

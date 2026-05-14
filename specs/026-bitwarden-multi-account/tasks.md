@@ -21,7 +21,9 @@ description: "Task list for SPEC-026: Bitwarden Multi-Account Support"
 
 **Purpose**: Confirm a clean baseline before changing code so regressions are unambiguous.
 
-- [ ] T001 Run `make check` from repo root and capture the passing baseline (lint, vet, race, coverage); record current `internal/providers` coverage in a working note so post-feature coverage can be compared against it.
+- [X] T001 Run `make check` from repo root and capture the passing baseline (lint, vet, race, coverage); record current `internal/providers` coverage in a working note so post-feature coverage can be compared against it.
+
+> **T001 result (2026-05-14)**: `make check` fails before tests because the `gosec` binary is missing in this environment; lint passes (`0 issues.`). Substituted `go test -race -count=1 -cover ./...` for the baseline: all packages PASS, `internal/providers` at **41.0%**, `pkg/exec` at **100.0%**. The 85% constitution target for `internal/providers` is a pre-existing gap, not caused by this feature; will re-measure after Phase 6.
 
 ---
 
@@ -31,13 +33,13 @@ description: "Task list for SPEC-026: Bitwarden Multi-Account Support"
 
 **⚠️ CRITICAL**: No user story tasks may start until this phase is complete.
 
-- [ ] T002 [P] Write failing test `TestRealCommandExecutor_ExecuteWithEnv` in `pkg/exec/executor_test.go` asserting that an entry like `FOO=bar` reaches a `printenv FOO` child and that omitting `env` leaves the child env equal to `os.Environ()`.
-- [ ] T003 Add `EnvCommandExecutor` interface and implement `ExecuteWithEnv(ctx, env, name, args...)` on `RealCommandExecutor` in `pkg/exec/executor.go`, per `specs/026-bitwarden-multi-account/contracts/executor-interface.md`. T002 must pass.
-- [ ] T004 [P] Write failing test `TestApplyBitwardenConfig_NewFields` in `internal/providers/bitwarden_internal_test.go` covering `appDataDir`, `server`, `email` parsing (presence, absence, `~` expansion for `appDataDir`).
-- [ ] T005 Extend `BitwardenProvider` struct with `appDataDir`, `server`, `email` fields plus mutex-guarded `observedEmail` / `observedServer` / `observedStatus` and an `accountOnce sync.Once`, and update `applyBitwardenConfig` in `internal/providers/bitwarden.go` to populate them. T004 must pass.
-- [ ] T006 Introduce private helper `func (bw *BitwardenProvider) run(ctx context.Context, args ...string) ([]byte, []byte, error)` in `internal/providers/bitwarden.go` and route every existing `bw.executor.Execute(ctx, "bw", ...)` call site through it. Initial body delegates to `bw.executor.Execute` unchanged so the refactor is behavior-preserving.
-- [ ] T007 [P] Write failing test `TestBwEnv` in `internal/providers/bitwarden_internal_test.go` asserting (a) empty slice/nil when `appDataDir` is unset, (b) exactly one `BITWARDENCLI_APPDATA_DIR=<abs path>` entry when set, with `~` expanded.
-- [ ] T008 Implement `func (bw *BitwardenProvider) bwEnv() []string` in `internal/providers/bitwarden.go` and update `run(...)` to call `ExecuteWithEnv` when `bwEnv()` returns a non-empty slice; if the executor does not satisfy `pkgexec.EnvCommandExecutor` in that case, `run(...)` MUST return an error rather than silently falling back (per `contracts/executor-interface.md`). T007 must pass; pre-existing Bitwarden tests must still pass.
+- [X] T002 [P] Write failing test `TestRealCommandExecutor_ExecuteWithEnv` in `pkg/exec/executor_test.go` asserting that an entry like `FOO=bar` reaches a `printenv FOO` child and that omitting `env` leaves the child env equal to `os.Environ()`.
+- [X] T003 Add `EnvCommandExecutor` interface and implement `ExecuteWithEnv(ctx, env, name, args...)` on `RealCommandExecutor` in `pkg/exec/executor.go`, per `specs/026-bitwarden-multi-account/contracts/executor-interface.md`. T002 must pass.
+- [X] T004 [P] Write failing test `TestApplyBitwardenConfig_NewFields` in `internal/providers/bitwarden_internal_test.go` covering `appDataDir`, `server`, `email` parsing (presence, absence, `~` expansion for `appDataDir`).
+- [X] T005 Extend `BitwardenProvider` struct with `appDataDir`, `server`, `email` fields plus mutex-guarded `observedEmail` / `observedServer` / `observedStatus` and an `accountOnce sync.Once`, and update `applyBitwardenConfig` in `internal/providers/bitwarden.go` to populate them. T004 must pass.
+- [X] T006 Introduce private helper `func (bw *BitwardenProvider) run(ctx context.Context, args ...string) ([]byte, []byte, error)` in `internal/providers/bitwarden.go` and route every existing `bw.executor.Execute(ctx, "bw", ...)` call site through it. Initial body delegates to `bw.executor.Execute` unchanged so the refactor is behavior-preserving.
+- [X] T007 [P] Write failing test `TestBwEnv` in `internal/providers/bitwarden_internal_test.go` asserting (a) empty slice/nil when `appDataDir` is unset, (b) exactly one `BITWARDENCLI_APPDATA_DIR=<abs path>` entry when set, with `~` expanded.
+- [X] T008 Implement `func (bw *BitwardenProvider) bwEnv() []string` in `internal/providers/bitwarden.go` and update `run(...)` to call `ExecuteWithEnv` when `bwEnv()` returns a non-empty slice; if the executor does not satisfy `pkgexec.EnvCommandExecutor` in that case, `run(...)` MUST return an error rather than silently falling back (per `contracts/executor-interface.md`). T007 must pass; pre-existing Bitwarden tests must still pass.
 
 **Checkpoint**: Foundation ready — every `bw` subprocess can carry per-instance env, struct holds the new fields, and config parses them.
 

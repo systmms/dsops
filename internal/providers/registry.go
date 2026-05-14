@@ -121,7 +121,7 @@ func NewJSONProviderFactory(name string, config map[string]interface{}) (provide
 
 // NewBitwardenProviderFactory creates a Bitwarden provider factory
 func NewBitwardenProviderFactory(name string, config map[string]interface{}) (provider.Provider, error) {
-	return NewBitwardenProvider(name, config), nil
+	return newBitwardenProviderFromConfig(name, config)
 }
 
 // NewBitwardenSecretsManagerProviderFactory creates a Bitwarden Secrets
