@@ -129,6 +129,9 @@ Use --env to also validate a specific environment configuration.`,
 			// Display results
 			displayHealthResults(results, verbose)
 
+			// SPEC-026: per-instance Bitwarden multi-account block.
+			renderBitwardenAccounts(os.Stdout, collectBitwardenAccountInfo(resolver, cfg))
+
 			// Check specific environment if requested
 			if envName != "" {
 				cfg.Logger.Info("\nChecking environment: %s", envName)

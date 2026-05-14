@@ -3,7 +3,9 @@ package providers_test
 import (
 	"context"
 	"encoding/base64"
+	"os"
 	osExec "os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,6 +14,10 @@ import (
 	"github.com/systmms/dsops/pkg/provider"
 	"github.com/systmms/dsops/tests/testutil"
 )
+
+// osMkdirAll wraps os.MkdirAll so the SPEC-026 helpers don't accidentally
+// shadow the existing osExec import alias.
+var osMkdirAll = os.MkdirAll
 
 func TestBitwardenProviderWithMockExecutor_Resolve(t *testing.T) {
 	t.Parallel()
@@ -965,4 +971,179 @@ func TestBitwardenProviderConstructors(t *testing.T) {
 		assert.True(t, caps.SupportsMetadata)
 		assert.Contains(t, caps.AuthMethods, "cli-session")
 	})
+}
+
+// statusJSON is a tiny helper that produces a `bw status` JSON payload for
+// the SPEC-026 tests.
+func statusJSON(userEmail, serverURL, status string) string {
+	return `{` +
+		`"status":"` + status + `",` +
+		`"userEmail":"` + userEmail + `",` +
+		`"serverUrl":"` + serverURL + `",` +
+		`"userId":"u-123",` +
+		`"lastSync":"2026-05-14T00:00:00Z"` +
+		`}`
+}
+
+// TestBitwarden_MultipleInstances_EnvIsolated (SPEC-026 US1, T009)
+// verifies that two BitwardenProvider instances with distinct appDataDirs
+// each carry the correct BITWARDENCLI_APPDATA_DIR on every `bw` invocation,
+// with no cross-contamination between mock executors.
+func TestBitwarden_MultipleInstances_EnvIsolated(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "personal", "work"))
+
+	personalDir := filepath.Join(tmp, "personal", "leaf")
+	workDir := filepath.Join(tmp, "work", "leaf")
+
+	personalExec := testutil.NewMockCommandExecutor()
+	personalExec.AddJSONResponse("bw status", statusJSON("alice@example.com", "https://vault.bitwarden.com", "unlocked"))
+	personalExec.AddJSONResponse("bw get item personal-1", `{"id":"personal-1","name":"P","type":1,"login":{"password":"pass-personal"},"fields":[]}`)
+
+	workExec := testutil.NewMockCommandExecutor()
+	workExec.AddJSONResponse("bw status", statusJSON("alice@corp.example.com", "https://vw.corp.example.com", "unlocked"))
+	workExec.AddJSONResponse("bw get item work-1", `{"id":"work-1","name":"W","type":1,"login":{"password":"pass-work"},"fields":[]}`)
+
+	personal := providers.NewBitwardenProviderWithExecutor("bw-personal", map[string]any{
+		"appDataDir": personalDir,
+		"email":      "alice@example.com",
+	}, personalExec)
+	work := providers.NewBitwardenProviderWithExecutor("bw-work", map[string]any{
+		"appDataDir": workDir,
+		"email":      "alice@corp.example.com",
+	}, workExec)
+
+	ctx := context.Background()
+
+	pSecret, err := personal.Resolve(ctx, provider.Reference{Key: "personal-1"})
+	require.NoError(t, err)
+	assert.Equal(t, "pass-personal", pSecret.Value)
+
+	wSecret, err := work.Resolve(ctx, provider.Reference{Key: "work-1"})
+	require.NoError(t, err)
+	assert.Equal(t, "pass-work", wSecret.Value)
+
+	// Every recorded call on each mock executor must carry its own appDataDir
+	// env entry (and only that one).
+	assertEnvOnAllCalls(t, personalExec.RecordedCalls, "BITWARDENCLI_APPDATA_DIR="+personalDir)
+	assertEnvOnAllCalls(t, workExec.RecordedCalls, "BITWARDENCLI_APPDATA_DIR="+workDir)
+}
+
+// TestBitwarden_EnsureAccount_EmailMismatch (SPEC-026 US1, T010)
+// verifies that a configured email mismatching the bw status userEmail
+// causes Resolve to fail BEFORE any `bw get item` is issued.
+func TestBitwarden_EnsureAccount_EmailMismatch(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("bob@example.com", "", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"never-returned"}}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-personal", map[string]any{
+		"appDataDir": dir,
+		"email":      "alice@example.com",
+	}, mockExec)
+
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "bw-personal")
+	assert.Contains(t, err.Error(), "alice@example.com")
+	assert.Contains(t, err.Error(), "bob@example.com")
+
+	for _, call := range mockExec.RecordedCalls {
+		if call.Command == "bw" && len(call.Args) > 0 && call.Args[0] == "get" {
+			t.Errorf("expected no `bw get` call after email mismatch, saw: %v", call.Args)
+		}
+	}
+}
+
+// TestBitwarden_EnsureAccount_EmailMatchCaseInsensitive (SPEC-026 US1, T011)
+// verifies that case differences between configured email and the bw status
+// userEmail are tolerated.
+func TestBitwarden_EnsureAccount_EmailMatchCaseInsensitive(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@example.com", "", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"ok"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-personal", map[string]any{
+		"appDataDir": dir,
+		"email":      "Alice@Example.COM",
+	}, mockExec)
+
+	secret, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.NoError(t, err)
+	assert.Equal(t, "ok", secret.Value)
+}
+
+// TestBitwarden_EnsureAccount_OncePerProcess (SPEC-026 US1)
+// verifies that ensureAccount runs `bw status` at most once across multiple
+// Resolve calls on the same provider instance.
+func TestBitwarden_EnsureAccount_OncePerProcess(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@example.com", "", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+	}, mockExec)
+
+	ctx := context.Background()
+	for i := 0; i < 3; i++ {
+		_, err := p.Resolve(ctx, provider.Reference{Key: "item-1"})
+		require.NoError(t, err)
+	}
+
+	statusCalls := 0
+	for _, c := range mockExec.RecordedCalls {
+		if c.Command == "bw" && len(c.Args) > 0 && c.Args[0] == "status" {
+			statusCalls++
+		}
+	}
+	assert.Equal(t, 1, statusCalls, "expected exactly one `bw status` call across 3 Resolves")
+}
+
+func ensureDirs(root string, names ...string) error {
+	for _, n := range names {
+		if err := osMkdirAll(filepath.Join(root, n), 0o755); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func assertEnvOnAllCalls(t *testing.T, calls []testutil.RecordedCall, want string) {
+	t.Helper()
+	for i, c := range calls {
+		if c.Command != "bw" {
+			continue
+		}
+		found := false
+		for _, e := range c.Env {
+			if e == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("call #%d args=%v env=%v: missing %q", i, c.Args, c.Env, want)
+		}
+	}
 }

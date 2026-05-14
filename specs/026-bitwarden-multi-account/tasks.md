@@ -53,18 +53,18 @@ description: "Task list for SPEC-026: Bitwarden Multi-Account Support"
 
 ### Tests for User Story 1 (write first; must fail before implementation)
 
-- [ ] T009 [P] [US1] Write failing test `TestBitwarden_MultipleInstances_EnvIsolated` in `internal/providers/bitwarden_mock_test.go`: construct two providers with distinct `appDataDir`s, resolve one secret from each via mock executor, assert each `bw` call carries the correct `BITWARDENCLI_APPDATA_DIR=...` and no cross-contamination.
-- [ ] T010 [P] [US1] Write failing test `TestEnsureAccount_VerifyEmailMismatch` in `internal/providers/bitwarden_internal_test.go`: configure `email: alice@x.com`, mock `bw status` returning `bob@x.com`, assert `ensureAccount` returns an error naming the provider instance and both emails, and that no `bw get item` follows.
-- [ ] T011 [P] [US1] Write failing test `TestEnsureAccount_VerifyEmailMatch_CaseInsensitive` in `internal/providers/bitwarden_internal_test.go`: configure `email: Alice@X.com`, mock `bw status` returning `alice@x.com`, assert no error.
-- [ ] T012 [P] [US1] Write failing test `TestValidateAppDataDir` in `internal/providers/bitwarden_internal_test.go`: covers absolute-path requirement, `~` expansion, and parent-directory-must-exist check; rejects non-absolute relative paths.
-- [ ] T013 [P] [US1] Write failing test `TestDoctor_BitwardenSharedAppDataDir_Warns` in `cmd/dsops/commands/doctor_test.go`: two providers with the same `appDataDir` produce a `⚠ shared with:` line under each.
+- [X] T009 [P] [US1] Write failing test `TestBitwarden_MultipleInstances_EnvIsolated` in `internal/providers/bitwarden_mock_test.go`: construct two providers with distinct `appDataDir`s, resolve one secret from each via mock executor, assert each `bw` call carries the correct `BITWARDENCLI_APPDATA_DIR=...` and no cross-contamination.
+- [X] T010 [P] [US1] Write failing test `TestEnsureAccount_VerifyEmailMismatch` in `internal/providers/bitwarden_internal_test.go`: configure `email: alice@x.com`, mock `bw status` returning `bob@x.com`, assert `ensureAccount` returns an error naming the provider instance and both emails, and that no `bw get item` follows.
+- [X] T011 [P] [US1] Write failing test `TestEnsureAccount_VerifyEmailMatch_CaseInsensitive` in `internal/providers/bitwarden_internal_test.go`: configure `email: Alice@X.com`, mock `bw status` returning `alice@x.com`, assert no error.
+- [X] T012 [P] [US1] Write failing test `TestValidateAppDataDir` in `internal/providers/bitwarden_internal_test.go`: covers absolute-path requirement, `~` expansion, and parent-directory-must-exist check; rejects non-absolute relative paths.
+- [X] T013 [P] [US1] Write failing test `TestDoctor_BitwardenSharedAppDataDir_Warns` in `cmd/dsops/commands/doctor_test.go`: two providers with the same `appDataDir` produce a `⚠ shared with:` line under each.
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Implement `func (bw *BitwardenProvider) ensureAccount(ctx context.Context) error` in `internal/providers/bitwarden.go`, gated by `bw.accountOnce`: runs `bw status` via `bw.run`, unmarshals into the existing `bitwardenStatus` shape (extend if necessary), records `observedEmail`/`observedServer`/`observedStatus`, and — if `bw.email != ""` — case-insensitively compares against `observedEmail` returning a clear error on mismatch. T010 and T011 must pass.
-- [ ] T015 [US1] Wire `ensureAccount` into the `Resolve` and `Describe` entry points in `internal/providers/bitwarden.go`, ordered as: `ensureHeadlessAuth` → `ensureAccount` → `ensureSync` → existing body.
-- [ ] T016 [US1] Add `appDataDir` validation (absolute-path coercion via `filepath.Abs`, `~` expansion, parent-exists check) inside `applyBitwardenConfig` in `internal/providers/bitwarden.go`. T012 must pass.
-- [ ] T017 [US1] Extend `cmd/dsops/commands/doctor.go` to print a per-Bitwarden-provider block (`appDataDir`, `server`, `email`, observed status) using the format in `research.md` §R6, and to detect cross-instance `appDataDir` collisions and emit the warning line. T013 must pass; T009 must pass (env routing already covered by Phase 2).
+- [X] T014 [US1] Implement `func (bw *BitwardenProvider) ensureAccount(ctx context.Context) error` in `internal/providers/bitwarden.go`, gated by `bw.accountOnce`: runs `bw status` via `bw.run`, unmarshals into the existing `bitwardenStatus` shape (extend if necessary), records `observedEmail`/`observedServer`/`observedStatus`, and — if `bw.email != ""` — case-insensitively compares against `observedEmail` returning a clear error on mismatch. T010 and T011 must pass.
+- [X] T015 [US1] Wire `ensureAccount` into the `Resolve` and `Describe` entry points in `internal/providers/bitwarden.go`, ordered as: `ensureHeadlessAuth` → `ensureAccount` → `ensureSync` → existing body.
+- [X] T016 [US1] Add `appDataDir` validation (absolute-path coercion via `filepath.Abs`, `~` expansion, parent-exists check) inside `applyBitwardenConfig` in `internal/providers/bitwarden.go`. T012 must pass.
+- [X] T017 [US1] Extend `cmd/dsops/commands/doctor.go` to print a per-Bitwarden-provider block (`appDataDir`, `server`, `email`, observed status) using the format in `research.md` §R6, and to detect cross-instance `appDataDir` collisions and emit the warning line. T013 must pass; T009 must pass (env routing already covered by Phase 2).
 
 **Checkpoint**: User Story 1 is independently demonstrable — two accounts resolve side-by-side, mis-email fails fast, doctor surfaces the right info.
 

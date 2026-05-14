@@ -195,6 +195,35 @@ func validateBitwardenServerURL(raw string) error {
 	return nil
 }
 
+// BitwardenAccountInfo is the per-instance multi-account snapshot exposed
+// by AccountInfo. Consumed by `dsops doctor`.
+type BitwardenAccountInfo struct {
+	Name           string
+	AppDataDir     string
+	Server         string
+	Email          string
+	ObservedEmail  string
+	ObservedServer string
+	ObservedStatus string
+}
+
+// AccountInfo returns the SPEC-026 multi-account state for this provider
+// instance. Observed fields are populated only after the first
+// Resolve/Describe call has run ensureAccount; before that they are empty.
+func (bw *BitwardenProvider) AccountInfo() BitwardenAccountInfo {
+	bw.mu.Lock()
+	defer bw.mu.Unlock()
+	return BitwardenAccountInfo{
+		Name:           bw.name,
+		AppDataDir:     bw.appDataDir,
+		Server:         bw.server,
+		Email:          bw.email,
+		ObservedEmail:  bw.observedEmail,
+		ObservedServer: bw.observedServer,
+		ObservedStatus: bw.observedStatus,
+	}
+}
+
 // bwEnv returns the environment variable entries dsops injects into every
 // bw subprocess for this provider instance. Returns nil when no
 // per-instance env is needed (the common single-account case), so callers
@@ -245,6 +274,50 @@ func (bw *BitwardenProvider) appendSessionArg(args []string) []string {
 	return args
 }
 
+// ensureAccount runs `bw status` at most once per provider lifetime when
+// any SPEC-026 multi-account field is configured. It records the observed
+// state and, when an expected email is configured, fails fast on a
+// case-insensitive mismatch. The sticky result is cached in accountErr so
+// subsequent Resolve/Describe calls return the same error without
+// re-issuing `bw status`.
+func (bw *BitwardenProvider) ensureAccount(ctx context.Context) error {
+	// Skip entirely when no multi-account fields are configured — preserves
+	// pre-SPEC-026 behavior (FR-008) byte-for-byte.
+	if bw.appDataDir == "" && bw.server == "" && bw.email == "" {
+		return nil
+	}
+	bw.accountOnce.Do(func() {
+		args := bw.appendSessionArg([]string{"status"})
+		stdout, _, err := bw.run(ctx, args...)
+		if err != nil {
+			bw.accountErr = fmt.Errorf("provider %q: bw status failed: %w", bw.name, err)
+			return
+		}
+		var status BitwardenStatus
+		if err := json.Unmarshal(stdout, &status); err != nil {
+			bw.accountErr = fmt.Errorf("provider %q: bw status returned invalid JSON: %w", bw.name, err)
+			return
+		}
+		bw.mu.Lock()
+		bw.observedEmail = status.UserEmail
+		bw.observedServer = status.ServerURL
+		bw.observedStatus = status.Status
+		bw.mu.Unlock()
+
+		if bw.email != "" && !strings.EqualFold(bw.email, status.UserEmail) {
+			bw.accountErr = provider.AuthError{
+				Provider: bw.name,
+				Message: fmt.Sprintf(
+					"configured email %q does not match authenticated session email %q",
+					bw.email, status.UserEmail,
+				),
+			}
+			return
+		}
+	})
+	return bw.accountErr
+}
+
 // ensureSync runs `bw sync` at most once per provider lifetime when sync is
 // enabled. A failed sync is intentionally swallowed: resolutions can still
 // proceed against the previously-cached vault state, and the per-call cost of
@@ -270,6 +343,9 @@ func (bw *BitwardenProvider) Resolve(ctx context.Context, ref provider.Reference
 		return provider.SecretValue{}, bw.configErr
 	}
 	if err := bw.ensureHeadlessAuth(ctx); err != nil {
+		return provider.SecretValue{}, err
+	}
+	if err := bw.ensureAccount(ctx); err != nil {
 		return provider.SecretValue{}, err
 	}
 	bw.ensureSync(ctx)
@@ -343,6 +419,9 @@ func (bw *BitwardenProvider) Describe(ctx context.Context, ref provider.Referenc
 		return provider.Metadata{}, bw.configErr
 	}
 	if err := bw.ensureHeadlessAuth(ctx); err != nil {
+		return provider.Metadata{}, err
+	}
+	if err := bw.ensureAccount(ctx); err != nil {
 		return provider.Metadata{}, err
 	}
 	bw.ensureSync(ctx)
@@ -941,6 +1020,7 @@ type BitwardenStatus struct {
 	LastSync  string `json:"lastSync"`
 	UserEmail string `json:"userEmail"`
 	UserID    string `json:"userId"`
+	ServerURL string `json:"serverUrl"`
 	Template  string `json:"template"`
 }
 
