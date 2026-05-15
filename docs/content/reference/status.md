@@ -36,6 +36,19 @@ See [retrospective specs](https://github.com/systmms/dsops/tree/main/specs) (SPE
 
 **See [SPEC-020: Release & Distribution](https://github.com/systmms/dsops/blob/main/specs/020-release-distribution/spec.md) for details.**
 
+### Bitwarden Multi-Account (SPEC-026)
+
+**Status**: 🟢 **IMPLEMENTED** - Bitwarden provider supports multiple accounts in one dsops.yaml
+
+- ✅ Per-instance `appDataDir` field injects `BITWARDENCLI_APPDATA_DIR` on every `bw` subprocess
+- ✅ Optional `server` URL reconciled via `bw config server` once per process
+- ✅ Optional `email` field verified case-insensitively against `bw status`'s userEmail
+- ✅ `dsops doctor` renders a per-Bitwarden-instance block with collision warnings
+- ✅ Two headless providers sharing an `appDataDir` fail fast with a configuration error
+- ✅ Backwards compatible: omitting all three new fields is byte-identical to pre-SPEC-026 behavior
+
+**See [SPEC-026: Bitwarden Multi-Account](https://github.com/systmms/dsops/blob/main/specs/026-bitwarden-multi-account/spec.md) for details.**
+
 ### Security Trust Infrastructure (SPEC-023)
 
 **Status**: ✅ **COMPLETE** - Security trust infrastructure operational

@@ -5,8 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/mail"
+	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,6 +26,28 @@ var bwLookPath = func() error {
 	return err
 }
 
+// headlessAppDataDirs records which provider instance has claimed each
+// appDataDir under headless mode, per SPEC-026 FR-007. The collision check
+// is performed on first use (ensureHeadlessAuth); since two headless
+// providers driving the same on-disk state would race each other's bw
+// login/unlock state, the second claimant fails fast with a configuration
+// error.
+//
+// Keyed by absolute appDataDir; value is the claiming provider's name.
+// sync.Map keeps the registry lock-free for concurrent multi-provider
+// resolves. ResetHeadlessAppDataDirsForTesting clears it for test
+// isolation.
+var headlessAppDataDirs sync.Map
+
+// ResetHeadlessAppDataDirsForTesting clears the package-level headless
+// appDataDir registry. For test use only.
+func ResetHeadlessAppDataDirsForTesting() {
+	headlessAppDataDirs.Range(func(k, _ any) bool {
+		headlessAppDataDirs.Delete(k)
+		return true
+	})
+}
+
 // BitwardenProvider implements the provider interface for Bitwarden
 type BitwardenProvider struct {
 	name     string
@@ -31,34 +56,83 @@ type BitwardenProvider struct {
 	headless bool   // If true, Validate will attempt API-key login + passwordenv unlock
 	executor pkgexec.CommandExecutor
 
-	mu       sync.Mutex // guards session and authDone
-	session  string     // captured from `bw unlock --raw` when headless
-	authDone bool       // last headless auth attempt succeeded; future calls skip
-	syncOnce sync.Once
+	// SPEC-026 multi-account fields (all optional; nil/empty when unset).
+	appDataDir string // value of BITWARDENCLI_APPDATA_DIR injected on every bw subprocess
+	server     string // Bitwarden server URL; reconciled via `bw config server` if mismatched
+	email      string // Expected userEmail; verified against `bw status` once per process
+
+	// configErr captures errors from applyBitwardenConfig when the provider is
+	// built via the legacy public constructors (NewBitwardenProvider /
+	// NewBitwardenProviderWithExecutor) which historically did not return an
+	// error. Surfaced by Resolve/Describe/Validate so misconfigured providers
+	// fail loudly at first use rather than running with partial state.
+	configErr error
+
+	mu             sync.Mutex // guards session, authDone, observed* fields, and account* gate
+	session        string     // captured from `bw unlock --raw` when headless
+	authDone       bool       // last headless auth attempt succeeded; future calls skip
+	observedEmail  string     // userEmail reported by `bw status`
+	observedServer string     // serverUrl reported by `bw status`
+	observedStatus string     // status reported by `bw status` (e.g. unlocked)
+	syncOnce       sync.Once
+	accountDone    bool // ensureAccount succeeded; latches only on success (transient errors retry next call)
 }
 
-// NewBitwardenProvider creates a new Bitwarden provider
+// NewBitwardenProvider creates a new Bitwarden provider.
+//
+// Invalid multi-account config (e.g. non-absolute appDataDir, malformed
+// server URL, invalid email) is captured and surfaced lazily by Resolve,
+// Describe, and Validate so this constructor remains source-compatible
+// with pre-SPEC-026 callers that don't expect an error return. Production
+// callers should construct via the factory (`NewBitwardenProviderFactory`)
+// which propagates the error eagerly.
 func NewBitwardenProvider(name string, config map[string]interface{}) *BitwardenProvider {
-	bw := &BitwardenProvider{
-		name:     name,
-		executor: pkgexec.DefaultExecutor(),
+	bw, err := newBitwardenProviderFromConfig(name, config)
+	if err != nil {
+		// Legacy callers don't get an error return; record it instead.
+		if bw == nil {
+			bw = &BitwardenProvider{name: name, executor: pkgexec.DefaultExecutor()}
+		}
+		bw.configErr = err
 	}
-	applyBitwardenConfig(bw, config)
 	return bw
 }
 
-// NewBitwardenProviderWithExecutor creates a new Bitwarden provider with a custom executor.
-// This is primarily for testing, allowing command execution to be mocked.
+// NewBitwardenProviderWithExecutor creates a new Bitwarden provider with a
+// custom executor. This is primarily for testing, allowing command
+// execution to be mocked. See NewBitwardenProvider for error-handling
+// semantics.
 func NewBitwardenProviderWithExecutor(name string, config map[string]interface{}, executor pkgexec.CommandExecutor) *BitwardenProvider {
+	bw, err := newBitwardenProviderFromConfigWithExecutor(name, config, executor)
+	if err != nil {
+		if bw == nil {
+			bw = &BitwardenProvider{name: name, executor: executor}
+		}
+		bw.configErr = err
+	}
+	return bw
+}
+
+// newBitwardenProviderFromConfig is the validating constructor used by the
+// production factory and by tests that exercise config-parse error paths.
+// Returns the constructed provider on success or a *partially-initialized*
+// provider plus error on failure (so callers can still inspect bw.name).
+func newBitwardenProviderFromConfig(name string, config map[string]interface{}) (*BitwardenProvider, error) {
+	return newBitwardenProviderFromConfigWithExecutor(name, config, pkgexec.DefaultExecutor())
+}
+
+func newBitwardenProviderFromConfigWithExecutor(name string, config map[string]interface{}, executor pkgexec.CommandExecutor) (*BitwardenProvider, error) {
 	bw := &BitwardenProvider{
 		name:     name,
 		executor: executor,
 	}
-	applyBitwardenConfig(bw, config)
-	return bw
+	if err := applyBitwardenConfig(bw, config); err != nil {
+		return bw, err
+	}
+	return bw, nil
 }
 
-func applyBitwardenConfig(bw *BitwardenProvider, config map[string]interface{}) {
+func applyBitwardenConfig(bw *BitwardenProvider, config map[string]interface{}) error {
 	if profile, ok := config["profile"].(string); ok {
 		bw.profile = profile
 	}
@@ -68,6 +142,152 @@ func applyBitwardenConfig(bw *BitwardenProvider, config map[string]interface{}) 
 	if v, ok := config["headless"].(bool); ok {
 		bw.headless = v
 	}
+	if raw, ok := config["appDataDir"].(string); ok && raw != "" {
+		abs, err := resolveAppDataDir(raw)
+		if err != nil {
+			return fmt.Errorf("provider %q: appDataDir %q: %w", bw.name, raw, err)
+		}
+		bw.appDataDir = abs
+	}
+	if raw, ok := config["server"].(string); ok && raw != "" {
+		if err := validateBitwardenServerURL(raw); err != nil {
+			return fmt.Errorf("provider %q: server %q: %w", bw.name, raw, err)
+		}
+		bw.server = raw
+	}
+	if raw, ok := config["email"].(string); ok && raw != "" {
+		parsed, err := mail.ParseAddress(raw)
+		if err != nil {
+			return fmt.Errorf("provider %q: email is not a valid address: %w", bw.name, err)
+		}
+		// Store the bare address so case-insensitive comparison against
+		// `bw status`'s userEmail (which is always the bare form) succeeds
+		// even when the user wrote `"Alice <alice@example.com>"`.
+		bw.email = parsed.Address
+	}
+	return nil
+}
+
+// resolveAppDataDir validates and normalizes a configured appDataDir.
+// Accepts absolute paths and ~-prefixed paths (which are expanded against
+// the current user's home directory). Returns an error if the result is
+// not absolute or if the parent directory does not exist.
+func resolveAppDataDir(raw string) (string, error) {
+	expanded := raw
+	if strings.HasPrefix(raw, "~") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("could not expand ~: %w", err)
+		}
+		if raw == "~" {
+			expanded = home
+		} else if strings.HasPrefix(raw, "~/") {
+			expanded = filepath.Join(home, raw[2:])
+		} else {
+			return "", fmt.Errorf("unsupported ~user expansion (only ~ and ~/ are supported)")
+		}
+	}
+	if !filepath.IsAbs(expanded) {
+		return "", fmt.Errorf("must be an absolute path or ~-prefixed")
+	}
+	// Surface unwritability eagerly: try to create the leaf dir now (and the
+	// parent if it doesn't exist). `bw` would create it anyway on first use;
+	// doing it here means permission problems are reported at config-load
+	// time with a clear path, not as a confusing `bw` error later.
+	if err := os.MkdirAll(expanded, 0o700); err != nil {
+		return "", fmt.Errorf("cannot create directory: %w", err)
+	}
+	return expanded, nil
+}
+
+// validateBitwardenServerURL rejects values that are not parseable HTTP(S)
+// URLs with a non-empty host.
+func validateBitwardenServerURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	switch u.Scheme {
+	case "http", "https":
+		// ok
+	default:
+		return fmt.Errorf("scheme must be http or https (got %q)", u.Scheme)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("host is required")
+	}
+	// bw config server expects a bare base URL — paths/queries/fragments
+	// would either confuse the CLI or get silently stripped, both surprising.
+	if u.Path != "" && u.Path != "/" {
+		return fmt.Errorf("path is not allowed (got %q)", u.Path)
+	}
+	if u.RawQuery != "" {
+		return fmt.Errorf("query string is not allowed")
+	}
+	if u.Fragment != "" {
+		return fmt.Errorf("fragment is not allowed")
+	}
+	return nil
+}
+
+// BitwardenAccountInfo is the per-instance multi-account snapshot exposed
+// by AccountInfo. Consumed by `dsops doctor`.
+type BitwardenAccountInfo struct {
+	Name           string
+	AppDataDir     string
+	Server         string
+	Email          string
+	ObservedEmail  string
+	ObservedServer string
+	ObservedStatus string
+}
+
+// AccountInfo returns the SPEC-026 multi-account state for this provider
+// instance. Observed fields are populated only after the first
+// Resolve/Describe call has run ensureAccount; before that they are empty.
+func (bw *BitwardenProvider) AccountInfo() BitwardenAccountInfo {
+	bw.mu.Lock()
+	defer bw.mu.Unlock()
+	return BitwardenAccountInfo{
+		Name:           bw.name,
+		AppDataDir:     bw.appDataDir,
+		Server:         bw.server,
+		Email:          bw.email,
+		ObservedEmail:  bw.observedEmail,
+		ObservedServer: bw.observedServer,
+		ObservedStatus: bw.observedStatus,
+	}
+}
+
+// bwEnv returns the environment variable entries dsops injects into every
+// bw subprocess for this provider instance. Returns nil when no
+// per-instance env is needed (the common single-account case), so callers
+// can still take the env-free Execute branch.
+func (bw *BitwardenProvider) bwEnv() []string {
+	if bw.appDataDir == "" {
+		return nil
+	}
+	return []string{"BITWARDENCLI_APPDATA_DIR=" + bw.appDataDir}
+}
+
+// run is the single point through which every `bw` subprocess is spawned by
+// this provider. It routes via the EnvCommandExecutor branch when an
+// appDataDir is configured (so per-instance state isolation takes effect)
+// and returns a clear error if the configured executor cannot honor the
+// requested isolation (per SPEC-026 contracts/executor-interface.md).
+func (bw *BitwardenProvider) run(ctx context.Context, args ...string) ([]byte, []byte, error) {
+	env := bw.bwEnv()
+	if len(env) == 0 {
+		return bw.executor.Execute(ctx, "bw", args...)
+	}
+	eExec, ok := bw.executor.(pkgexec.EnvCommandExecutor)
+	if !ok {
+		return nil, nil, fmt.Errorf(
+			"bitwarden provider %q requires environment isolation (appDataDir is configured) but the executor does not implement pkgexec.EnvCommandExecutor",
+			bw.name,
+		)
+	}
+	return eExec.ExecuteWithEnv(ctx, env, "bw", args...)
 }
 
 // sessionArg returns the value to pass after --session when invoking bw, or
@@ -89,6 +309,100 @@ func (bw *BitwardenProvider) appendSessionArg(args []string) []string {
 	return args
 }
 
+// ensureAccount runs the SPEC-026 multi-account checks once per provider
+// lifetime *on success*. Transient errors (CLI timeout, JSON parse, etc.)
+// do NOT latch — the next call will retry — so a recoverable failure
+// doesn't poison the provider for the rest of the process. The bw status
+// result is cached (in observedEmail/Server/Status) so a sibling caller
+// like ensureHeadlessAuth can reuse it without spawning another bw process.
+func (bw *BitwardenProvider) ensureAccount(ctx context.Context) error {
+	// Skip entirely when no multi-account fields are configured — preserves
+	// pre-SPEC-026 behavior (FR-008) byte-for-byte.
+	if bw.appDataDir == "" && bw.server == "" && bw.email == "" {
+		return nil
+	}
+
+	bw.mu.Lock()
+	if bw.accountDone {
+		bw.mu.Unlock()
+		return nil
+	}
+	// Take a snapshot of cached observed state so a sibling call (e.g.
+	// recoverAuthIfHeadless via Validate) doesn't force a second `bw status`.
+	cached := bw.observedStatus != ""
+	cachedEmail := bw.observedEmail
+	cachedServer := bw.observedServer
+	cachedStatus := bw.observedStatus
+	bw.mu.Unlock()
+
+	var observed BitwardenStatus
+	if cached {
+		observed.UserEmail = cachedEmail
+		observed.ServerURL = cachedServer
+		observed.Status = cachedStatus
+	} else {
+		args := bw.appendSessionArg([]string{"status"})
+		stdout, _, err := bw.run(ctx, args...)
+		if err != nil {
+			return fmt.Errorf("provider %q: bw status failed: %w", bw.name, err)
+		}
+		if err := json.Unmarshal(stdout, &observed); err != nil {
+			return fmt.Errorf("provider %q: bw status returned invalid JSON: %w", bw.name, err)
+		}
+		bw.mu.Lock()
+		bw.observedEmail = observed.UserEmail
+		bw.observedServer = observed.ServerURL
+		bw.observedStatus = observed.Status
+		bw.mu.Unlock()
+	}
+
+	// Unauthenticated/locked states must short-circuit to a clear auth
+	// error rather than reporting a misleading email mismatch against an
+	// empty userEmail.
+	if observed.Status == "unauthenticated" {
+		return provider.AuthError{
+			Provider: bw.name,
+			Message:  "not logged in. Run: bw login (or set headless: true with BW_CLIENTID / BW_CLIENTSECRET)",
+		}
+	}
+	if observed.Status == "locked" {
+		return provider.AuthError{
+			Provider: bw.name,
+			Message:  "vault is locked. Run: bw unlock (or set headless: true with BW_PASSWORD)",
+		}
+	}
+
+	// US2: reconcile server URL when configured and mismatched. Unset
+	// `server` is left alone (FR-008 / research.md R4).
+	if bw.server != "" && bw.server != observed.ServerURL {
+		if _, _, err := bw.run(ctx, "config", "server", bw.server); err != nil {
+			// Server URL deliberately omitted from the message — it may
+			// expose internal hostnames in CI logs; see doctor output for
+			// the configured value.
+			return fmt.Errorf("provider %q: bw config server failed: %w", bw.name, err)
+		}
+		bw.mu.Lock()
+		bw.observedServer = bw.server
+		bw.mu.Unlock()
+	}
+
+	// FR-006: emails are sensitive. The default error message omits the
+	// configured and observed values; users see the full picture only via
+	// `dsops doctor` (which has its own consent surface).
+	if bw.email != "" && !strings.EqualFold(bw.email, observed.UserEmail) {
+		return provider.AuthError{
+			Provider: bw.name,
+			Message:  "configured email does not match authenticated session (run `dsops doctor` for details)",
+		}
+	}
+
+	// Success — latch the gate so future calls short-circuit.
+	bw.mu.Lock()
+	bw.accountDone = true
+	bw.mu.Unlock()
+	return nil
+}
+
 // ensureSync runs `bw sync` at most once per provider lifetime when sync is
 // enabled. A failed sync is intentionally swallowed: resolutions can still
 // proceed against the previously-cached vault state, and the per-call cost of
@@ -99,7 +413,7 @@ func (bw *BitwardenProvider) ensureSync(ctx context.Context) {
 	}
 	bw.syncOnce.Do(func() {
 		args := bw.appendSessionArg([]string{"sync"})
-		_, _, _ = bw.executor.Execute(ctx, "bw", args...)
+		_, _, _ = bw.run(ctx, args...)
 	})
 }
 
@@ -110,7 +424,13 @@ func (bw *BitwardenProvider) Name() string {
 
 // Resolve retrieves a secret from Bitwarden
 func (bw *BitwardenProvider) Resolve(ctx context.Context, ref provider.Reference) (provider.SecretValue, error) {
+	if bw.configErr != nil {
+		return provider.SecretValue{}, bw.configErr
+	}
 	if err := bw.ensureHeadlessAuth(ctx); err != nil {
+		return provider.SecretValue{}, err
+	}
+	if err := bw.ensureAccount(ctx); err != nil {
 		return provider.SecretValue{}, err
 	}
 	bw.ensureSync(ctx)
@@ -180,7 +500,13 @@ func (bw *BitwardenProvider) resolveAttachment(ctx context.Context, itemID, file
 
 // Describe returns metadata about a Bitwarden item
 func (bw *BitwardenProvider) Describe(ctx context.Context, ref provider.Reference) (provider.Metadata, error) {
+	if bw.configErr != nil {
+		return provider.Metadata{}, bw.configErr
+	}
 	if err := bw.ensureHeadlessAuth(ctx); err != nil {
+		return provider.Metadata{}, err
+	}
+	if err := bw.ensureAccount(ctx); err != nil {
 		return provider.Metadata{}, err
 	}
 	bw.ensureSync(ctx)
@@ -228,6 +554,9 @@ func (bw *BitwardenProvider) Capabilities() provider.Capabilities {
 // attempt to recover from unauthenticated/locked states using API-key login
 // and passwordenv unlock — see headlessLogin and headlessUnlock.
 func (bw *BitwardenProvider) Validate(ctx context.Context) error {
+	if bw.configErr != nil {
+		return bw.configErr
+	}
 	if err := bwLookPath(); err != nil {
 		return fmt.Errorf("bitwarden CLI 'bw' not found in PATH. Install from: https://bitwarden.com/help/cli/")
 	}
@@ -249,7 +578,10 @@ func (bw *BitwardenProvider) Validate(ctx context.Context) error {
 			Message:  "vault is locked. Run: bw unlock (or set headless: true with BW_PASSWORD)",
 		}
 	case "unlocked":
-		return nil
+		// SPEC-026: also run the multi-account guards so `dsops doctor`
+		// catches email mismatches and server-reconcile failures before the
+		// first `dsops exec` would deterministically fail on them.
+		return bw.ensureAccount(ctx)
 	default:
 		return provider.AuthError{
 			Provider: bw.name,
@@ -305,6 +637,24 @@ func (bw *BitwardenProvider) ensureHeadlessAuth(ctx context.Context) error {
 	if !bw.headless {
 		return nil
 	}
+	// SPEC-026 FR-007: two headless providers cannot share an appDataDir
+	// because their `bw login`/`bw unlock` calls would race each other's
+	// on-disk session state. Fail fast on the second claimant.
+	if bw.appDataDir != "" {
+		prev, loaded := headlessAppDataDirs.LoadOrStore(bw.appDataDir, bw.name)
+		if loaded {
+			prevName, ok := prev.(string)
+			if !ok {
+				return fmt.Errorf("internal error: headlessAppDataDirs holds non-string for %q (got %T)", bw.appDataDir, prev)
+			}
+			if prevName != bw.name {
+				return fmt.Errorf(
+					"bitwarden provider %q cannot share appDataDir %q with headless provider %q",
+					bw.name, bw.appDataDir, prevName,
+				)
+			}
+		}
+	}
 	bw.mu.Lock()
 	if bw.authDone {
 		bw.mu.Unlock()
@@ -323,10 +673,12 @@ func (bw *BitwardenProvider) ensureHeadlessAuth(ctx context.Context) error {
 }
 
 // fetchStatus invokes `bw status` and returns the status string from the
-// resulting JSON, or an error.
+// resulting JSON, or an error. The full parsed BitwardenStatus is also
+// cached on the provider so a sibling caller (ensureAccount) doesn't need
+// to re-spawn the bw subprocess.
 func (bw *BitwardenProvider) fetchStatus(ctx context.Context) (string, error) {
 	args := bw.appendSessionArg([]string{"status"})
-	output, _, err := bw.executor.Execute(ctx, "bw", args...)
+	output, _, err := bw.run(ctx, args...)
 	if err != nil {
 		return "", fmt.Errorf("failed to check bitwarden status: %w", err)
 	}
@@ -334,6 +686,11 @@ func (bw *BitwardenProvider) fetchStatus(ctx context.Context) (string, error) {
 	if err := json.Unmarshal(output, &status); err != nil {
 		return "", fmt.Errorf("failed to parse bitwarden status: %w", err)
 	}
+	bw.mu.Lock()
+	bw.observedEmail = status.UserEmail
+	bw.observedServer = status.ServerURL
+	bw.observedStatus = status.Status
+	bw.mu.Unlock()
 	return status.Status, nil
 }
 
@@ -346,7 +703,7 @@ func (bw *BitwardenProvider) headlessLogin(ctx context.Context) error {
 			Message:  "headless login requires BW_CLIENTID and BW_CLIENTSECRET env vars",
 		}
 	}
-	if _, _, err := bw.executor.Execute(ctx, "bw", "login", "--apikey"); err != nil {
+	if _, _, err := bw.run(ctx, "login", "--apikey"); err != nil {
 		return provider.AuthError{
 			Provider: bw.name,
 			Message:  fmt.Sprintf("bw login --apikey failed: %v", err),
@@ -364,7 +721,7 @@ func (bw *BitwardenProvider) headlessUnlock(ctx context.Context) error {
 			Message:  "headless unlock requires BW_PASSWORD env var",
 		}
 	}
-	stdout, _, err := bw.executor.Execute(ctx, "bw", "unlock", "--passwordenv", "BW_PASSWORD", "--raw")
+	stdout, _, err := bw.run(ctx, "unlock", "--passwordenv", "BW_PASSWORD", "--raw")
 	if err != nil {
 		return provider.AuthError{
 			Provider: bw.name,
@@ -441,7 +798,7 @@ func defaultFieldForType(t BitwardenItemType) string {
 func (bw *BitwardenProvider) getItem(ctx context.Context, itemID string) (*BitwardenItem, error) {
 	args := bw.appendSessionArg([]string{"get", "item", itemID})
 
-	stdout, stderr, err := bw.executor.Execute(ctx, "bw", args...)
+	stdout, stderr, err := bw.run(ctx, args...)
 	if err != nil {
 		stderrStr := string(stderr)
 		errStr := err.Error()
@@ -714,7 +1071,7 @@ func (bw *BitwardenProvider) extractSshKeyField(item *BitwardenItem, field strin
 func (bw *BitwardenProvider) getAttachment(ctx context.Context, itemID, filename string) ([]byte, error) {
 	args := bw.appendSessionArg([]string{"get", "attachment", filename, "--itemid", itemID, "--raw"})
 
-	stdout, stderr, err := bw.executor.Execute(ctx, "bw", args...)
+	stdout, stderr, err := bw.run(ctx, args...)
 	if err != nil {
 		stderrStr := string(stderr)
 		errStr := err.Error()
@@ -776,6 +1133,7 @@ type BitwardenStatus struct {
 	LastSync  string `json:"lastSync"`
 	UserEmail string `json:"userEmail"`
 	UserID    string `json:"userId"`
+	ServerURL string `json:"serverUrl"`
 	Template  string `json:"template"`
 }
 

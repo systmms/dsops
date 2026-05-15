@@ -45,6 +45,7 @@ type MockResponse struct {
 type RecordedCall struct {
 	Command string
 	Args    []string
+	Env     []string // extra env entries when invoked via ExecuteWithEnv (nil otherwise)
 	Context context.Context
 }
 
@@ -58,6 +59,18 @@ func NewMockCommandExecutor() *MockCommandExecutor {
 
 // Execute returns the mocked response for the given command.
 func (m *MockCommandExecutor) Execute(ctx context.Context, name string, args ...string) ([]byte, []byte, error) {
+	return m.execute(ctx, nil, name, args)
+}
+
+// ExecuteWithEnv returns the mocked response for the given command and
+// records the supplied env entries on the RecordedCall so tests can assert
+// per-call environment propagation. Lookup uses the same key as Execute
+// (env is metadata, not part of the response key).
+func (m *MockCommandExecutor) ExecuteWithEnv(ctx context.Context, env []string, name string, args ...string) ([]byte, []byte, error) {
+	return m.execute(ctx, env, name, args)
+}
+
+func (m *MockCommandExecutor) execute(ctx context.Context, env []string, name string, args []string) ([]byte, []byte, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -65,6 +78,7 @@ func (m *MockCommandExecutor) Execute(ctx context.Context, name string, args ...
 	m.RecordedCalls = append(m.RecordedCalls, RecordedCall{
 		Command: name,
 		Args:    args,
+		Env:     env,
 		Context: ctx,
 	})
 

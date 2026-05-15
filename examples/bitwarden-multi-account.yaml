@@ -1,0 +1,39 @@
+version: 0
+
+# SPEC-026 example: two Bitwarden accounts in one dsops.yaml.
+#
+# Each `type: bitwarden` provider pins itself to its own `appDataDir`
+# (the BITWARDENCLI_APPDATA_DIR the bw CLI will use). That makes the two
+# instances completely isolated: each has its own login session,
+# server, and vault cache on disk. The optional `email` field guards
+# against state-dir/account mismatches.
+#
+# Prereqs: log each account into its own state directory before running
+# dsops, e.g.:
+#
+#   BITWARDENCLI_APPDATA_DIR=~/.config/dsops/bw-personal bw login
+#   BITWARDENCLI_APPDATA_DIR=~/.config/dsops/bw-personal bw unlock
+#   BITWARDENCLI_APPDATA_DIR=~/.config/dsops/bw-work     bw login
+#   BITWARDENCLI_APPDATA_DIR=~/.config/dsops/bw-work     bw unlock
+
+providers:
+  bw-personal:
+    type: bitwarden
+    appDataDir: ~/.config/dsops/bw-personal
+    email: alice@example.com        # optional but recommended
+
+  bw-work:
+    type: bitwarden
+    appDataDir: ~/.config/dsops/bw-work
+    server: https://vw.corp.example.com  # self-hosted Vaultwarden
+    email: alice@corp.example.com
+
+envs:
+  dev:
+    # Replace <...-item-id> with real item IDs from each vault.
+    # Use `BITWARDENCLI_APPDATA_DIR=~/.config/dsops/bw-personal bw list items`
+    # to inspect.
+    PERSONAL_API_KEY:
+      from: { provider: bw-personal, key: "<personal-item-id>.password" }
+    WORK_DB_URL:
+      from: { provider: bw-work,     key: "<work-item-id>.custom.database_url" }

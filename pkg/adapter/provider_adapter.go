@@ -31,6 +31,20 @@ func NewSecretStoreToProviderAdapter(s secretstore.SecretStore) *SecretStoreToPr
 	return &SecretStoreToProviderAdapter{secretStore: s}
 }
 
+// Provider returns the wrapped legacy provider. Consumers that need to
+// type-assert to a concrete provider (e.g. `dsops doctor` reaching for
+// `*providers.BitwardenProvider.AccountInfo()`) walk the adapter chain via
+// this accessor.
+func (a *ProviderToSecretStoreAdapter) Provider() provider.Provider {
+	return a.provider
+}
+
+// SecretStore returns the wrapped secret store. See Provider for the
+// motivating use case.
+func (a *SecretStoreToProviderAdapter) SecretStore() secretstore.SecretStore {
+	return a.secretStore
+}
+
 func (a *ProviderToSecretStoreAdapter) Name() string {
 	return a.provider.Name()
 }

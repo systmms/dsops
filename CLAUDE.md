@@ -532,6 +532,8 @@ ADRs provide decision history and rationale for future maintainers. See `docs/ad
 - N/A (no data persistence) (022-mod-tidy-check)
 - Go 1.25 + GoReleaser v2, cosign (Sigstore), syft (SBOM), memguard (023-security-trust)
 - N/A (documentation + CI/CD changes + runtime memory protection) (023-security-trust)
+- Go 1.25 (existing project minimum) + Bitwarden CLI `bw` (executed via `pkg/exec.CommandExecutor`); standard library only inside the provider. (026-bitwarden-multi-account)
+- Per-provider account-state directory on disk, owned by `bw` (we only set `BITWARDENCLI_APPDATA_DIR` for the child process). (026-bitwarden-multi-account)
 
 ## Recent Changes
 - 020-release-distribution: Added Go 1.25+ (matches existing project) + GoReleaser (v2.x), GitHub Actions, Docker

@@ -114,3 +114,58 @@ func TestRealCommandExecutor_StderrCapture(t *testing.T) {
 	assert.Equal(t, "stdout\n", string(stdout))
 	assert.Equal(t, "stderr\n", string(stderr))
 }
+
+func TestRealCommandExecutor_ExecuteWithEnv(t *testing.T) {
+	// Note: t.Parallel is NOT called on this top-level test because the
+	// "preserves parent env" and "overrides parent env" subtests rely on
+	// t.Setenv, which is incompatible with parallel execution.
+
+	executor := &RealCommandExecutor{}
+	ctx := context.Background()
+
+	t.Run("injects new env var", func(t *testing.T) {
+		stdout, _, err := executor.ExecuteWithEnv(
+			ctx,
+			[]string{"DSOPS_TEST_VAR=hello"},
+			"sh", "-c", "echo $DSOPS_TEST_VAR",
+		)
+		require.NoError(t, err)
+		assert.Equal(t, "hello\n", string(stdout))
+	})
+
+	t.Run("preserves parent env when injecting", func(t *testing.T) {
+		t.Setenv("DSOPS_PARENT_VAR", "parent_value")
+		stdout, _, err := executor.ExecuteWithEnv(
+			ctx,
+			[]string{"DSOPS_TEST_VAR=child"},
+			"sh", "-c", "echo $DSOPS_PARENT_VAR:$DSOPS_TEST_VAR",
+		)
+		require.NoError(t, err)
+		assert.Equal(t, "parent_value:child\n", string(stdout))
+	})
+
+	t.Run("overrides parent env var", func(t *testing.T) {
+		t.Setenv("DSOPS_OVERRIDE_VAR", "from_parent")
+		stdout, _, err := executor.ExecuteWithEnv(
+			ctx,
+			[]string{"DSOPS_OVERRIDE_VAR=from_child"},
+			"sh", "-c", "echo $DSOPS_OVERRIDE_VAR",
+		)
+		require.NoError(t, err)
+		assert.Equal(t, "from_child\n", string(stdout))
+	})
+
+	t.Run("empty env behaves like Execute", func(t *testing.T) {
+		stdout, _, err := executor.ExecuteWithEnv(ctx, nil, "echo", "hello")
+		require.NoError(t, err)
+		assert.Equal(t, "hello\n", string(stdout))
+	})
+}
+
+func TestEnvCommandExecutorInterface(t *testing.T) {
+	t.Parallel()
+
+	// Verify that RealCommandExecutor implements EnvCommandExecutor
+	var _ EnvCommandExecutor = &RealCommandExecutor{}
+	var _ EnvCommandExecutor = (*RealCommandExecutor)(nil)
+}

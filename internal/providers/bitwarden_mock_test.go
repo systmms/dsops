@@ -3,7 +3,11 @@ package providers_test
 import (
 	"context"
 	"encoding/base64"
+	"errors"
+	"os"
 	osExec "os/exec"
+	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,6 +16,10 @@ import (
 	"github.com/systmms/dsops/pkg/provider"
 	"github.com/systmms/dsops/tests/testutil"
 )
+
+// osMkdirAll wraps os.MkdirAll so the SPEC-026 helpers don't accidentally
+// shadow the existing osExec import alias.
+var osMkdirAll = os.MkdirAll
 
 func TestBitwardenProviderWithMockExecutor_Resolve(t *testing.T) {
 	t.Parallel()
@@ -965,4 +973,774 @@ func TestBitwardenProviderConstructors(t *testing.T) {
 		assert.True(t, caps.SupportsMetadata)
 		assert.Contains(t, caps.AuthMethods, "cli-session")
 	})
+}
+
+// statusJSON is a tiny helper that produces a `bw status` JSON payload for
+// the SPEC-026 tests.
+func statusJSON(userEmail, serverURL, status string) string {
+	return `{` +
+		`"status":"` + status + `",` +
+		`"userEmail":"` + userEmail + `",` +
+		`"serverUrl":"` + serverURL + `",` +
+		`"userId":"u-123",` +
+		`"lastSync":"2026-05-14T00:00:00Z"` +
+		`}`
+}
+
+// TestBitwarden_MultipleInstances_EnvIsolated (SPEC-026 US1, T009)
+// verifies that two BitwardenProvider instances with distinct appDataDirs
+// each carry the correct BITWARDENCLI_APPDATA_DIR on every `bw` invocation,
+// with no cross-contamination between mock executors.
+func TestBitwarden_MultipleInstances_EnvIsolated(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "personal", "work"))
+
+	personalDir := filepath.Join(tmp, "personal", "leaf")
+	workDir := filepath.Join(tmp, "work", "leaf")
+
+	personalExec := testutil.NewMockCommandExecutor()
+	personalExec.AddJSONResponse("bw status", statusJSON("alice@example.com", "https://vault.bitwarden.com", "unlocked"))
+	personalExec.AddJSONResponse("bw get item personal-1", `{"id":"personal-1","name":"P","type":1,"login":{"password":"pass-personal"},"fields":[]}`)
+
+	workExec := testutil.NewMockCommandExecutor()
+	workExec.AddJSONResponse("bw status", statusJSON("alice@corp.example.com", "https://vw.corp.example.com", "unlocked"))
+	workExec.AddJSONResponse("bw get item work-1", `{"id":"work-1","name":"W","type":1,"login":{"password":"pass-work"},"fields":[]}`)
+
+	personal := providers.NewBitwardenProviderWithExecutor("bw-personal", map[string]any{
+		"appDataDir": personalDir,
+		"email":      "alice@example.com",
+	}, personalExec)
+	work := providers.NewBitwardenProviderWithExecutor("bw-work", map[string]any{
+		"appDataDir": workDir,
+		"email":      "alice@corp.example.com",
+	}, workExec)
+
+	ctx := context.Background()
+
+	pSecret, err := personal.Resolve(ctx, provider.Reference{Key: "personal-1"})
+	require.NoError(t, err)
+	assert.Equal(t, "pass-personal", pSecret.Value)
+
+	wSecret, err := work.Resolve(ctx, provider.Reference{Key: "work-1"})
+	require.NoError(t, err)
+	assert.Equal(t, "pass-work", wSecret.Value)
+
+	// Every recorded call on each mock executor must carry its own appDataDir
+	// env entry (and only that one).
+	assertEnvOnAllCalls(t, personalExec.RecordedCalls, "BITWARDENCLI_APPDATA_DIR="+personalDir)
+	assertEnvOnAllCalls(t, workExec.RecordedCalls, "BITWARDENCLI_APPDATA_DIR="+workDir)
+}
+
+// TestBitwarden_EnsureAccount_EmailMismatch (SPEC-026 US1, T010)
+// verifies that a configured email mismatching the bw status userEmail
+// causes Resolve to fail BEFORE any `bw get item` is issued.
+func TestBitwarden_EnsureAccount_EmailMismatch(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("bob@example.com", "", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"never-returned"}}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-personal", map[string]any{
+		"appDataDir": dir,
+		"email":      "alice@example.com",
+	}, mockExec)
+
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "bw-personal")
+	// FR-006: the configured/observed emails must NOT appear in the default
+	// error message; the dedicated redaction test asserts that. Here we only
+	// assert that the mismatch is the cause (and the verbose form is
+	// available via doctor).
+	assert.Contains(t, err.Error(), "configured email does not match")
+
+	for _, call := range mockExec.RecordedCalls {
+		if call.Command == "bw" && len(call.Args) > 0 && call.Args[0] == "get" {
+			t.Errorf("expected no `bw get` call after email mismatch, saw: %v", call.Args)
+		}
+	}
+}
+
+// TestBitwarden_EnsureAccount_EmailMatchCaseInsensitive (SPEC-026 US1, T011)
+// verifies that case differences between configured email and the bw status
+// userEmail are tolerated.
+func TestBitwarden_EnsureAccount_EmailMatchCaseInsensitive(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@example.com", "", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"ok"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-personal", map[string]any{
+		"appDataDir": dir,
+		"email":      "Alice@Example.COM",
+	}, mockExec)
+
+	secret, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.NoError(t, err)
+	assert.Equal(t, "ok", secret.Value)
+}
+
+// TestBitwarden_EnsureAccount_OncePerProcess (SPEC-026 US1)
+// verifies that ensureAccount runs `bw status` at most once across multiple
+// Resolve calls on the same provider instance.
+func TestBitwarden_EnsureAccount_OncePerProcess(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@example.com", "", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+	}, mockExec)
+
+	ctx := context.Background()
+	for i := 0; i < 3; i++ {
+		_, err := p.Resolve(ctx, provider.Reference{Key: "item-1"})
+		require.NoError(t, err)
+	}
+
+	statusCalls := 0
+	for _, c := range mockExec.RecordedCalls {
+		if c.Command == "bw" && len(c.Args) > 0 && c.Args[0] == "status" {
+			statusCalls++
+		}
+	}
+	assert.Equal(t, 1, statusCalls, "expected exactly one `bw status` call across 3 Resolves")
+}
+
+func ensureDirs(root string, names ...string) error {
+	for _, n := range names {
+		if err := osMkdirAll(filepath.Join(root, n), 0o755); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// TestBitwarden_EnsureServer_MismatchTriggersConfig (SPEC-026 US2, T018)
+func TestBitwarden_EnsureServer_MismatchTriggersConfig(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@x.com", "https://vault.bitwarden.com", "unlocked"))
+	mockExec.AddResponse("bw config server https://vw.example.com", testutil.MockResponse{Stdout: []byte("Saved.\n")})
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+		"server":     "https://vw.example.com",
+	}, mockExec)
+
+	ctx := context.Background()
+	for i := 0; i < 2; i++ {
+		_, err := p.Resolve(ctx, provider.Reference{Key: "item-1"})
+		require.NoError(t, err)
+	}
+
+	configCalls := 0
+	for _, c := range mockExec.RecordedCalls {
+		if c.Command != "bw" || len(c.Args) < 3 {
+			continue
+		}
+		if c.Args[0] == "config" && c.Args[1] == "server" && c.Args[2] == "https://vw.example.com" {
+			configCalls++
+		}
+	}
+	assert.Equal(t, 1, configCalls, "expected exactly one `bw config server` call across two Resolves")
+}
+
+// TestBitwarden_EnsureServer_MatchSkipsConfig (SPEC-026 US2, T019)
+func TestBitwarden_EnsureServer_MatchSkipsConfig(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@x.com", "https://vw.example.com", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+		"server":     "https://vw.example.com",
+	}, mockExec)
+
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.NoError(t, err)
+
+	for _, c := range mockExec.RecordedCalls {
+		if c.Command == "bw" && len(c.Args) >= 2 && c.Args[0] == "config" && c.Args[1] == "server" {
+			t.Errorf("expected no `bw config server` call when server already matches, got %v", c.Args)
+		}
+	}
+}
+
+// TestBitwarden_EnsureServer_UnsetSkipsReconciliation (SPEC-026 US2, FR-008)
+// Verifies the research.md R4 fix: an unset `server` does NOT clobber a
+// pre-existing self-hosted setting via `bw config server`.
+func TestBitwarden_EnsureServer_UnsetSkipsReconciliation(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@x.com", "https://vw.example.com", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+		// server intentionally unset
+	}, mockExec)
+
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.NoError(t, err)
+
+	for _, c := range mockExec.RecordedCalls {
+		if c.Command == "bw" && len(c.Args) >= 2 && c.Args[0] == "config" && c.Args[1] == "server" {
+			t.Errorf("server unset must not reconcile, got %v", c.Args)
+		}
+	}
+}
+
+// TestBitwarden_Headless_TwoInstances_EnvIsolated (SPEC-026 US3, T024+T026)
+// Two headless providers with distinct appDataDirs each drive bw login /
+// bw unlock through ExecuteWithEnv with the matching env entries.
+func TestBitwarden_Headless_TwoInstances_EnvIsolated(t *testing.T) {
+	// Not parallel: relies on package-level headlessAppDataDirs registry.
+	t.Setenv("BW_CLIENTID", "id-a")
+	t.Setenv("BW_CLIENTSECRET", "secret-a")
+	t.Setenv("BW_PASSWORD", "pass-a")
+
+	providers.ResetHeadlessAppDataDirsForTesting()
+	t.Cleanup(providers.ResetHeadlessAppDataDirsForTesting)
+
+	restore := providers.SetBwLookPathForTesting(func() error { return nil })
+	defer restore()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "a", "b"))
+	dirA := filepath.Join(tmp, "a", "leaf")
+	dirB := filepath.Join(tmp, "b", "leaf")
+
+	mkMock := func() *testutil.MockCommandExecutor {
+		m := testutil.NewMockCommandExecutor()
+		// status returns "locked" so the headless recovery flow exercises
+		// `bw unlock --passwordenv BW_PASSWORD --raw`. (`bw login --apikey`
+		// uses the same bw.run() router already covered by status calls
+		// in Phase 2/3 tests.)
+		m.AddJSONResponse("bw status", statusJSON("alice@x.com", "", "locked"))
+		m.AddResponse("bw unlock --passwordenv BW_PASSWORD --raw", testutil.MockResponse{Stdout: []byte("session-token-xyz\n")})
+		return m
+	}
+
+	mockA := mkMock()
+	mockB := mkMock()
+
+	pA := providers.NewBitwardenProviderWithExecutor("bw-a", map[string]any{
+		"appDataDir": dirA,
+		"headless":   true,
+	}, mockA)
+	pB := providers.NewBitwardenProviderWithExecutor("bw-b", map[string]any{
+		"appDataDir": dirB,
+		"headless":   true,
+	}, mockB)
+
+	// We don't need a real Resolve here; we want to assert that the login
+	// and unlock calls flow through ExecuteWithEnv with the right env.
+	// Invoke Validate which exercises the headless auth path.
+	_ = pA.Validate(context.Background())
+	_ = pB.Validate(context.Background())
+
+	// Find the login + unlock calls on each mock and assert env contents.
+	requireCallWithEnv := func(t *testing.T, mock *testutil.MockCommandExecutor, argPrefix []string, want string) {
+		t.Helper()
+		for _, c := range mock.RecordedCalls {
+			if c.Command != "bw" || len(c.Args) < len(argPrefix) {
+				continue
+			}
+			match := true
+			for i, want := range argPrefix {
+				if c.Args[i] != want {
+					match = false
+					break
+				}
+			}
+			if match {
+				for _, e := range c.Env {
+					if e == want {
+						return
+					}
+				}
+				t.Errorf("call %v env=%v missing %q", c.Args, c.Env, want)
+				return
+			}
+		}
+		t.Errorf("no call matching prefix %v", argPrefix)
+	}
+
+	requireCallWithEnv(t, mockA, []string{"unlock", "--passwordenv", "BW_PASSWORD", "--raw"}, "BITWARDENCLI_APPDATA_DIR="+dirA)
+	requireCallWithEnv(t, mockB, []string{"unlock", "--passwordenv", "BW_PASSWORD", "--raw"}, "BITWARDENCLI_APPDATA_DIR="+dirB)
+}
+
+// TestBitwarden_Headless_SharedAppDataDir_Errors (SPEC-026 US3, T025 + FR-007)
+// Two headless providers with the same appDataDir: the second one fails
+// fast with a configuration error naming both providers.
+func TestBitwarden_Headless_SharedAppDataDir_Errors(t *testing.T) {
+	// Not parallel: relies on package-level headlessAppDataDirs registry.
+	t.Setenv("BW_CLIENTID", "id")
+	t.Setenv("BW_CLIENTSECRET", "secret")
+	t.Setenv("BW_PASSWORD", "pass")
+
+	providers.ResetHeadlessAppDataDirsForTesting()
+	t.Cleanup(providers.ResetHeadlessAppDataDirsForTesting)
+
+	restore := providers.SetBwLookPathForTesting(func() error { return nil })
+	defer restore()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "shared"))
+	dir := filepath.Join(tmp, "shared", "leaf")
+
+	mkMock := func() *testutil.MockCommandExecutor {
+		m := testutil.NewMockCommandExecutor()
+		m.AddJSONResponse("bw status", statusJSON("alice@x.com", "", "unlocked"))
+		m.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+		return m
+	}
+
+	pFirst := providers.NewBitwardenProviderWithExecutor("bw-first", map[string]any{
+		"appDataDir": dir,
+		"headless":   true,
+	}, mkMock())
+	pSecond := providers.NewBitwardenProviderWithExecutor("bw-second", map[string]any{
+		"appDataDir": dir,
+		"headless":   true,
+	}, mkMock())
+
+	// First provider claims the dir.
+	_, err := pFirst.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.NoError(t, err)
+
+	// Second provider sees the claim and fails fast.
+	_, err = pSecond.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "bw-second")
+	assert.Contains(t, err.Error(), "bw-first")
+	assert.Contains(t, err.Error(), dir)
+}
+
+func assertEnvOnAllCalls(t *testing.T, calls []testutil.RecordedCall, want string) {
+	t.Helper()
+	for i, c := range calls {
+		if c.Command != "bw" {
+			continue
+		}
+		found := false
+		for _, e := range c.Env {
+			if e == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("call #%d args=%v env=%v: missing %q", i, c.Args, c.Env, want)
+		}
+	}
+}
+
+// === SPEC-026 review fix-up tests ==========================================
+// Tests below cover the issues reported in the consolidated PR review on
+// systmms/dsops#51. Each was added BEFORE the corresponding fix landed
+// (TDD red-then-green per constitution VII).
+
+// TestBitwarden_EnsureAccount_TransientErrorDoesNotLatch verifies that a
+// transient `bw status` failure on the first call is NOT cached for the
+// process lifetime — the next call retries. Regression test for the
+// sync.Once + sticky-error bug reported by gemini.
+func TestBitwarden_EnsureAccount_TransientErrorDoesNotLatch(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	// First `bw status` returns an error (simulating a transient CLI failure).
+	mockExec.AddResponse("bw status", testutil.MockResponse{
+		Err: errors.New("transient: context deadline exceeded"),
+	})
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+	}, mockExec)
+
+	ctx := context.Background()
+	_, err := p.Resolve(ctx, provider.Reference{Key: "item-1"})
+	require.Error(t, err, "first call should propagate the transient error")
+
+	// Now swap the mock so `bw status` succeeds (simulating CLI recovery).
+	mockExec.Responses = map[string]testutil.MockResponse{}
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@x.com", "", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+
+	_, err = p.Resolve(ctx, provider.Reference{Key: "item-1"})
+	require.NoError(t, err, "second call should retry after transient failure cleared")
+}
+
+// TestBitwarden_EnsureAccount_ConcurrentResolves verifies that 5 concurrent
+// Resolve goroutines drive exactly one `bw status` call. Catches the race
+// my earlier serial OncePerProcess test missed.
+func TestBitwarden_EnsureAccount_ConcurrentResolves(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@x.com", "", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+	}, mockExec)
+
+	const n = 5
+	var wg sync.WaitGroup
+	wg.Add(n)
+	ctx := context.Background()
+	for i := 0; i < n; i++ {
+		go func() {
+			defer wg.Done()
+			_, _ = p.Resolve(ctx, provider.Reference{Key: "item-1"})
+		}()
+	}
+	wg.Wait()
+
+	statusCalls := 0
+	for _, c := range mockExec.RecordedCalls {
+		if c.Command == "bw" && len(c.Args) > 0 && c.Args[0] == "status" {
+			statusCalls++
+		}
+	}
+	assert.Equal(t, 1, statusCalls, "5 concurrent Resolves should issue exactly one `bw status`")
+}
+
+// TestBitwarden_EmailConfig_NormalizesDisplayNameForm verifies that a
+// configured email in RFC-5322 named-address form is normalized to the bare
+// address so comparisons against `bw status`'s userEmail succeed. Regression
+// for the gemini/codex finding on bitwarden.go:164.
+func TestBitwarden_EmailConfig_NormalizesDisplayNameForm(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@example.com", "", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+		"email":      "Alice <alice@example.com>", // RFC 5322 named-address form
+	}, mockExec)
+
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.NoError(t, err, "named-address form should match bare userEmail after normalization")
+}
+
+// TestBitwarden_EnsureAccount_EmailMismatch_RedactsInError verifies that the
+// AuthError.Error() default form does NOT include the raw configured or
+// observed email values. Regression for FR-006 (gemini security finding on
+// bitwarden.go:344-348).
+func TestBitwarden_EnsureAccount_EmailMismatch_RedactsInError(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("bob-secret@example.com", "", "unlocked"))
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+		"email":      "alice-secret@example.com",
+	}, mockExec)
+
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.Error(t, err)
+	msg := err.Error()
+	assert.NotContains(t, msg, "alice-secret@example.com", "default error must redact configured email")
+	assert.NotContains(t, msg, "bob-secret@example.com", "default error must redact observed email")
+	assert.Contains(t, msg, "bw-p", "default error should still name the provider")
+}
+
+// TestBitwarden_EnsureAccount_UnauthenticatedReturnsAuthError verifies that
+// when `bw status` reports unauthenticated, ensureAccount returns the
+// standard "not logged in" auth error rather than a misleading
+// "configured email does not match ''" mismatch. Codex finding on
+// bitwarden.go:347.
+func TestBitwarden_EnsureAccount_UnauthenticatedReturnsAuthError(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	// bw status reports unauthenticated; userEmail is empty.
+	mockExec.AddJSONResponse("bw status", `{"status":"unauthenticated","userEmail":"","serverUrl":"","userId":"","lastSync":""}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+		"email":      "alice@example.com",
+	}, mockExec)
+
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.Error(t, err)
+	msg := err.Error()
+	assert.NotContains(t, msg, "does not match", "must not produce a misleading mismatch error")
+	assert.Contains(t, msg, "logged in", "should hint at not-logged-in state")
+}
+
+// TestBitwarden_EnsureServer_FailureRedactsURL verifies that when
+// `bw config server` fails, the returned error does NOT embed the
+// configured server URL. Server URLs can leak internal hostnames via CI
+// logs (security audit finding on bitwarden.go:333).
+func TestBitwarden_EnsureServer_FailureRedactsURL(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@x.com", "https://vault.bitwarden.com", "unlocked"))
+	// Server mismatch triggers `bw config server`, which fails.
+	mockExec.AddResponse("bw config server https://internal-secret.example.com", testutil.MockResponse{
+		Err: errors.New("bw error: Invalid URL"),
+	})
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+		"server":     "https://internal-secret.example.com",
+	}, mockExec)
+
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.Error(t, err)
+	assert.NotContains(t, err.Error(), "internal-secret.example.com", "URL must be redacted from the error message")
+	assert.Contains(t, err.Error(), "bw-p", "error should name the provider")
+}
+
+// TestBitwarden_EnsureAccount_InvalidStatusJSON covers the JSON-parse
+// error path in ensureAccount (test gap from review).
+func TestBitwarden_EnsureAccount_InvalidStatusJSON(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddResponse("bw status", testutil.MockResponse{Stdout: []byte("{not-json")})
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+	}, mockExec)
+
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "bw-p")
+}
+
+// TestBitwarden_Validate_RunsAccountChecks verifies that Validate
+// surfaces ensureAccount errors (e.g. email mismatch) so `dsops doctor`
+// doesn't report healthy when the next `dsops exec` will fail. Codex
+// finding on bitwarden.go:529-530.
+func TestBitwarden_Validate_RunsAccountChecks(t *testing.T) {
+	t.Parallel()
+
+	restore := providers.SetBwLookPathForTesting(func() error { return nil })
+	defer restore()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("bob@example.com", "", "unlocked"))
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+		"email":      "alice@example.com",
+	}, mockExec)
+
+	err := p.Validate(context.Background())
+	require.Error(t, err, "Validate must catch email mismatch so doctor flags it")
+	assert.Contains(t, err.Error(), "bw-p")
+}
+
+// TestBitwarden_Headless_SingleStatusCallOnFirstResolve verifies that
+// when both `ensureHeadlessAuth` and `ensureAccount` run for a fully
+// unlocked headless provider, only one `bw status` invocation hits the
+// CLI (the result is cached). Performance fix gemini found at
+// bitwarden.go:327.
+func TestBitwarden_Headless_SingleStatusCallOnFirstResolve(t *testing.T) {
+	// Not parallel: uses package-level headlessAppDataDirs registry.
+	t.Setenv("BW_CLIENTID", "id")
+	t.Setenv("BW_CLIENTSECRET", "secret")
+	t.Setenv("BW_PASSWORD", "pass")
+
+	providers.ResetHeadlessAppDataDirsForTesting()
+	t.Cleanup(providers.ResetHeadlessAppDataDirsForTesting)
+
+	restore := providers.SetBwLookPathForTesting(func() error { return nil })
+	defer restore()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "p"))
+	dir := filepath.Join(tmp, "p", "leaf")
+
+	mockExec := testutil.NewMockCommandExecutor()
+	mockExec.AddJSONResponse("bw status", statusJSON("alice@x.com", "", "unlocked"))
+	mockExec.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+
+	p := providers.NewBitwardenProviderWithExecutor("bw-p", map[string]any{
+		"appDataDir": dir,
+		"headless":   true,
+	}, mockExec)
+
+	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.NoError(t, err)
+
+	statusCalls := 0
+	for _, c := range mockExec.RecordedCalls {
+		if c.Command == "bw" && len(c.Args) > 0 && c.Args[0] == "status" {
+			statusCalls++
+		}
+	}
+	assert.Equal(t, 1, statusCalls, "ensureHeadlessAuth + ensureAccount must share one `bw status` result")
+}
+
+// TestBitwarden_NonHeadless_SharedAppDataDir_NoError verifies that two
+// non-headless providers sharing an appDataDir do NOT error at Resolve
+// time — the collision is a doctor-time warning per FR-007 (not an
+// error). Compensates for previously only testing this at the
+// doctor-render layer.
+func TestBitwarden_NonHeadless_SharedAppDataDir_NoError(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	require.NoError(t, ensureDirs(tmp, "shared"))
+	dir := filepath.Join(tmp, "shared", "leaf")
+
+	mkMock := func() *testutil.MockCommandExecutor {
+		m := testutil.NewMockCommandExecutor()
+		m.AddJSONResponse("bw status", statusJSON("alice@x.com", "", "unlocked"))
+		m.AddJSONResponse("bw get item item-1", `{"id":"item-1","name":"X","type":1,"login":{"password":"v"},"fields":[]}`)
+		return m
+	}
+
+	pA := providers.NewBitwardenProviderWithExecutor("bw-a", map[string]any{
+		"appDataDir": dir,
+	}, mkMock())
+	pB := providers.NewBitwardenProviderWithExecutor("bw-b", map[string]any{
+		"appDataDir": dir,
+	}, mkMock())
+
+	_, err := pA.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.NoError(t, err, "first non-headless provider must Resolve OK")
+	_, err = pB.Resolve(context.Background(), provider.Reference{Key: "item-1"})
+	require.NoError(t, err, "second non-headless provider sharing the dir must also Resolve OK")
+}
+
+// TestBitwarden_AppDataDir_UnwritableParent verifies that
+// resolveAppDataDir surfaces the unwritability of the parent eagerly at
+// config-load time, not later via a confusing `bw` error. Correctness
+// audit finding on bitwarden.go:172-199.
+//
+// Skipped on platforms where running as root makes filesystem mode
+// effectively meaningless (e.g. some CI containers).
+func TestBitwarden_AppDataDir_UnwritableParent(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: filesystem write-mode is meaningless")
+	}
+	t.Parallel()
+
+	parent := t.TempDir()
+	// Make parent read-only.
+	require.NoError(t, os.Chmod(parent, 0o555))
+	t.Cleanup(func() { _ = os.Chmod(parent, 0o755) })
+
+	_, err := providers.NewBitwardenProviderFactory("bw", map[string]any{
+		"appDataDir": filepath.Join(parent, "leaf"),
+	})
+	require.Error(t, err, "unwritable parent must be rejected at config-load")
+}
+
+// TestValidateBitwardenServerURL_RejectsPathQueryFragment verifies the
+// stricter URL validation rejects URLs with non-empty Path, RawQuery, or
+// Fragment. Correctness audit finding on bitwarden.go:201-218.
+func TestValidateBitwardenServerURL_RejectsPathQueryFragment(t *testing.T) {
+	t.Parallel()
+
+	bad := []string{
+		"https://vault.bitwarden.com/foo",
+		"https://vault.bitwarden.com/?q=1",
+		"https://vault.bitwarden.com#frag",
+	}
+	for _, raw := range bad {
+		raw := raw
+		t.Run(raw, func(t *testing.T) {
+			t.Parallel()
+			_, err := providers.NewBitwardenProviderFactory("bw", map[string]any{
+				"server": raw,
+			})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "server")
+		})
+	}
+
+	// Bare-host URLs must still be accepted.
+	good := []string{
+		"https://vault.bitwarden.com",
+		"https://vw.example.com:8443",
+		"https://vw.example.com/",
+	}
+	for _, raw := range good {
+		raw := raw
+		t.Run(raw, func(t *testing.T) {
+			t.Parallel()
+			_, err := providers.NewBitwardenProviderFactory("bw", map[string]any{
+				"server": raw,
+			})
+			require.NoError(t, err)
+		})
+	}
 }
