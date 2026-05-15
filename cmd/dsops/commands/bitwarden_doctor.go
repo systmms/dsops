@@ -9,21 +9,37 @@ import (
 	"github.com/systmms/dsops/internal/config"
 	"github.com/systmms/dsops/internal/providers"
 	"github.com/systmms/dsops/internal/resolve"
+	"github.com/systmms/dsops/pkg/adapter"
+	"github.com/systmms/dsops/pkg/provider"
 )
 
 // collectBitwardenAccountInfo gathers AccountInfo snapshots from every
-// registered Bitwarden provider declared in cfg.
+// registered Bitwarden provider declared in cfg. Names that appear in both
+// SecretStores and Providers maps are deduplicated. Providers wrapped in
+// the SecretStores adapter chain are unwrapped so they show up alongside
+// directly-registered ones.
 func collectBitwardenAccountInfo(resolver *resolve.Resolver, cfg *config.Config) []providers.BitwardenAccountInfo {
+	seen := make(map[string]struct{})
 	names := make([]string, 0)
 	for name, sc := range cfg.Definition.SecretStores {
-		if sc.Type == "bitwarden" {
-			names = append(names, name)
+		if sc.Type != "bitwarden" {
+			continue
 		}
+		if _, dup := seen[name]; dup {
+			continue
+		}
+		seen[name] = struct{}{}
+		names = append(names, name)
 	}
 	for name, pc := range cfg.Definition.Providers {
-		if pc.Type == "bitwarden" {
-			names = append(names, name)
+		if pc.Type != "bitwarden" {
+			continue
 		}
+		if _, dup := seen[name]; dup {
+			continue
+		}
+		seen[name] = struct{}{}
+		names = append(names, name)
 	}
 
 	out := make([]providers.BitwardenAccountInfo, 0, len(names))
@@ -32,11 +48,32 @@ func collectBitwardenAccountInfo(resolver *resolve.Resolver, cfg *config.Config)
 		if !ok {
 			continue
 		}
-		if bw, ok := p.(*providers.BitwardenProvider); ok {
+		if bw, ok := unwrapBitwardenProvider(p); ok {
 			out = append(out, bw.AccountInfo())
 		}
 	}
 	return out
+}
+
+// unwrapBitwardenProvider walks the adapter chain that the secret-store
+// registry applies (SecretStore -> ProviderToSecretStoreAdapter -> legacy
+// provider) so a Bitwarden provider configured under either `providers:`
+// or `secretStores:` can be discovered by `dsops doctor`.
+func unwrapBitwardenProvider(p provider.Provider) (*providers.BitwardenProvider, bool) {
+	for {
+		if bw, ok := p.(*providers.BitwardenProvider); ok {
+			return bw, true
+		}
+		ssa, ok := p.(*adapter.SecretStoreToProviderAdapter)
+		if !ok {
+			return nil, false
+		}
+		ps, ok := ssa.SecretStore().(*adapter.ProviderToSecretStoreAdapter)
+		if !ok {
+			return nil, false
+		}
+		p = ps.Provider()
+	}
 }
 
 // renderBitwardenAccounts writes a per-Bitwarden-provider block to out.
@@ -64,7 +101,14 @@ func renderBitwardenAccounts(out io.Writer, infos []providers.BitwardenAccountIn
 		_, _ = fmt.Fprintf(out, "  provider %s:\n", info.Name)
 		_, _ = fmt.Fprintf(out, "    appDataDir: %s\n", valueOrUnset(info.AppDataDir))
 		_, _ = fmt.Fprintf(out, "    server:     %s\n", valueOrUnset(info.Server))
-		emailLine := valueOrUnset(info.Email)
+		// Prefer the live observed identity; fall back to the configured
+		// expectation; finally to <unset>. This is the field operators
+		// actually want to see in doctor output.
+		emailValue := info.ObservedEmail
+		if emailValue == "" {
+			emailValue = info.Email
+		}
+		emailLine := valueOrUnset(emailValue)
 		if info.ObservedStatus != "" {
 			emailLine = fmt.Sprintf("%s   (status: %s)", emailLine, info.ObservedStatus)
 		}

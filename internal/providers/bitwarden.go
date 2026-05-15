@@ -68,15 +68,14 @@ type BitwardenProvider struct {
 	// fail loudly at first use rather than running with partial state.
 	configErr error
 
-	mu             sync.Mutex // guards session, authDone, observed* fields
+	mu             sync.Mutex // guards session, authDone, observed* fields, and account* gate
 	session        string     // captured from `bw unlock --raw` when headless
 	authDone       bool       // last headless auth attempt succeeded; future calls skip
 	observedEmail  string     // userEmail reported by `bw status`
 	observedServer string     // serverUrl reported by `bw status`
 	observedStatus string     // status reported by `bw status` (e.g. unlocked)
 	syncOnce       sync.Once
-	accountOnce    sync.Once // gates ensureAccount: at most one `bw status` per process
-	accountErr     error     // sticky result of the first ensureAccount call
+	accountDone    bool // ensureAccount succeeded; latches only on success (transient errors retry next call)
 }
 
 // NewBitwardenProvider creates a new Bitwarden provider.
@@ -157,10 +156,14 @@ func applyBitwardenConfig(bw *BitwardenProvider, config map[string]interface{}) 
 		bw.server = raw
 	}
 	if raw, ok := config["email"].(string); ok && raw != "" {
-		if _, err := mail.ParseAddress(raw); err != nil {
-			return fmt.Errorf("provider %q: email %q is not a valid address: %w", bw.name, raw, err)
+		parsed, err := mail.ParseAddress(raw)
+		if err != nil {
+			return fmt.Errorf("provider %q: email is not a valid address: %w", bw.name, err)
 		}
-		bw.email = raw
+		// Store the bare address so case-insensitive comparison against
+		// `bw status`'s userEmail (which is always the bare form) succeeds
+		// even when the user wrote `"Alice <alice@example.com>"`.
+		bw.email = parsed.Address
 	}
 	return nil
 }
@@ -187,13 +190,12 @@ func resolveAppDataDir(raw string) (string, error) {
 	if !filepath.IsAbs(expanded) {
 		return "", fmt.Errorf("must be an absolute path or ~-prefixed")
 	}
-	parent := filepath.Dir(expanded)
-	info, err := os.Stat(parent)
-	if err != nil {
-		return "", fmt.Errorf("parent directory %q must exist: %w", parent, err)
-	}
-	if !info.IsDir() {
-		return "", fmt.Errorf("parent path %q is not a directory", parent)
+	// Surface unwritability eagerly: try to create the leaf dir now (and the
+	// parent if it doesn't exist). `bw` would create it anyway on first use;
+	// doing it here means permission problems are reported at config-load
+	// time with a clear path, not as a confusing `bw` error later.
+	if err := os.MkdirAll(expanded, 0o700); err != nil {
+		return "", fmt.Errorf("cannot create directory: %w", err)
 	}
 	return expanded, nil
 }
@@ -213,6 +215,17 @@ func validateBitwardenServerURL(raw string) error {
 	}
 	if u.Host == "" {
 		return fmt.Errorf("host is required")
+	}
+	// bw config server expects a bare base URL — paths/queries/fragments
+	// would either confuse the CLI or get silently stripped, both surprising.
+	if u.Path != "" && u.Path != "/" {
+		return fmt.Errorf("path is not allowed (got %q)", u.Path)
+	}
+	if u.RawQuery != "" {
+		return fmt.Errorf("query string is not allowed")
+	}
+	if u.Fragment != "" {
+		return fmt.Errorf("fragment is not allowed")
 	}
 	return nil
 }
@@ -296,60 +309,98 @@ func (bw *BitwardenProvider) appendSessionArg(args []string) []string {
 	return args
 }
 
-// ensureAccount runs `bw status` at most once per provider lifetime when
-// any SPEC-026 multi-account field is configured. It records the observed
-// state and, when an expected email is configured, fails fast on a
-// case-insensitive mismatch. The sticky result is cached in accountErr so
-// subsequent Resolve/Describe calls return the same error without
-// re-issuing `bw status`.
+// ensureAccount runs the SPEC-026 multi-account checks once per provider
+// lifetime *on success*. Transient errors (CLI timeout, JSON parse, etc.)
+// do NOT latch — the next call will retry — so a recoverable failure
+// doesn't poison the provider for the rest of the process. The bw status
+// result is cached (in observedEmail/Server/Status) so a sibling caller
+// like ensureHeadlessAuth can reuse it without spawning another bw process.
 func (bw *BitwardenProvider) ensureAccount(ctx context.Context) error {
 	// Skip entirely when no multi-account fields are configured — preserves
 	// pre-SPEC-026 behavior (FR-008) byte-for-byte.
 	if bw.appDataDir == "" && bw.server == "" && bw.email == "" {
 		return nil
 	}
-	bw.accountOnce.Do(func() {
+
+	bw.mu.Lock()
+	if bw.accountDone {
+		bw.mu.Unlock()
+		return nil
+	}
+	// Take a snapshot of cached observed state so a sibling call (e.g.
+	// recoverAuthIfHeadless via Validate) doesn't force a second `bw status`.
+	cached := bw.observedStatus != ""
+	cachedEmail := bw.observedEmail
+	cachedServer := bw.observedServer
+	cachedStatus := bw.observedStatus
+	bw.mu.Unlock()
+
+	var observed BitwardenStatus
+	if cached {
+		observed.UserEmail = cachedEmail
+		observed.ServerURL = cachedServer
+		observed.Status = cachedStatus
+	} else {
 		args := bw.appendSessionArg([]string{"status"})
 		stdout, _, err := bw.run(ctx, args...)
 		if err != nil {
-			bw.accountErr = fmt.Errorf("provider %q: bw status failed: %w", bw.name, err)
-			return
+			return fmt.Errorf("provider %q: bw status failed: %w", bw.name, err)
 		}
-		var status BitwardenStatus
-		if err := json.Unmarshal(stdout, &status); err != nil {
-			bw.accountErr = fmt.Errorf("provider %q: bw status returned invalid JSON: %w", bw.name, err)
-			return
+		if err := json.Unmarshal(stdout, &observed); err != nil {
+			return fmt.Errorf("provider %q: bw status returned invalid JSON: %w", bw.name, err)
 		}
 		bw.mu.Lock()
-		bw.observedEmail = status.UserEmail
-		bw.observedServer = status.ServerURL
-		bw.observedStatus = status.Status
+		bw.observedEmail = observed.UserEmail
+		bw.observedServer = observed.ServerURL
+		bw.observedStatus = observed.Status
 		bw.mu.Unlock()
+	}
 
-		// SPEC-026 US2: reconcile server URL if configured and mismatched.
-		// Unset `server` is left alone (FR-008 / research.md R4).
-		if bw.server != "" && bw.server != status.ServerURL {
-			if _, _, err := bw.run(ctx, "config", "server", bw.server); err != nil {
-				bw.accountErr = fmt.Errorf("provider %q: bw config server %q failed: %w", bw.name, bw.server, err)
-				return
-			}
-			bw.mu.Lock()
-			bw.observedServer = bw.server
-			bw.mu.Unlock()
+	// Unauthenticated/locked states must short-circuit to a clear auth
+	// error rather than reporting a misleading email mismatch against an
+	// empty userEmail.
+	if observed.Status == "unauthenticated" {
+		return provider.AuthError{
+			Provider: bw.name,
+			Message:  "not logged in. Run: bw login (or set headless: true with BW_CLIENTID / BW_CLIENTSECRET)",
 		}
+	}
+	if observed.Status == "locked" {
+		return provider.AuthError{
+			Provider: bw.name,
+			Message:  "vault is locked. Run: bw unlock (or set headless: true with BW_PASSWORD)",
+		}
+	}
 
-		if bw.email != "" && !strings.EqualFold(bw.email, status.UserEmail) {
-			bw.accountErr = provider.AuthError{
-				Provider: bw.name,
-				Message: fmt.Sprintf(
-					"configured email %q does not match authenticated session email %q",
-					bw.email, status.UserEmail,
-				),
-			}
-			return
+	// US2: reconcile server URL when configured and mismatched. Unset
+	// `server` is left alone (FR-008 / research.md R4).
+	if bw.server != "" && bw.server != observed.ServerURL {
+		if _, _, err := bw.run(ctx, "config", "server", bw.server); err != nil {
+			// Server URL deliberately omitted from the message — it may
+			// expose internal hostnames in CI logs; see doctor output for
+			// the configured value.
+			return fmt.Errorf("provider %q: bw config server failed: %w", bw.name, err)
 		}
-	})
-	return bw.accountErr
+		bw.mu.Lock()
+		bw.observedServer = bw.server
+		bw.mu.Unlock()
+	}
+
+	// FR-006: emails are sensitive. The default error message omits the
+	// configured and observed values; users see the full picture only via
+	// `dsops doctor` (which has its own consent surface).
+	if bw.email != "" && !strings.EqualFold(bw.email, observed.UserEmail) {
+		return provider.AuthError{
+			Provider: bw.name,
+			Message:  "configured email does not match authenticated session (run `dsops doctor` for details)",
+		}
+	}
+
+	// Success — latch the gate so future calls short-circuit.
+	bw.mu.Lock()
+	bw.accountDone = true
+	bw.mu.Unlock()
+	return nil
 }
 
 // ensureSync runs `bw sync` at most once per provider lifetime when sync is
@@ -527,7 +578,10 @@ func (bw *BitwardenProvider) Validate(ctx context.Context) error {
 			Message:  "vault is locked. Run: bw unlock (or set headless: true with BW_PASSWORD)",
 		}
 	case "unlocked":
-		return nil
+		// SPEC-026: also run the multi-account guards so `dsops doctor`
+		// catches email mismatches and server-reconcile failures before the
+		// first `dsops exec` would deterministically fail on them.
+		return bw.ensureAccount(ctx)
 	default:
 		return provider.AuthError{
 			Provider: bw.name,
@@ -587,11 +641,18 @@ func (bw *BitwardenProvider) ensureHeadlessAuth(ctx context.Context) error {
 	// because their `bw login`/`bw unlock` calls would race each other's
 	// on-disk session state. Fail fast on the second claimant.
 	if bw.appDataDir != "" {
-		if prev, loaded := headlessAppDataDirs.LoadOrStore(bw.appDataDir, bw.name); loaded && prev.(string) != bw.name {
-			return fmt.Errorf(
-				"bitwarden provider %q cannot share appDataDir %q with headless provider %q",
-				bw.name, bw.appDataDir, prev.(string),
-			)
+		prev, loaded := headlessAppDataDirs.LoadOrStore(bw.appDataDir, bw.name)
+		if loaded {
+			prevName, ok := prev.(string)
+			if !ok {
+				return fmt.Errorf("internal error: headlessAppDataDirs holds non-string for %q (got %T)", bw.appDataDir, prev)
+			}
+			if prevName != bw.name {
+				return fmt.Errorf(
+					"bitwarden provider %q cannot share appDataDir %q with headless provider %q",
+					bw.name, bw.appDataDir, prevName,
+				)
+			}
 		}
 	}
 	bw.mu.Lock()
@@ -612,7 +673,9 @@ func (bw *BitwardenProvider) ensureHeadlessAuth(ctx context.Context) error {
 }
 
 // fetchStatus invokes `bw status` and returns the status string from the
-// resulting JSON, or an error.
+// resulting JSON, or an error. The full parsed BitwardenStatus is also
+// cached on the provider so a sibling caller (ensureAccount) doesn't need
+// to re-spawn the bw subprocess.
 func (bw *BitwardenProvider) fetchStatus(ctx context.Context) (string, error) {
 	args := bw.appendSessionArg([]string{"status"})
 	output, _, err := bw.run(ctx, args...)
@@ -623,6 +686,11 @@ func (bw *BitwardenProvider) fetchStatus(ctx context.Context) (string, error) {
 	if err := json.Unmarshal(output, &status); err != nil {
 		return "", fmt.Errorf("failed to parse bitwarden status: %w", err)
 	}
+	bw.mu.Lock()
+	bw.observedEmail = status.UserEmail
+	bw.observedServer = status.ServerURL
+	bw.observedStatus = status.Status
+	bw.mu.Unlock()
 	return status.Status, nil
 }
 

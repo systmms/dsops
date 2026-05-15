@@ -569,12 +569,19 @@ func TestApplyBitwardenConfig_NewFields(t *testing.T) {
 		assert.Contains(t, err.Error(), "appDataDir")
 	})
 
-	t.Run("appDataDir with missing parent dir is rejected", func(t *testing.T) {
-		_, err := newBitwardenProviderFromConfig("test", map[string]any{
-			"appDataDir": filepath.Join(tmp, "no-such-parent", "leaf"),
+	t.Run("appDataDir creates missing parent dirs eagerly", func(t *testing.T) {
+		// Per the review fix-up: appDataDir validation uses os.MkdirAll
+		// so users don't need to pre-create intermediate directories.
+		// Surfaces unwritability immediately while letting the common
+		// "fresh laptop" case Just Work.
+		target := filepath.Join(tmp, "not-yet-existing", "leaf")
+		bw, err := newBitwardenProviderFromConfig("test", map[string]any{
+			"appDataDir": target,
 		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "appDataDir")
+		require.NoError(t, err)
+		assert.Equal(t, target, bw.appDataDir)
+		_, err = os.Stat(target)
+		require.NoError(t, err, "appDataDir should have been created on disk")
 	})
 
 	t.Run("https server accepted", func(t *testing.T) {

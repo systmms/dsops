@@ -1055,8 +1055,11 @@ func TestBitwarden_EnsureAccount_EmailMismatch(t *testing.T) {
 	_, err := p.Resolve(context.Background(), provider.Reference{Key: "item-1"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "bw-personal")
-	assert.Contains(t, err.Error(), "alice@example.com")
-	assert.Contains(t, err.Error(), "bob@example.com")
+	// FR-006: the configured/observed emails must NOT appear in the default
+	// error message; the dedicated redaction test asserts that. Here we only
+	// assert that the mismatch is the cause (and the verbose form is
+	// available via doctor).
+	assert.Contains(t, err.Error(), "configured email does not match")
 
 	for _, call := range mockExec.RecordedCalls {
 		if call.Command == "bw" && len(call.Args) > 0 && call.Args[0] == "get" {
