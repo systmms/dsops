@@ -356,9 +356,17 @@ func (r *Reference) ToLegacyProviderRef() ProviderRef {
 	if r.IsStoreReference() {
 		// Try to parse the store reference and convert to legacy format
 		if ref, err := secretstore.ParseSecretRef(r.Store); err == nil {
+			// Carry the #field selector into the legacy Key as "path#field".
+			// Field-capable providers parse this fragment out of the Key; if it
+			// were dropped here the provider would silently return the default
+			// field instead of the requested one (issue #55).
+			key := ref.Path
+			if ref.Field != "" {
+				key += "#" + ref.Field
+			}
 			return ProviderRef{
 				Provider: ref.Store,
-				Key:      ref.Path,
+				Key:      key,
 				Version:  ref.Version,
 			}
 		}

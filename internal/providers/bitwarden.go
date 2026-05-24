@@ -751,10 +751,21 @@ func (bw *BitwardenProvider) headlessUnlock(ctx context.Context) error {
 //
 // Item names may not contain dots; this is a known limitation.
 //
+// store:// references carry their field as a "#field" fragment (e.g.
+// "MyItem#api_key" from store://bitwarden/MyItem#api_key). This is mapped to a
+// bare field name rather than the explicit "custom:" form: extractField tries
+// built-in/login fields first and then falls back to a custom-field-by-name
+// lookup, so "#api_key" resolves the api_key custom field while "#password"
+// still resolves the login password.
+//
 // When no field is specified the empty string is returned. extractField then
 // applies a per-item-type default (Login→password, Card→number,
 // Identity→email, SshKey→privateKey, Note→notes).
 func (bw *BitwardenProvider) parseKey(key string) (itemID, field string) {
+	if idx := strings.Index(key, "#"); idx != -1 {
+		return key[:idx], key[idx+1:]
+	}
+
 	parts := strings.SplitN(key, ".", 3)
 	itemID = parts[0]
 

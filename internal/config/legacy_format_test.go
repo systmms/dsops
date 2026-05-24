@@ -419,6 +419,27 @@ func TestConfig_LegacyFormat_ToLegacyProviderRef_Conversion(t *testing.T) {
 			},
 		},
 		{
+			name: "store reference carries field selector",
+			ref: Reference{
+				Store: "store://bitwarden/MyItem#api_key",
+			},
+			expected: ProviderRef{
+				Provider: "bitwarden",
+				Key:      "MyItem#api_key",
+			},
+		},
+		{
+			name: "store reference carries field and version",
+			ref: Reference{
+				Store: "store://vault/secret/app#api_key?version=2",
+			},
+			expected: ProviderRef{
+				Provider: "vault",
+				Key:      "secret/app#api_key",
+				Version:  "2",
+			},
+		},
+		{
 			name: "service reference returns empty",
 			ref: Reference{
 				Service: "svc://postgres/db",
