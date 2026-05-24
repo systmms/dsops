@@ -94,6 +94,9 @@ release:
   draft: false
   prerelease: auto
   name_template: "v{{ .Version }}"
+  # Delete-and-retry on 422 already_exists so uploads are idempotent and
+  # resilient to GitHub's flaky uploads API (this aborted the v0.2.6 release).
+  replace_existing_artifacts: true
 
 homebrew_casks:
   - name: dsops
