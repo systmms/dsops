@@ -150,9 +150,15 @@ func (op *OnePasswordProvider) Describe(ctx context.Context, ref provider.Refere
 
 // parseKey parses various 1Password key formats:
 // - "op://vault/item/field" (URI format)
+// - "item-name#field" (store:// #field selector)
 // - "item-name.field"
 // - "item-name" (defaults to password field)
 func (op *OnePasswordProvider) parseKey(key string) (string, string) {
+	// Handle store:// #field selector: "item#field"
+	if idx := strings.Index(key, "#"); idx != -1 {
+		return key[:idx], key[idx+1:]
+	}
+
 	// Handle op:// URI format
 	if strings.HasPrefix(key, "op://") {
 		parts := strings.Split(strings.TrimPrefix(key, "op://"), "/")

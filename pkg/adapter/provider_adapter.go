@@ -50,10 +50,13 @@ func (a *ProviderToSecretStoreAdapter) Name() string {
 }
 
 func (a *ProviderToSecretStoreAdapter) Resolve(ctx context.Context, ref secretstore.SecretRef) (secretstore.SecretValue, error) {
-	// Convert SecretRef to legacy Reference
+	// Convert SecretRef to legacy Reference. The #field selector is folded into
+	// the Key as "path#field" because field-capable providers parse the field
+	// out of the Key string; leaving it only in Field would silently drop it
+	// (issue #55).
 	legacyRef := provider.Reference{
 		Provider: ref.Store,
-		Key:      ref.Path,
+		Key:      legacyKeyWithField(ref.Path, ref.Field),
 		Field:    ref.Field,
 		Version:  ref.Version,
 		Path:     ref.Path,
@@ -75,10 +78,13 @@ func (a *ProviderToSecretStoreAdapter) Resolve(ctx context.Context, ref secretst
 }
 
 func (a *ProviderToSecretStoreAdapter) Describe(ctx context.Context, ref secretstore.SecretRef) (secretstore.SecretMetadata, error) {
-	// Convert SecretRef to legacy Reference
+	// Convert SecretRef to legacy Reference. The #field selector is folded into
+	// the Key as "path#field" because field-capable providers parse the field
+	// out of the Key string; leaving it only in Field would silently drop it
+	// (issue #55).
 	legacyRef := provider.Reference{
 		Provider: ref.Store,
-		Key:      ref.Path,
+		Key:      legacyKeyWithField(ref.Path, ref.Field),
 		Field:    ref.Field,
 		Version:  ref.Version,
 		Path:     ref.Path,
@@ -314,6 +320,17 @@ func (a *ProviderToServiceAdapter) serviceRefToLegacyRef(ref service.ServiceRef)
 
 // Helper functions for reference conversion
 
+// legacyKeyWithField folds a #field selector into a legacy provider Key as
+// "path#field". Field-capable providers parse the field out of the Key, so the
+// fragment must travel inside the Key rather than only in Reference.Field
+// (which providers do not read) — see issue #55.
+func legacyKeyWithField(path, field string) string {
+	if field == "" {
+		return path
+	}
+	return path + "#" + field
+}
+
 // ConvertProviderRefToSecretRef converts legacy provider references to new SecretRef format
 func ConvertProviderRefToSecretRef(ref provider.Reference) secretstore.SecretRef {
 	return secretstore.SecretRef{
@@ -329,7 +346,7 @@ func ConvertProviderRefToSecretRef(ref provider.Reference) secretstore.SecretRef
 
 // ConvertSecretRefToProviderRef converts new SecretRef to legacy provider Reference
 func ConvertSecretRefToProviderRef(ref secretstore.SecretRef) provider.Reference {
-	key := ref.Path
+	key := legacyKeyWithField(ref.Path, ref.Field)
 	if legacyKey, ok := ref.Options["key"]; ok {
 		key = legacyKey
 	}

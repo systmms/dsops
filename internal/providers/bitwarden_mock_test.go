@@ -440,6 +440,51 @@ func TestBitwardenProviderWithMockExecutor_CustomFieldExplicitPrefix(t *testing.
 	})
 }
 
+// TestBitwardenProviderWithMockExecutor_StoreURIFieldSelector verifies that a
+// store:// reference's #field fragment (carried into the Key as "item#field")
+// reaches the provider and selects the correct field — regression test for
+// the silently-dropped field selector in issue #55.
+func TestBitwardenProviderWithMockExecutor_StoreURIFieldSelector(t *testing.T) {
+	t.Parallel()
+
+	itemJSON := `{
+		"id": "MyItem",
+		"name": "My Item",
+		"organizationId": "",
+		"folderId": "",
+		"type": 1,
+		"login": {"username": "u", "password": "login-password", "totp": "", "uris": []},
+		"fields": [
+			{"name": "api_key", "value": "sk-live-custom", "type": 0}
+		],
+		"notes": "",
+		"revisionDate": "2024-01-01T00:00:00Z"
+	}`
+
+	cases := []struct {
+		name string
+		key  string
+		want string
+	}{
+		{"custom field via # selector", "MyItem#api_key", "sk-live-custom"},
+		{"built-in login field via # selector", "MyItem#password", "login-password"},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			mockExec := testutil.NewMockCommandExecutor()
+			mockExec.AddJSONResponse("bw get item MyItem", itemJSON)
+			p := providers.NewBitwardenProviderWithExecutor("bitwarden", map[string]interface{}{}, mockExec)
+
+			secret, err := p.Resolve(context.Background(), provider.Reference{Key: tc.key})
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, secret.Value)
+		})
+	}
+}
+
 func TestBitwardenProviderWithMockExecutor_Attachment(t *testing.T) {
 	t.Parallel()
 
