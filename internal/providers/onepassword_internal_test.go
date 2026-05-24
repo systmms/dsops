@@ -111,6 +111,19 @@ func TestOnePasswordParseKey(t *testing.T) {
 			expectedItem:  "item",
 			expectedField: "",
 		},
+		// store:// URI field selector (#field)
+		{
+			name:          "hash notation field selector",
+			key:           "item#field",
+			expectedItem:  "item",
+			expectedField: "field",
+		},
+		{
+			name:          "hash notation with custom field",
+			key:           "api-service#api_key",
+			expectedItem:  "api-service",
+			expectedField: "api_key",
+		},
 	}
 
 	for _, tt := range tests {

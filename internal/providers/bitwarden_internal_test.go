@@ -144,6 +144,24 @@ func TestBitwardenParseKey(t *testing.T) {
 			expectedItem:  "abc123",
 			expectedField: "attachment:fullchain.pem",
 		},
+		{
+			name:          "store URI field selector maps to bare field name",
+			key:           "MyItem#api_key",
+			expectedItem:  "MyItem",
+			expectedField: "api_key",
+		},
+		{
+			name:          "store URI field selector for built-in login field",
+			key:           "MyItem#password",
+			expectedItem:  "MyItem",
+			expectedField: "password",
+		},
+		{
+			name:          "store URI field selector preserves dots in field name",
+			key:           "MyItem#aws.region",
+			expectedItem:  "MyItem",
+			expectedField: "aws.region",
+		},
 	}
 
 	for _, tt := range tests {
