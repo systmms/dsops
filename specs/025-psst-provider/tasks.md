@@ -42,7 +42,7 @@
 
 - [ ] T008 Implement Name() method returning "psst" in internal/providers/psst.go
 - [ ] T009 Implement Capabilities() method with SupportsVersioning=false, RequiresAuth=true in internal/providers/psst.go
-- [ ] T010 Implement executePsst() helper for CLI invocation with shell escaping (FR-012) in internal/providers/psst.go
+- [ ] T010 Implement executePsst() helper that invokes the psst CLI via pkgexec.CommandExecutor, passing the secret name as a discrete argv argument — no shell, no quoting/`%q` (FR-012) — in internal/providers/psst.go
 
 **Checkpoint**: Provider compiles and is registered; contract test passes
 
@@ -62,17 +62,19 @@
 - [ ] T014 [P] [US1] Write unit test for Resolve() returning secret value in internal/providers/psst_test.go
 - [ ] T015 [P] [US1] Write unit test for Resolve() returning NotFoundError when secret missing in internal/providers/psst_test.go
 - [ ] T016 [P] [US1] Write unit test for Resolve() surfacing auth errors from psst CLI in internal/providers/psst_test.go
-- [ ] T017 [P] [US1] Write unit test for Describe() returning metadata in internal/providers/psst_test.go
+- [ ] T017 [P] [US1] Write unit test for Describe() reporting existence via `psst list` WITHOUT fetching the value (asserts no `psst get` call) in internal/providers/psst_test.go
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Implement Validate() checking CLI availability with exec.LookPath in internal/providers/psst.go
+- [ ] T018 [US1] Implement Validate() checking CLI availability with exec.LookPath in internal/providers/psst.go (exec.LookPath matches the existing CLI providers: bitwarden/bws/doppler/onepassword/pass)
 - [ ] T019 [US1] Implement Validate() testing vault access with `psst list` in internal/providers/psst.go
 - [ ] T020 [US1] Implement Resolve() invoking `psst get <key>` and returning SecretValue in internal/providers/psst.go (Note: FR-003 vault precedence handled by psst CLI - no dsops code needed)
 - [ ] T021 [US1] Implement error mapping in Resolve() for not-found and auth errors in internal/providers/psst.go
-- [ ] T022 [US1] Implement Describe() returning Metadata with exists and size in internal/providers/psst.go
+- [ ] T022 [US1] Implement Describe() as an existence check via `psst list` returning Metadata{Exists} WITHOUT fetching the value (do not call `psst get`) in internal/providers/psst.go
 - [ ] T023 [US1] Add logging with logging.Secret() wrapper for all secret operations in internal/providers/psst.go
-- [ ] T024 [US1] Implement GetDoctorInfo() method returning resolution source (vault vs env fallback) per FR-011 in internal/providers/psst.go
+- [ ] T024a [US1] Define optional `DoctorInfoProvider` interface (+ `DoctorInfo` struct) in pkg/provider/provider.go — NOT added to the core `Provider` interface
+- [ ] T024b [US1] Write unit test for + implement `GetDoctorInfo()` on PsstProvider returning per-secret resolution source (vault vs env fallback) per FR-011 in internal/providers/psst.go
+- [ ] T024c [US1] Wire cmd/dsops/commands/doctor.go to type-assert `provider.DoctorInfoProvider` and render its output under the store entry (providers that don't implement it are unaffected)
 
 **Checkpoint**: User Story 1 complete - can resolve secrets from default psst vault
 
@@ -127,12 +129,12 @@
 
 ### Tests for Edge Cases
 
-- [ ] T034 [P] Write unit test for shell escaping of secret names with special characters in internal/providers/psst_test.go
+- [ ] T034 [P] Write unit test verifying secret names with special characters (spaces, quotes) are passed as a single literal argv argument (not quoted/escaped) in internal/providers/psst_test.go
 - [ ] T035 [P] Write unit test for handling secrets with whitespace in values in internal/providers/psst_test.go
 
 ### Implementation for Edge Cases
 
-- [ ] T036 Verify shell escaping handles quotes, spaces, and special characters in internal/providers/psst.go
+- [ ] T036 Verify special-character names (quotes, spaces) resolve correctly via argv passing (no escaping) in internal/providers/psst.go
 - [ ] T037 Verify stdout trimming handles trailing newlines correctly in internal/providers/psst.go
 
 ### Documentation
@@ -193,7 +195,7 @@ User Story 1 (P1) ────► User Story 2 (P1) ────► User Story 3
 
 **Phase 3 (US1)**: T011-T017 tests can run in parallel; implementation is sequential
 
-**Phase 4 (US2)**: T024 standalone; T025-T026 sequential
+**Phase 4 (US2)**: T025 test standalone; T026-T027 sequential
 
 **Phase 5 (US3)**: T027-T029 tests can run in parallel; implementation is sequential
 
@@ -235,10 +237,10 @@ Task: "Write unit test for Describe() returning metadata"
 
 ### Estimated Scope
 
-- **Total tasks**: 43
+- **Total tasks**: 45
 - **Phase 1 (Setup)**: 4 tasks
 - **Phase 2 (Foundational)**: 6 tasks
-- **Phase 3 (US1)**: 14 tasks (7 tests + 7 implementation, includes FR-011 doctor integration)
+- **Phase 3 (US1)**: 16 tasks (7 tests + 9 implementation; FR-011 split into optional-interface definition, psst impl, and doctor wiring)
 - **Phase 4 (US2)**: 3 tasks (1 test + 2 implementation)
 - **Phase 5 (US3)**: 6 tasks (3 tests + 3 implementation)
 - **Phase 6 (Polish)**: 10 tasks
@@ -252,4 +254,4 @@ Task: "Write unit test for Describe() returning metadata"
 - TDD: Write test → verify fails → implement → verify passes
 - Commit after each task or logical group
 - Use FakeExecutor for unit tests (inject via NewPsstProviderWithExecutor)
-- Shell escaping critical for security - test with special characters
+- Argument safety: pass secret names as argv (no shell, no `%q`) — injection-safe by design; test that special-character names pass through as a single literal argument

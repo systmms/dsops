@@ -80,7 +80,7 @@ ref := provider.Reference{
 |--------|----------------|
 | `Name()` | Returns `"psst"` |
 | `Resolve(ctx, ref)` | Executes `psst get <ref.Key>`, returns plain text value |
-| `Describe(ctx, ref)` | Executes `psst get <ref.Key>`, returns metadata (exists, size) |
+| `Describe(ctx, ref)` | Existence check via `psst list [--json]`; returns `Metadata{Exists: …}` WITHOUT fetching the secret value (per the `provider.Provider` contract). Does not call `psst get`. |
 | `Capabilities()` | Returns static capabilities struct |
 | `Validate(ctx)` | Checks CLI availability, tests vault access with `psst list` |
 
@@ -89,7 +89,7 @@ ref := provider.Reference{
 ```go
 provider.Capabilities{
     SupportsVersioning: false,  // psst has no versioning
-    SupportsMetadata:   false,  // No secret metadata available
+    SupportsMetadata:   false,  // Describe is existence-only (no size/version/rich metadata)
     SupportsWatching:   false,  // No change notifications
     SupportsBinary:     false,  // Text-only secrets
     RequiresAuth:       true,   // Requires OS keychain or PSST_PASSWORD
@@ -118,7 +118,12 @@ psst get "SECRET_NAME"
 psst --env staging get "SECRET_NAME"
 ```
 
-**Shell Escaping**: All secret names wrapped with `%q` format specifier to prevent injection.
+**Argument passing**: Secret names are passed as discrete argv arguments through
+`pkgexec.CommandExecutor` (which calls `exec.CommandContext(name, args...)` — no shell).
+Do NOT wrap names in `%q` or any manual quoting: `os/exec` passes each argument literally,
+so quoting would make psst receive the quote characters as part of the name and break lookups.
+This argv path is injection-safe by design (no shell to interpret metacharacters). The quotes
+in the bash examples above are just shell-usage convention, not something dsops adds.
 
 ### Validation
 
@@ -156,7 +161,7 @@ psst list
 
 ## Doctor Output (FR-011)
 
-The provider should report resolution source in doctor output:
+The provider reports resolution source in doctor output:
 
 ```text
 Secret Store: local (psst)
@@ -168,3 +173,28 @@ Secret Store: local (psst)
     API_KEY .......... ✓ (resolved from vault)
     DEBUG_TOKEN ...... ✓ (resolved from env var fallback)
 ```
+
+### DoctorInfoProvider (optional interface)
+
+The core `provider.Provider` interface is `Name/Resolve/Describe/Capabilities/Validate` and
+does NOT include a doctor-info hook. To surface the resolution source without changing the
+contract every provider must satisfy, FR-011 is delivered via an **optional** interface that
+`cmd/dsops/commands/doctor.go` type-asserts and renders when present:
+
+```go
+// In pkg/provider — optional; providers MAY implement it.
+type DoctorInfoProvider interface {
+    // GetDoctorInfo returns provider-specific diagnostics for `dsops doctor`,
+    // e.g. per-secret resolution source (vault vs env-var fallback).
+    GetDoctorInfo(ctx context.Context) (DoctorInfo, error)
+}
+
+type DoctorInfo struct {
+    // Lines is human-readable diagnostic output rendered under the store entry.
+    Lines []string
+}
+```
+
+**Wiring**: `doctor.go` does `if di, ok := prov.(provider.DoctorInfoProvider); ok { … render … }`.
+Providers that don't implement it (all existing ones) are unaffected. `PsstProvider` implements
+it to report vault-vs-env resolution per secret.

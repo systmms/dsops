@@ -62,8 +62,8 @@ As a developer with multiple psst environments (dev, staging), I want to specify
 - **psst CLI not installed**: FR-005 validates CLI availability during provider init, returns clear error
 - **Vault doesn't exist**: FR-006 validates vault existence during provider init
 - **Vault requires authentication**: FR-008 surfaces psst's auth errors directly (keychain failure, locked vault)
-- **Environment fallback behavior**: FR-011 surfaces resolution source in doctor output; documented that psst checks local vault → global vault → env vars
-- **Special characters in secret names**: FR-012 requires shell-escaping for safe CLI invocation
+- **Environment fallback behavior**: FR-011 surfaces resolution source in doctor output (via the optional `DoctorInfoProvider` interface); documented that psst checks local vault → global vault → env vars
+- **Special characters in secret names**: FR-012 passes secret names as discrete argv arguments (no shell), so names with spaces, quotes, or other special characters are handled as a single literal argument without escaping
 
 ## Requirements *(mandatory)*
 
@@ -77,10 +77,10 @@ As a developer with multiple psst environments (dev, staging), I want to specify
 - **FR-006**: System MUST validate vault existence during provider initialization
 - **FR-007**: System MUST return `NotFoundError` when requested secret doesn't exist in vault
 - **FR-008**: System MUST surface psst CLI auth errors (keychain access failure, locked vault) without pre-validation - delegate authentication entirely to psst
-- **FR-009**: System MUST support the `Describe()` method returning secret metadata where available
+- **FR-009**: System MUST implement the `Describe()` method as an existence check (via `psst list`) that reports whether the secret exists WITHOUT retrieving its value, per the `provider.Provider` contract
 - **FR-010**: System MUST report accurate capabilities (no versioning, no rotation, requires auth)
-- **FR-011**: System MUST surface resolution source (vault vs env var fallback) in `dsops doctor` output to aid debugging
-- **FR-012**: System MUST shell-escape secret names when invoking psst CLI to prevent command injection and handle special characters safely
+- **FR-011**: System MUST surface resolution source (vault vs env var fallback) in `dsops doctor` output to aid debugging, delivered via an optional `DoctorInfoProvider` interface that `dsops doctor` type-asserts and renders (the core `Provider` interface is unchanged)
+- **FR-012**: System MUST pass secret names to the psst CLI as discrete argv arguments via `pkg/exec.CommandExecutor` (no shell, no manual quoting); this is injection-safe by design and avoids the literal-quote corruption that manual escaping (e.g. `%q`) would introduce
 
 ### Key Entities
 
@@ -114,4 +114,4 @@ As a developer with multiple psst environments (dev, staging), I want to specify
 - Q: How should the provider retrieve secrets - JSON parsing or plain output? → A: Use `psst get <name>` (plain output) for retrieval, `--json` only for list/metadata operations. Simpler and less brittle than parsing JSON for every secret.
 - Q: How should dsops handle psst's automatic env var fallback behavior? → A: Document behavior AND show resolution source in `dsops doctor` output. Users should understand the resolution chain (local vault → global vault → env var fallback).
 - Q: Should dsops expose vault path configuration or use psst's default precedence? → A: Use psst's default precedence (local → global), only expose `env` option. Keeps configuration simple and matches developer expectations.
-- Q: How should dsops handle secret names with special characters? → A: Shell-escape secret names when invoking `psst get <name>`. Essential for security (command injection prevention) and correctness.
+- Q: How should dsops handle secret names with special characters? → A: Pass the secret name as a discrete argv argument via `pkg/exec.CommandExecutor` (no shell, no manual quoting). This is injection-safe by design and correct for names with spaces/quotes. (Corrected per PR #54 review: the original answer called for `%q` "shell-escaping", which is wrong for `os/exec` — there is no shell, and `%q` would pass literal quotes to psst and break lookups.)

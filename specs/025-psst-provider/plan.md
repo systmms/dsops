@@ -26,8 +26,8 @@ Add a psst secret store provider to dsops, enabling developers who use psst for 
 | Principle | Status | Notes |
 |-----------|--------|-------|
 | I. Ephemeral-First | ✅ Pass | No file writes; secrets exist only in memory during resolution |
-| II. Security by Default | ✅ Pass | Uses `logging.Secret()` wrapper; shell-escapes secret names (FR-012) |
-| III. Provider-Agnostic Interfaces | ✅ Pass | Implements `provider.Provider` interface exactly |
+| II. Security by Default | ✅ Pass | Uses `logging.Secret()` wrapper; passes secret names as argv (no shell — injection-safe by design, FR-012); `Describe()` is existence-only and never fetches the value |
+| III. Provider-Agnostic Interfaces | ✅ Pass | Implements `provider.Provider` interface exactly; FR-011 uses an optional `DoctorInfoProvider` interface (core contract unchanged) |
 | IV. Data-Driven Service Architecture | N/A | Secret store provider, not service integration |
 | V. Developer Experience First | ✅ Pass | Clear error messages with suggestions (dserrors.UserError) |
 | VI. Cross-Platform Support | ✅ Pass | Pure Go with CLI abstraction via pkgexec |
@@ -85,10 +85,10 @@ docs/content/reference/providers/
 
 All technical unknowns resolved during clarification session:
 - ✅ Authentication: Delegate to psst CLI (OS keychain / PSST_PASSWORD)
-- ✅ Secret retrieval: `psst get <name>` plain output (no JSON parsing)
+- ✅ Secret retrieval: `psst get <name>` plain output for `Resolve` (no JSON parsing); `Describe` uses `psst list` (existence-only, no value fetch)
 - ✅ Vault precedence: Local `.psst/` → Global `~/.psst/` (psst default)
-- ✅ Environment fallback: Document in doctor output (FR-011)
-- ✅ Shell escaping: Required for security (FR-012)
+- ✅ Environment fallback: Surface in doctor output via optional `DoctorInfoProvider` interface (FR-011)
+- ✅ Argument safety: secret names passed as argv (no shell, no `%q`) — injection-safe by design (FR-012)
 
 ### Phase 1: Design
 

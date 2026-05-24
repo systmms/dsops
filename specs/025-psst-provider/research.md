@@ -69,19 +69,18 @@ Research conducted during `/speckit.clarify` session to resolve technical unknow
 1. Bypass fallback with explicit flag → Not possible: psst has no such flag
 2. Just document in provider docs → Partial solution, but doctor visibility helps debugging
 
-### 5. Shell Escaping for Secret Names
+### 5. Secret Names and Argument Safety
 
-**Decision**: Shell-escape all secret names when invoking psst CLI
+**Decision**: Pass secret names as discrete argv arguments via `pkg/exec.CommandExecutor`; do NOT shell-escape or apply `%q`
 
 **Rationale**:
-- Secret names are user-controlled input passed to shell commands
-- Proper escaping prevents command injection vulnerabilities
-- Ensures correctness for names with spaces, quotes, or special characters
-- Go's `%q` format specifier handles this safely
+- The executor runs `exec.CommandContext(name, args...)` — arguments go straight to the process, there is no shell to interpret metacharacters, so command injection is not possible by construction
+- This is correct for names with spaces, quotes, or special characters: each name is a single literal argument
+- Manual quoting (e.g. Go's `%q`) would be actively wrong here — `os/exec` passes the argument verbatim, so psst would receive literal quote characters as part of the name and the lookup would fail. (`%q` produces Go-syntax string literals; it is not a shell-escaping tool.)
 
 **Alternatives Considered**:
-1. Reject special characters at config validation → Rejected: too restrictive, psst allows them
-2. Use stdin mode to avoid shell entirely → psst may not support this for `get` command
+1. Wrap names with `%q` for "shell escaping" → **Rejected**: there is no shell; `%q` corrupts the argument with literal quotes (flagged in PR #54 review by both Gemini and Codex)
+2. Reject special characters at config validation → Rejected: too restrictive, psst allows them
 
 ## psst CLI Reference
 
@@ -115,4 +114,4 @@ Research conducted during `/speckit.clarify` session to resolve technical unknow
 2. **Validation**: Check `psst` CLI exists, run `psst list` to verify vault access
 3. **Error Mapping**: Parse stderr for "not found" patterns → `NotFoundError`
 4. **Capabilities**: `RequiresAuth=true`, `SupportsVersioning=false`, `SupportsBinary=false`
-5. **Doctor Output**: Show resolution source (vault vs env fallback) per FR-011
+5. **Doctor Output**: Show resolution source (vault vs env fallback) per FR-011, via an optional `DoctorInfoProvider` interface that `doctor.go` type-asserts (core `Provider` interface unchanged)
