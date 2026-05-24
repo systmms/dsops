@@ -94,6 +94,13 @@ release:
   draft: false
   prerelease: auto
   name_template: "v{{ .Version }}"
+  # Make uploads resilient to GitHub's flaky uploads API and idempotent on
+  # re-runs. When an asset upload returns 422 already_exists (which also
+  # happens after a transient 404 that actually created the asset), GoReleaser
+  # deletes the existing asset and retries instead of failing the release.
+  # v0.2.6 failed exactly this way on dsops_*_sbom.spdx.json, which aborted the
+  # publish phase before the Homebrew cask was pushed to the tap.
+  replace_existing_artifacts: true
 
 homebrew_casks:
   - name: dsops
