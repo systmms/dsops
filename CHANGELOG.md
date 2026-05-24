@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.7](https://github.com/systmms/dsops/compare/v0.2.6...v0.2.7) (2026-05-24)
+
+
+### Bug Fixes
+
+* **deps:** bump golang.org/x/net to v0.55.0 (GO-2026-5026) ([598bcdf](https://github.com/systmms/dsops/commit/598bcdfd2cd5348c06648efc1ab898d9553c1090))
+* **deps:** bump golang.org/x/net to v0.55.0 (GO-2026-5026) ([c197aa8](https://github.com/systmms/dsops/commit/c197aa8d1aabb92ebb1cf602d65f67d8f5f89573))
+
 ## [0.2.6](https://github.com/systmms/dsops/compare/v0.2.5...v0.2.6) (2026-05-24)
 
 
