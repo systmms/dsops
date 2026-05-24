@@ -72,6 +72,13 @@ jobs:
           echo "$output"
           exit 1
 
+      - name: Assert replace_existing_artifacts stays enabled
+        run: |
+          # Guards against silently dropping the flag that prevents the v0.2.6
+          # GitHub-upload failure (422 already_exists aborting the release).
+          grep -qE '^[[:space:]]*replace_existing_artifacts:[[:space:]]*true' .goreleaser.yml \
+            || { echo "::error file=.goreleaser.yml::release.replace_existing_artifacts must stay 'true' — it prevents the GitHub-upload (422 already_exists) release failure seen in v0.2.6"; exit 1; }
+
   goreleaser-snapshot:
     name: Test GoReleaser Snapshot Build
     runs-on: ubuntu-latest
