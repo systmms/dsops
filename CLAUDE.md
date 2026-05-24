@@ -534,6 +534,8 @@ ADRs provide decision history and rationale for future maintainers. See `docs/ad
 - N/A (documentation + CI/CD changes + runtime memory protection) (023-security-trust)
 - Go 1.25 (existing project minimum) + Bitwarden CLI `bw` (executed via `pkg/exec.CommandExecutor`); standard library only inside the provider. (026-bitwarden-multi-account)
 - Per-provider account-state directory on disk, owned by `bw` (we only set `BITWARDENCLI_APPDATA_DIR` for the child process). (026-bitwarden-multi-account)
+- Go 1.25 (matches existing project) + `pkg/exec` (CommandExecutor), `pkg/provider` (Provider interface), `internal/errors` (UserError) (025-psst-provider)
+- N/A (psst manages its own `.psst/` vault storage) (025-psst-provider)
 
 ## Recent Changes
 - 020-release-distribution: Added Go 1.25+ (matches existing project) + GoReleaser (v2.x), GitHub Actions, Docker
