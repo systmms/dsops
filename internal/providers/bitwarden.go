@@ -75,7 +75,8 @@ type BitwardenProvider struct {
 	observedServer string     // serverUrl reported by `bw status`
 	observedStatus string     // status reported by `bw status` (e.g. unlocked)
 	syncOnce       sync.Once
-	accountDone    bool // ensureAccount succeeded; latches only on success (transient errors retry next call)
+	accountMu      sync.Mutex // serializes ensureAccount so concurrent callers issue `bw status` at most once
+	accountDone    bool       // ensureAccount succeeded; latches only on success (transient errors retry next call)
 }
 
 // NewBitwardenProvider creates a new Bitwarden provider.
@@ -321,6 +322,14 @@ func (bw *BitwardenProvider) ensureAccount(ctx context.Context) error {
 	if bw.appDataDir == "" && bw.server == "" && bw.email == "" {
 		return nil
 	}
+
+	// Serialize the whole check so concurrent Resolve/Describe calls don't each
+	// spawn their own `bw status`. The first caller runs the gate and latches
+	// accountDone on success; the rest observe it and return. bw.mu is released
+	// during the bw subprocess call, so it cannot provide this guarantee on its
+	// own — accountMu does (transient errors still don't latch, so they retry).
+	bw.accountMu.Lock()
+	defer bw.accountMu.Unlock()
 
 	bw.mu.Lock()
 	if bw.accountDone {
