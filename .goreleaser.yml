@@ -57,11 +57,15 @@ checksum:
   algorithm: sha256
 
 # Software Bill of Materials (SBOM) generation
-# Generates SPDX format SBOM for supply chain transparency
+# Generates SPDX format SBOM for supply chain transparency.
+# `artifacts: archive` produces one SBOM per archive (5 of them), so the
+# document name MUST be unique per artifact. A static name emitted the same
+# filename 5x, causing duplicate release-asset uploads that aborted publishing
+# (the v0.2.5/0.2.6/0.2.7 release failures). `${artifact}` makes each unique.
 sboms:
   - artifacts: archive
     documents:
-      - "{{ .ProjectName }}_{{ .Version }}_sbom.spdx.json"
+      - "${artifact}.spdx.json"
 
 changelog:
   use: github-native
