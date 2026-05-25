@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.8](https://github.com/systmms/dsops/compare/v0.2.7...v0.2.8) (2026-05-25)
+
+
+### Bug Fixes
+
+* **release:** give each archive SBOM a unique filename ([794ce95](https://github.com/systmms/dsops/commit/794ce952a06b9f8757437658733d150495ef604a))
+* **release:** unique SBOM filename per archive (fixes release publish failure) ([03fee3b](https://github.com/systmms/dsops/commit/03fee3b76c035d0f4ed637b35437a7aa4044d07d))
+
 ## [0.2.7](https://github.com/systmms/dsops/compare/v0.2.6...v0.2.7) (2026-05-24)
 
 
