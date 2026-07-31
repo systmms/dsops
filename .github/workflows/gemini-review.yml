@@ -1,0 +1,36 @@
+name: Gemini PR Review
+# Thin caller — logic lives in systmms/actions (reusable workflow).
+# Auth: org secret GEMINI_API_KEY via `secrets: inherit`. Context: root GEMINI.md.
+# On-demand re-run: comment "@gemini-cli /review" (works once merged to default branch).
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: gemini-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+# GITHUB_TOKEN scopes for the reusable workflow. A called workflow's token is the
+# intersection of the caller's grant with the callee's own declaration and can never
+# escalate above the caller — so on repos whose default token is read-only, the caller
+# MUST grant every scope the reusable workflow needs or it fails with "Resource not
+# accessible by integration". These mirror the four scopes declared in
+# systmms/actions' gemini-review.yml; keep them in sync.
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  review:
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '@gemini-cli /review') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    uses: systmms/actions/.github/workflows/gemini-review.yml@main
+    secrets: inherit
