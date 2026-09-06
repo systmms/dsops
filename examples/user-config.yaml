@@ -1,0 +1,52 @@
+# Machine-level dsops configuration (SPEC-027)
+#
+# dsops loads this file in addition to the project's dsops.yaml and uses it to
+# fill in secret stores the project references but does not declare itself.
+# The project always wins: a store name defined in dsops.yaml is never
+# overridden by this file.
+#
+# Discovery order:
+#   1. --user-config <path>
+#   2. $DSOPS_USER_CONFIG
+#   3. $XDG_CONFIG_HOME/dsops/config.yaml
+#   4. ~/.config/dsops/config.yaml  (Linux and macOS)
+#      %APPDATA%\dsops\config.yaml  (Windows)
+# Use `--user-config none` (or DSOPS_USER_CONFIG=none) to disable it.
+#
+# Only `version`, `secretStores:` and legacy `providers:` are allowed here.
+# `envs:`, `services:`, `templates:`, `policies:`, `notifications:`,
+# `metrics:` and `transforms:` are rejected so that a machine file can never
+# change *what* a project renders, only *where* it reads from.
+#
+# This file holds references and connection details only — never secret
+# values. It is safe to generate from nix/home-manager into the (world
+# readable) nix store; see docs/content/getting-started/configuration.md.
+
+version: 0
+
+secretStores:
+  # A HashiCorp Vault that several projects on this machine share.
+  work-vault:
+    type: vault
+    address: https://vault.corp.example.com
+    auth_method: token
+
+  # A Bitwarden work account isolated from the personal one (SPEC-026).
+  bw-work:
+    type: bitwarden
+    appDataDir: ~/.config/dsops/bitwarden/work
+    email: alice@corp.example.com
+
+  # Cloud stores usually only need machine-specific auth context.
+  aws-work:
+    type: aws.secretsmanager
+    region: us-east-1
+    profile: work
+
+# Legacy section. Store types that are not yet accepted under `secretStores:`
+# (keychain, infisical, akeyless, bitwarden.secretsmanager) must be declared
+# here instead.
+providers:
+  local-keychain:
+    type: keychain
+    service_prefix: dsops

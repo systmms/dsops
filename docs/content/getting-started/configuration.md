@@ -199,10 +199,87 @@ envs:
 # Use different config file
 dsops --config production.yaml exec -- ./app
 
-# Or via environment
+# Or via environment (default for --config)
 export DSOPS_CONFIG=production.yaml
 dsops exec -- ./app
 ```
+
+## Machine-level Secret Stores
+
+A project's `dsops.yaml` can reference a secret store **without declaring it**.
+dsops also loads a machine-level *user config* that declares secret stores
+only, and uses it to fill in any store names the project leaves undefined.
+That keeps the project file portable (no home paths, emails, server URLs or
+`appDataDir`s) while each contributor binds the names to their own backends.
+
+**Discovery order**
+
+1. `--user-config <path>`
+2. `DSOPS_USER_CONFIG=<path>`
+3. `$XDG_CONFIG_HOME/dsops/config.yaml`
+4. `~/.config/dsops/config.yaml` (Linux **and** macOS) or `%APPDATA%\dsops\config.yaml` (Windows)
+
+Use `--user-config none` or `DSOPS_USER_CONFIG=none` to disable it (useful in
+CI). A missing file at the default location is silently ignored; a missing
+file at an explicit path is an error.
+
+**What the user file may contain**
+
+```yaml
+# ~/.config/dsops/config.yaml
+version: 0
+secretStores:
+  work-vault:
+    type: vault
+    address: https://vault.corp.example.com
+  bw-work:
+    type: bitwarden
+    appDataDir: ~/.config/dsops/bitwarden/work
+    email: you@example.com
+```
+
+Only `version`, `secretStores:` and the legacy `providers:` section are
+accepted. `envs:`, `services:`, `templates:`, `transforms:`, `policies:`,
+`notifications:` and `metrics:` are rejected, so a machine file can change
+*where* secrets are read from but never *what* a project renders.
+
+**Precedence**: the project always wins. A store declared in `dsops.yaml`
+shadows the same name in the user file; `dsops doctor` reports the shadowed
+entry.
+
+**Provenance**: `dsops doctor` and `dsops providers` print a
+`Configuration sources:` block and a `SOURCE` column (`project` / `user`).
+When a store is missing, the error names both the project file and the user
+file to create.
+
+**Security notes**: both files hold references, never secret values, so the
+user file may live in a world-readable location. dsops warns if the file (or
+the directory containing it, following symlinks) is writable by other users,
+because whoever can edit it can redirect secret resolution.
+
+**Declaring stores with nix / home-manager**
+
+```nix
+# Works on Linux and on macOS via nix-darwin + home-manager.
+xdg.configFile."dsops/config.yaml".text = builtins.toJSON {
+  version = 0;
+  secretStores = {
+    work-vault = { type = "vault"; address = "https://vault.corp.example.com"; };
+    bw-work = {
+      type = "bitwarden";
+      appDataDir = "~/.config/dsops/bitwarden/work";
+      email = "you@example.com";
+    };
+  };
+};
+# Alternative: .source = (pkgs.formats.yaml {}).generate "dsops-config.yaml" { ... };
+```
+
+JSON is valid YAML, so `builtins.toJSON` is enough. The generated file is a
+read-only symlink into the nix store, which passes the permission check.
+
+See `examples/user-config.yaml` and `examples/portable-project.yaml` for a
+complete pair.
 
 ## Best Practices
 

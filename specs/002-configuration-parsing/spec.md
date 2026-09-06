@@ -172,7 +172,7 @@ policies:
 3. **Secrets in Config**: Support `config://` references for config-level secrets (e.g., provider credentials)
 4. **Include Files**: `includes:` section for splitting large configs
 5. **Environment Overrides**: Environment variable substitution in config (e.g., `${AWS_REGION}`)
-6. **Config Profiles**: Multiple configs with inheritance (e.g., `base.yaml` + `dev.yaml`)
+6. **Config Profiles**: Multiple configs with inheritance (e.g., `base.yaml` + `dev.yaml`) — partially addressed by [SPEC-027](../027-machine-level-secret-stores/spec.md), which adds a machine-level user config that declares secret stores only.
 
 ## Related Specifications
 

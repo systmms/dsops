@@ -1,0 +1,27 @@
+# A portable project configuration (SPEC-027)
+#
+# This file declares no secret stores at all. It only *references* stores by
+# name; every contributor supplies those names from their own machine-level
+# config (see examples/user-config.yaml, or ~/.config/dsops/config.yaml).
+#
+#   dsops --config examples/portable-project.yaml \
+#         --user-config examples/user-config.yaml doctor
+#
+# Run `dsops doctor` without a user config to see the missing-store hint that
+# names the file to create.
+
+version: 0
+
+envs:
+  dev:
+    DATABASE_URL:
+      from:
+        store: store://work-vault/apps/demo/database_url
+    STRIPE_API_KEY:
+      from:
+        store: store://bw-work/Stripe (dev).password
+    AWS_WEBHOOK_SECRET:
+      from:
+        store: store://aws-work/demo/webhook-secret
+    LOG_LEVEL:
+      literal: debug

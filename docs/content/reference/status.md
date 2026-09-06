@@ -36,6 +36,21 @@ See [retrospective specs](https://github.com/systmms/dsops/tree/main/specs) (SPE
 
 **See [SPEC-020: Release & Distribution](https://github.com/systmms/dsops/blob/main/specs/020-release-distribution/spec.md) for details.**
 
+### Machine-level Secret Stores (SPEC-027)
+
+**Status**: 🟢 **IMPLEMENTED** - Projects reference secret stores by name; each machine declares them in a user-level config
+
+- ✅ User config discovered via `--user-config`, `DSOPS_USER_CONFIG`, `$XDG_CONFIG_HOME/dsops/config.yaml`, `~/.config/dsops/config.yaml` (`%APPDATA%` on Windows); `none` disables
+- ✅ Only `secretStores:` / legacy `providers:` allowed in the user file; any other section is rejected
+- ✅ Project always wins on name collisions; shadowed user entries reported by `dsops doctor`
+- ✅ `dsops doctor` and `dsops providers` print a "Configuration sources" block and a `SOURCE` column
+- ✅ Missing-store errors name both the project file and the user file to create
+- ✅ Warns when the user file (symlink target) or its directory is writable by others; nix-store files pass
+- ✅ `DSOPS_CONFIG` now honoured as the default for `--config`
+- ✅ Backwards compatible: no user file → byte-identical behaviour
+
+**See [SPEC-027: Machine-level Secret Stores](https://github.com/systmms/dsops/blob/main/specs/027-machine-level-secret-stores/spec.md) for details.**
+
 ### Bitwarden Multi-Account (SPEC-026)
 
 **Status**: 🟢 **IMPLEMENTED** - Bitwarden provider supports multiple accounts in one dsops.yaml

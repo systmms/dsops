@@ -19,6 +19,7 @@ All dsops commands support these global flags:
 | Flag | Description | Default | Environment Variable |
 |------|-------------|---------|----------------------|
 | `--config` | Config file path | `dsops.yaml` | `DSOPS_CONFIG` |
+| `--user-config` | Machine-level config declaring secret stores (`none` disables) | `$XDG_CONFIG_HOME/dsops/config.yaml` → `~/.config/dsops/config.yaml` | `DSOPS_USER_CONFIG` |
 | `--debug` | Enable debug logging | `false` | `DSOPS_DEBUG=true` |
 | `--no-color` | Disable colored output | `false` | `DSOPS_NO_COLOR=true` |
 | `--non-interactive` | Non-interactive mode | `false` | - |
@@ -677,6 +678,7 @@ dsops supports these environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DSOPS_CONFIG` | Configuration file path | `dsops.yaml` |
+| `DSOPS_USER_CONFIG` | Machine-level config declaring secret stores; `none` disables | `$XDG_CONFIG_HOME/dsops/config.yaml` |
 | `DSOPS_ENV` | Default environment name | - |
 | `DSOPS_DEBUG` | Enable debug logging | `false` |
 | `DSOPS_NO_COLOR` | Disable colored output | `false` |

@@ -771,6 +771,7 @@ Override configuration with environment variables:
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `DSOPS_CONFIG` | Configuration file path | `export DSOPS_CONFIG=prod.yaml` |
+| `DSOPS_USER_CONFIG` | Machine-level config declaring secret stores (`none` disables) | `export DSOPS_USER_CONFIG=~/.config/dsops/config.yaml` |
 | `DSOPS_ENV` | Default environment | `export DSOPS_ENV=production` |
 | `${VAR}` | Variable substitution | `region: ${AWS_REGION}` |
 

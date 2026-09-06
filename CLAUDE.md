@@ -536,6 +536,8 @@ ADRs provide decision history and rationale for future maintainers. See `docs/ad
 - Per-provider account-state directory on disk, owned by `bw` (we only set `BITWARDENCLI_APPDATA_DIR` for the child process). (026-bitwarden-multi-account)
 - Go 1.25 (matches existing project) + `pkg/exec` (CommandExecutor), `pkg/provider` (Provider interface), `internal/errors` (UserError) (025-psst-provider)
 - N/A (psst manages its own `.psst/` vault storage) (025-psst-provider)
+- Go 1.25 + standard library and `gopkg.in/yaml.v3`; user config discovered via XDG / `DSOPS_USER_CONFIG`, merged under the project file with project-wins precedence (027-machine-level-secret-stores)
+- Reads one extra YAML file (`~/.config/dsops/config.yaml`), never writes it (027-machine-level-secret-stores)
 
 ## Recent Changes
 - 020-release-distribution: Added Go 1.25+ (matches existing project) + GoReleaser (v2.x), GitHub Actions, Docker
