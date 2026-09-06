@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/tabwriter"
 
@@ -42,6 +44,7 @@ Use --env to also validate a specific environment configuration.`,
 				return fmt.Errorf("failed to load config: %w", err)
 			}
 			cfg.Logger.Info("✓ Configuration loaded successfully")
+			renderConfigSources(os.Stdout, cfg)
 
 			// Create resolver
 			resolver := resolve.New(cfg)
@@ -61,6 +64,7 @@ Use --env to also validate a specific environment configuration.`,
 				health := ProviderHealth{
 					Name:   name,
 					Type:   storeConfig.Type,
+					Source: storeSourceLabel(cfg, name),
 					Status: "checking",
 				}
 
@@ -95,6 +99,7 @@ Use --env to also validate a specific environment configuration.`,
 				health := ProviderHealth{
 					Name:   name,
 					Type:   providerConfig.Type,
+					Source: storeSourceLabel(cfg, name),
 					Status: "checking",
 				}
 
@@ -169,6 +174,7 @@ Use --env to also validate a specific environment configuration.`,
 type ProviderHealth struct {
 	Name         string
 	Type         string
+	Source       string // project | user (SPEC-027 provenance)
 	Status       string // healthy, error, checking
 	Error        string
 	Message      string
@@ -180,8 +186,8 @@ type ProviderHealth struct {
 func displayHealthResults(results []ProviderHealth, verbose bool) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
-	_, _ = fmt.Fprintf(w, "PROVIDER\tTYPE\tSTATUS\tMESSAGE\n")
-	_, _ = fmt.Fprintf(w, "--------\t----\t------\t-------\n")
+	_, _ = fmt.Fprintf(w, "PROVIDER\tTYPE\tSOURCE\tSTATUS\tMESSAGE\n")
+	_, _ = fmt.Fprintf(w, "--------\t----\t------\t------\t-------\n")
 
 	for _, result := range results {
 		status := result.Status
@@ -200,8 +206,8 @@ func displayHealthResults(results []ProviderHealth, verbose bool) {
 			status = "? " + status
 		}
 
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-			result.Name, result.Type, status, message)
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+			result.Name, result.Type, result.Source, status, message)
 	}
 
 	_ = w.Flush()
@@ -447,4 +453,46 @@ func getRegisteredProvider(resolver *resolve.Resolver, name string) provider.Pro
 		return nil
 	}
 	return provider
+}
+
+// storeSourceLabel returns "project" or "user" for a configured store name.
+func storeSourceLabel(cfg *config.Config, name string) string {
+	if src, ok := cfg.StoreSource(name); ok {
+		return string(src.Scope)
+	}
+	return string(config.StoreScopeProject)
+}
+
+// renderConfigSources prints which files contributed configuration so that a
+// contributor can see at a glance where a store came from and where a missing
+// one should be declared (SPEC-027).
+func renderConfigSources(w io.Writer, cfg *config.Config) {
+	projectPath := cfg.Path
+	if abs, err := filepath.Abs(projectPath); err == nil {
+		projectPath = abs
+	}
+
+	_, _ = fmt.Fprintf(w, "\nConfiguration sources:\n")
+	_, _ = fmt.Fprintf(w, "  Project config: %s\n", projectPath)
+	switch {
+	case cfg.LoadedUserConfigPath != "":
+		userStores := 0
+		for _, src := range cfg.StoreSources {
+			if src.Scope == config.StoreScopeUser {
+				userStores++
+			}
+		}
+		_, _ = fmt.Fprintf(w, "  User config:    %s (%d store(s))\n", cfg.LoadedUserConfigPath, userStores)
+	case cfg.UserConfig.Path != "":
+		_, _ = fmt.Fprintf(w, "  User config:    none found at %s\n", cfg.UserConfig.Path)
+	default:
+		_, _ = fmt.Fprintf(w, "  User config:    disabled\n")
+	}
+	for _, warning := range cfg.LoadWarnings {
+		_, _ = fmt.Fprintf(w, "  ⚠ %s\n", warning)
+	}
+	for _, name := range cfg.ShadowedUserStores {
+		_, _ = fmt.Fprintf(w, "  ⚠ Store '%s' in %s is shadowed by the project config\n", name, cfg.LoadedUserConfigPath)
+	}
+	_, _ = fmt.Fprintln(w)
 }

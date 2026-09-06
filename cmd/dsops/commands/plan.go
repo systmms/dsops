@@ -252,7 +252,11 @@ func outputPlanTable(result *resolve.PlanResult, cfg *config.Config, envName str
 		// Suggest next steps
 		fmt.Printf("\nNext steps:\n")
 		if strings.Contains(strings.Join(errorStrings(result.Errors), " "), "not registered") {
-			fmt.Printf("  • Configure missing providers in dsops.yaml\n")
+			if cfg.UserConfig.Path != "" {
+				fmt.Printf("  • Configure missing providers in dsops.yaml or your user config (%s)\n", cfg.UserConfig.Path)
+			} else {
+				fmt.Printf("  • Configure missing providers in dsops.yaml\n")
+			}
 			fmt.Printf("  • Run 'dsops doctor' to check provider connectivity\n")
 		}
 		fmt.Printf("  • Fix configuration errors and try again\n")

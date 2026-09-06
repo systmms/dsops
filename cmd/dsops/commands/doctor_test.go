@@ -405,3 +405,93 @@ func captureDoctorOutput(t *testing.T, cmd *cobra.Command, args []string) string
 
 	return buf.String()
 }
+
+// --- SPEC-027: machine-level secret stores ---------------------------------
+
+func writeUserConfigFixture(t *testing.T, dir, body string) string {
+	t.Helper()
+	path := filepath.Join(dir, "user-config.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
+	return path
+}
+
+func TestDoctorCommand_ShowsStoreSources(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "dsops.yaml")
+	configData := &config.Definition{
+		Version:      0,
+		SecretStores: map[string]config.SecretStoreConfig{"store1": {Type: "literal"}},
+		Envs:         map[string]config.Environment{"test": {}},
+	}
+	configBytes, _ := yaml.Marshal(configData)
+	require.NoError(t, os.WriteFile(configPath, configBytes, 0o644))
+
+	userPath := writeUserConfigFixture(t, tempDir, "version: 0\nsecretStores:\n  bw-user:\n    type: literal\n")
+
+	cfg := &config.Config{
+		Path:       configPath,
+		Logger:     logging.New(false, true),
+		UserConfig: config.UserConfigSpec{Path: userPath, Origin: config.UserConfigOriginFlag},
+	}
+
+	cmd := NewDoctorCommand(cfg)
+	output := captureDoctorOutput(t, cmd, nil)
+
+	assert.Contains(t, output, "Configuration sources:")
+	assert.Contains(t, output, "User config:    "+userPath+" (1 store(s))")
+	assert.Contains(t, output, "SOURCE")
+	assert.Regexp(t, `store1\s+literal\s+project`, output)
+	assert.Regexp(t, `bw-user\s+literal\s+user`, output)
+	assert.Contains(t, output, "Summary: 2/2 providers healthy")
+}
+
+func TestDoctorCommand_UserConfigNotFound_ShowsDefaultLocation(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "dsops.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte("version: 0\nenvs:\n  test: {}\n"), 0o644))
+
+	missing := filepath.Join(tempDir, "nope", "config.yaml")
+	cfg := &config.Config{
+		Path:       configPath,
+		Logger:     logging.New(false, true),
+		UserConfig: config.UserConfigSpec{Path: missing, Origin: config.UserConfigOriginDefault},
+	}
+
+	output := captureDoctorOutput(t, NewDoctorCommand(cfg), nil)
+	assert.Contains(t, output, "User config:    none found at "+missing)
+}
+
+func TestDoctorCommand_ShadowedUserStore_Warns(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "dsops.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte("version: 0\nsecretStores:\n  store1:\n    type: literal\nenvs:\n  test: {}\n"), 0o644))
+	userPath := writeUserConfigFixture(t, tempDir, "version: 0\nsecretStores:\n  store1:\n    type: vault\n    address: https://example.com\n")
+
+	cfg := &config.Config{
+		Path:       configPath,
+		Logger:     logging.New(false, true),
+		UserConfig: config.UserConfigSpec{Path: userPath, Origin: config.UserConfigOriginEnv},
+	}
+
+	output := captureDoctorOutput(t, NewDoctorCommand(cfg), nil)
+	assert.Contains(t, output, "Store 'store1' in "+userPath+" is shadowed by the project config")
+	assert.Regexp(t, `store1\s+literal\s+project`, output, "project definition must win")
+}
+
+func TestDoctorCommand_UserConfigDisallowedSection_Fails(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "dsops.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte("version: 0\nenvs:\n  test: {}\n"), 0o644))
+	userPath := writeUserConfigFixture(t, tempDir, "version: 0\nenvs:\n  prod: {}\n")
+
+	cfg := &config.Config{
+		Path:       configPath,
+		Logger:     logging.New(false, true),
+		UserConfig: config.UserConfigSpec{Path: userPath, Origin: config.UserConfigOriginFlag},
+	}
+
+	err := NewDoctorCommand(cfg).Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to load config")
+	assert.Contains(t, err.Error(), "'envs'")
+}

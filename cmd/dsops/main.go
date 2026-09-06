@@ -24,16 +24,22 @@ func main() {
 }
 
 func run() error {
+	cfg := &config.Config{}
+	return newRootCommand(cfg).Execute()
+}
+
+// newRootCommand builds the root command and wires the global flags into cfg.
+// Configuration discovery happens here (not inside config.Load) so that a
+// Config constructed directly in tests never consults the real environment.
+func newRootCommand(cfg *config.Config) *cobra.Command {
 	// Global flags
 	var (
 		configFile     string
+		userConfigFile string
 		noColor        bool
 		debug          bool
 		nonInteractive bool
 	)
-
-	// Create config placeholder
-	cfg := &config.Config{}
 
 	rootCmd := &cobra.Command{
 		Use:   "dsops",
@@ -49,10 +55,23 @@ launches commands with ephemeral environment variables.`,
 			cfg.Path = configFile
 			cfg.Logger = logger
 			cfg.NonInteractive = nonInteractive
+			cfg.UserConfig = config.ResolveUserConfigPath(
+				userConfigFile,
+				cmd.Flags().Changed("user-config"),
+				config.DefaultUserConfigLookup(),
+			)
+			if cfg.UserConfig.Path != "" {
+				logger.Debug("User config (%s): %s", cfg.UserConfig.Origin, cfg.UserConfig.Path)
+			} else {
+				logger.Debug("User config disabled")
+			}
 		},
 	}
 
-	rootCmd.PersistentFlags().StringVar(&configFile, "config", "dsops.yaml", "Config file path")
+	rootCmd.PersistentFlags().StringVar(&configFile, "config", config.DefaultProjectConfigPath(os.Getenv),
+		"Config file path (env: "+config.ProjectConfigEnvVar+")")
+	rootCmd.PersistentFlags().StringVar(&userConfigFile, "user-config", "",
+		"Machine-level config declaring secret stores for this user (env: "+config.UserConfigEnvVar+"; default: $XDG_CONFIG_HOME/dsops/config.yaml; '"+config.UserConfigDisabled+"' disables)")
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().BoolVar(&nonInteractive, "non-interactive", false, "Non-interactive mode")
@@ -76,5 +95,5 @@ launches commands with ephemeral environment variables.`,
 		commands.NewCompletionCommand(cfg), // Shell completion generation
 	)
 
-	return rootCmd.Execute()
+	return rootCmd
 }

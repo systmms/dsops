@@ -40,25 +40,40 @@ Shows both built-in provider types and configured provider instances.`,
 			_ = w.Flush()
 
 			// Show configured providers if config is available
-			if err := cfg.Load(); err == nil && cfg.Definition != nil {
+			if err := cfg.Load(); err != nil {
+				// Tolerated (the built-in listing is still useful without a
+				// project), but never silent: a broken user config would
+				// otherwise go unnoticed here.
+				if cfg.Logger != nil {
+					cfg.Logger.Warn("Could not load configuration: %v", err)
+				}
+			} else if cfg.Definition != nil {
 				fmt.Println("\nConfigured Providers:")
 				fmt.Println("====================")
+				renderConfigSources(os.Stdout, cfg)
 
 				providers := cfg.ListAllProviders()
 				if len(providers) == 0 {
 					fmt.Println("No providers configured")
 				} else {
-					w2 := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-					_, _ = fmt.Fprintf(w2, "NAME\tTYPE\tSTATUS\n")
-					_, _ = fmt.Fprintf(w2, "----\t----\t------\n")
+					names := make([]string, 0, len(providers))
+					for name := range providers {
+						names = append(names, name)
+					}
+					sort.Strings(names)
 
-					for name, providerCfg := range providers {
+					w2 := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+					_, _ = fmt.Fprintf(w2, "NAME\tTYPE\tSOURCE\tSTATUS\n")
+					_, _ = fmt.Fprintf(w2, "----\t----\t------\t------\n")
+
+					for _, name := range names {
+						providerCfg := providers[name]
 						status := "configured"
 						if !registry.IsSupported(providerCfg.Type) {
 							status = "unsupported"
 						}
 
-						_, _ = fmt.Fprintf(w2, "%s\t%s\t%s\n", name, providerCfg.Type, status)
+						_, _ = fmt.Fprintf(w2, "%s\t%s\t%s\t%s\n", name, providerCfg.Type, storeSourceLabel(cfg, name), status)
 					}
 					_ = w2.Flush()
 				}
