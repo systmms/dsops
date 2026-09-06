@@ -548,3 +548,32 @@ func TestResolverPlan(t *testing.T) {
 		})
 	}
 }
+
+// TestResolverMissingProviderSuggestionMentionsUserConfig verifies that the
+// missing-provider error points at the machine-level config when one is
+// configured (SPEC-027).
+func TestResolverMissingProviderSuggestionMentionsUserConfig(t *testing.T) {
+	t.Parallel()
+
+	cfg := createTestConfig(t)
+	cfg.Path = "/proj/dsops.yaml"
+	cfg.UserConfig = config.UserConfigSpec{Path: "/home/me/.config/dsops/config.yaml", Origin: config.UserConfigOriginDefault}
+
+	resolver := New(cfg)
+
+	envVars := config.Environment{
+		"DB_PASSWORD": {
+			From: &config.Reference{Store: "store://work-vault/database/password"},
+		},
+	}
+
+	_, err := resolver.ResolveEnvironment(context.Background(), envVars)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "provider not found")
+	assert.Contains(t, err.Error(), "/home/me/.config/dsops/config.yaml")
+	assert.Contains(t, err.Error(), "/proj/dsops.yaml")
+
+	err = resolver.ValidateProvider(context.Background(), "work-vault")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "/home/me/.config/dsops/config.yaml")
+}

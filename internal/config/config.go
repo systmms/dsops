@@ -19,6 +19,18 @@ type Config struct {
 	Logger         *logging.Logger
 	NonInteractive bool
 	Definition     *Definition // New format with separated secret stores and services
+
+	// UserConfig says where the machine-level config lives (SPEC-027). It is
+	// an input set by the CLI (or tests); the zero value disables it so that
+	// Load() never reads a developer's real ~/.config/dsops/config.yaml by
+	// accident.
+	UserConfig UserConfigSpec
+
+	// Outputs populated by Load():
+	LoadedUserConfigPath string                 // "" when no user file contributed
+	StoreSources         map[string]StoreSource // provenance for every store/service/provider name
+	ShadowedUserStores   []string               // user-config names overridden by the project (sorted)
+	LoadWarnings         []string               // non-fatal findings such as permission warnings
 }
 
 // Definition represents the dsops.yaml structure with separated secret stores and services
@@ -118,19 +130,44 @@ func DefaultPrometheusConfig() *PrometheusConfig {
 	}
 }
 
-// Load reads and parses the dsops.yaml file
+// Load reads and parses the project dsops.yaml, then fills in any secret
+// stores declared by the machine-level user config (see UserConfig). The
+// project file is required; the user file only supplies store names the
+// project does not define itself.
 func (c *Config) Load() error {
+	def, err := c.loadProject()
+	if err != nil {
+		return err
+	}
+
+	c.resetLoadState()
+	c.recordProjectSources(def)
+
+	user, err := c.loadUserConfig()
+	if err != nil {
+		return err
+	}
+	if user != nil {
+		c.mergeUserConfig(def, user, c.UserConfig.Path)
+	}
+
+	c.Definition = def
+	return nil
+}
+
+// loadProject reads and parses the project dsops.yaml file.
+func (c *Config) loadProject() (*Definition, error) {
 	data, err := os.ReadFile(c.Path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return dserrors.ConfigError{
+			return nil, dserrors.ConfigError{
 				Field:      "path",
 				Value:      c.Path,
 				Message:    "configuration file not found",
 				Suggestion: "Run 'dsops init' to create a new configuration file",
 			}
 		}
-		return dserrors.UserError{
+		return nil, dserrors.UserError{
 			Message:    "Failed to read configuration file",
 			Details:    err.Error(),
 			Suggestion: "Check file permissions and path",
@@ -141,7 +178,7 @@ func (c *Config) Load() error {
 	// Parse configuration
 	var def Definition
 	if err := yaml.Unmarshal(data, &def); err != nil {
-		return dserrors.ConfigError{
+		return nil, dserrors.ConfigError{
 			Message:    "invalid YAML syntax in configuration file",
 			Suggestion: "Check for indentation errors, missing quotes, or invalid characters. Use a YAML validator",
 		}
@@ -149,7 +186,7 @@ func (c *Config) Load() error {
 
 	// Validate version
 	if def.Version != 0 {
-		return dserrors.ConfigError{
+		return nil, dserrors.ConfigError{
 			Field:      "version",
 			Value:      def.Version,
 			Message:    "unsupported configuration version",
@@ -157,8 +194,7 @@ func (c *Config) Load() error {
 		}
 	}
 
-	c.Definition = &def
-	return nil
+	return &def, nil
 }
 
 // GetEnvironment returns the configuration for a specific environment
@@ -232,7 +268,7 @@ func (c *Config) GetProvider(name string) (ProviderConfig, error) {
 		available = append(available, providerName)
 	}
 
-	suggestion := "Add the provider to the 'secretStores:' or 'services:' section of your dsops.yaml"
+	suggestion := c.MissingProviderSuggestion(name)
 	if len(available) > 0 {
 		suggestion = fmt.Sprintf("Available providers: %s. %s", strings.Join(available, ", "), suggestion)
 	}

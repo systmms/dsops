@@ -67,7 +67,7 @@ func (r *Resolver) ValidateProvider(ctx context.Context, providerName string) er
 			Field:      "provider",
 			Value:      providerName,
 			Message:    "provider not registered",
-			Suggestion: fmt.Sprintf("Check that provider '%s' is configured correctly", providerName),
+			Suggestion: r.config.MissingProviderSuggestion(providerName),
 		}
 	}
 
@@ -347,7 +347,7 @@ func (r *Resolver) resolveFromProvider(ctx context.Context, ref *config.Referenc
 			Field:      "provider",
 			Value:      providerName,
 			Message:    "provider not found in configuration",
-			Suggestion: fmt.Sprintf("Add provider '%s' to the 'secretStores:' section of your dsops.yaml", providerName),
+			Suggestion: r.config.MissingProviderSuggestion(providerName),
 		}
 	}
 
